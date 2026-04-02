@@ -1,0 +1,758 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  NOTICE_PERIOD
+  RESIGNED
+  TERMINATED
+}
+
+// ============================================
+// Organizations
+// ============================================
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users        User[]
+  roles        Role[]
+  userRoles    UserRole[]
+  departments  Department[]
+  designations Designation[]
+  employees    Employee[]
+
+  // Attendance
+  attendancePolicies           AttendancePolicy[]
+  allowedIpRules               AllowedIpRule[]
+  attendanceLogs               AttendanceLog[]
+  attendanceDailySummaries     AttendanceDailySummary[]
+  attendanceCorrectionRequests AttendanceCorrectionRequest[]
+
+  // Leave Management
+  leavePolicies                LeavePolicy[]
+  employeeLeavePolicyAssignments EmployeeLeavePolicyAssignment[]
+  employeeLeaveBalances        EmployeeLeaveBalance[]
+  leaveRequests                LeaveRequest[]
+  holidays                     Holiday[]
+
+  @@map("organizations")
+}
+
+// ============================================
+// Users — authentication identity only.
+// Separate from employees (HR/business identity).
+// ============================================
+
+model User {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  email          String
+  passwordHash   String    @map("password_hash")
+  firstName      String    @map("first_name")
+  lastName       String    @map("last_name")
+  isActive       Boolean   @default(true) @map("is_active")
+  lastLoginAt    DateTime? @map("last_login_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  userRoles         UserRole[]
+  refreshTokens     RefreshToken[]
+  employee          Employee?
+  uploadedDocuments EmployeeDocument[]
+
+  @@unique([organizationId, email])
+  @@map("users")
+}
+
+// ============================================
+// RBAC — Roles, Permissions, Assignments
+// ============================================
+
+/// Roles can be system-wide (organizationId = null, isSystem = true)
+/// or organization-specific (organizationId set, isSystem = false).
+model Role {
+  id             String   @id @default(uuid())
+  organizationId String?  @map("organization_id")
+  name           String
+  slug           String
+  description    String?
+  isSystem       Boolean  @default(false) @map("is_system")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  // Uniqueness is enforced via partial indexes in the migration:
+  //   roles_org_slug_unique  → (organization_id, slug) WHERE organization_id IS NOT NULL
+  //   roles_system_slug_unique → (slug) WHERE organization_id IS NULL
+  // This avoids PostgreSQL's NULL != NULL behavior in composite unique constraints.
+  @@index([organizationId])
+  @@map("roles")
+}
+
+/// Permissions are global, code-addressable entities.
+/// They do not belong to a specific organization.
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  module      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String   @map("role_id")
+  permissionId String   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// A user can have multiple roles within an organization.
+model UserRole {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  roleId         String   @map("role_id")
+  organizationId String   @map("organization_id")
+  assignedBy     String?  @map("assigned_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, roleId, organizationId])
+  @@index([organizationId])
+  @@map("user_roles")
+}
+
+// ============================================
+// Refresh Tokens
+// ============================================
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// Departments
+// ============================================
+
+model Department {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  code           String
+  parentId       String?  @map("parent_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  parent       Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children     Department[] @relation("DepartmentHierarchy")
+  employees    Employee[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("departments")
+}
+
+// ============================================
+// Designations
+// ============================================
+
+model Designation {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  level          Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employees    Employee[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("designations")
+}
+
+// ============================================
+// Employees — HR / business identity.
+// Separate from Users (auth identity).
+// Linked via optional userId (1:1).
+// ============================================
+
+model Employee {
+  id                 String    @id @default(uuid())
+  organizationId     String    @map("organization_id")
+  userId             String?   @unique @map("user_id")
+  employeeCode       String    @map("employee_code")
+  firstName          String    @map("first_name")
+  lastName           String    @map("last_name")
+  dateOfBirth        DateTime? @map("date_of_birth") @db.Date
+  gender             Gender?
+  phone              String?
+  personalEmail      String?   @map("personal_email")
+  profileImageUrl    String?   @map("profile_image_url")
+  departmentId       String?   @map("department_id")
+  designationId      String?   @map("designation_id")
+  reportingManagerId String?   @map("reporting_manager_id")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  organization     Organization              @relation(fields: [organizationId], references: [id])
+  user             User?                     @relation(fields: [userId], references: [id])
+  department       Department?               @relation(fields: [departmentId], references: [id])
+  designation      Designation?              @relation(fields: [designationId], references: [id])
+  reportingManager Employee?                 @relation("EmployeeHierarchy", fields: [reportingManagerId], references: [id])
+  directReports    Employee[]                @relation("EmployeeHierarchy")
+  employmentDetail EmployeeEmploymentDetail?
+  documents        EmployeeDocument[]
+
+  // Attendance
+  attendancePolicyAssignments  EmployeeAttendancePolicyAssignment[]
+  attendanceOverride           EmployeeAttendanceOverride?
+  attendanceLogs               AttendanceLog[]
+  attendanceDailySummaries     AttendanceDailySummary[]
+  attendanceCorrectionRequests AttendanceCorrectionRequest[]
+  reviewedCorrections          AttendanceCorrectionRequest[]  @relation("CorrectionReviewer")
+
+  // Leave Management
+  leavePolicyAssignments EmployeeLeavePolicyAssignment[]
+  leaveBalances          EmployeeLeaveBalance[]
+  leaveRequests          LeaveRequest[]
+  leaveDecisions         LeaveRequest[]          @relation("LeaveDecisionMaker")
+  leaveApprovalActions   LeaveApprovalAction[]
+
+  @@unique([organizationId, employeeCode])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([designationId])
+  @@index([reportingManagerId])
+  @@map("employees")
+}
+
+// ============================================
+// Employee Employment Details (1:1)
+// ============================================
+
+model EmployeeEmploymentDetail {
+  id               String           @id @default(uuid())
+  employeeId       String           @unique @map("employee_id")
+  employmentType   EmploymentType   @default(FULL_TIME) @map("employment_type")
+  joiningDate      DateTime         @map("joining_date") @db.Date
+  confirmationDate DateTime?        @map("confirmation_date") @db.Date
+  probationEndDate DateTime?        @map("probation_end_date") @db.Date
+  resignationDate  DateTime?        @map("resignation_date") @db.Date
+  lastWorkingDate  DateTime?        @map("last_working_date") @db.Date
+  employmentStatus EmploymentStatus @default(ACTIVE) @map("employment_status")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_employment_details")
+}
+
+// ============================================
+// Employee Documents
+// ============================================
+
+model EmployeeDocument {
+  id               String    @id @default(uuid())
+  employeeId       String    @map("employee_id")
+  documentType     String    @map("document_type")
+  documentNumber   String?   @map("document_number")
+  fileUrl          String?   @map("file_url")
+  fileName         String?   @map("file_name")
+  uploadedByUserId String?   @map("uploaded_by_user_id")
+  validFrom        DateTime? @map("valid_from") @db.Date
+  validUntil       DateTime? @map("valid_until") @db.Date
+  isVerified       Boolean   @default(false) @map("is_verified")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  uploadedByUser User?    @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@map("employee_documents")
+}
+
+// ============================================
+// Attendance — Enums
+// ============================================
+
+enum AttendancePolicyType {
+  FIXED
+  FLEXIBLE
+}
+
+enum AttendanceLogType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum AttendanceLogSource {
+  WEB
+  MOBILE
+  MANUAL
+  SYSTEM
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+  ON_LEAVE
+  HOLIDAY
+  WEEKEND
+}
+
+enum CorrectionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================
+// Attendance Policies
+// ============================================
+
+model AttendancePolicy {
+  id                      String               @id @default(uuid())
+  organizationId          String               @map("organization_id")
+  name                    String
+  policyType              AttendancePolicyType  @map("policy_type")
+  startTime               String?              @map("start_time")
+  endTime                 String?              @map("end_time")
+  minHoursPerDay          Decimal?             @map("min_hours_per_day") @db.Decimal(4, 2)
+  coreStartTime           String?              @map("core_start_time")
+  coreEndTime             String?              @map("core_end_time")
+  graceMinutesLate        Int                  @default(0) @map("grace_minutes_late")
+  graceMinutesEarly       Int                  @default(0) @map("grace_minutes_early")
+  halfDayThresholdMinutes Int?                 @map("half_day_threshold_minutes")
+  workingDays             Int[]                @map("working_days")
+  isActive                Boolean              @default(true) @map("is_active")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+
+  organization Organization                        @relation(fields: [organizationId], references: [id])
+  assignments  EmployeeAttendancePolicyAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("attendance_policies")
+}
+
+// ============================================
+// Employee → Policy Assignments
+// ============================================
+
+model EmployeeAttendancePolicyAssignment {
+  id                 String    @id @default(uuid())
+  employeeId         String    @map("employee_id")
+  attendancePolicyId String    @map("attendance_policy_id")
+  effectiveFrom      DateTime  @map("effective_from") @db.Date
+  effectiveTo        DateTime? @map("effective_to") @db.Date
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  employee         Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  attendancePolicy AttendancePolicy @relation(fields: [attendancePolicyId], references: [id])
+
+  @@index([employeeId])
+  @@index([attendancePolicyId])
+  @@map("employee_attendance_policy_assignments")
+}
+
+// ============================================
+// Allowed IP Rules (org-level whitelist)
+// ============================================
+
+model AllowedIpRule {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  label          String
+  ipAddress      String   @map("ip_address")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@map("allowed_ip_rules")
+}
+
+// ============================================
+// Employee Attendance Overrides (1:1)
+// ============================================
+
+model EmployeeAttendanceOverride {
+  id                  String   @id @default(uuid())
+  employeeId          String   @unique @map("employee_id")
+  ipRestrictionExempt Boolean  @default(false) @map("ip_restriction_exempt")
+  reason              String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_attendance_overrides")
+}
+
+// ============================================
+// Attendance Logs (source of truth)
+// ============================================
+
+model AttendanceLog {
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  employeeId     String              @map("employee_id")
+  logType        AttendanceLogType   @map("log_type")
+  timestamp      DateTime
+  ipAddress      String?             @map("ip_address")
+  source         AttendanceLogSource @default(WEB)
+  notes          String?
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([employeeId, timestamp])
+  @@map("attendance_logs")
+}
+
+// ============================================
+// Attendance Daily Summaries (derived)
+// ============================================
+
+model AttendanceDailySummary {
+  id                    String           @id @default(uuid())
+  organizationId        String           @map("organization_id")
+  employeeId            String           @map("employee_id")
+  date                  DateTime         @db.Date
+  status                AttendanceStatus @default(ABSENT)
+  firstCheckIn          DateTime?        @map("first_check_in")
+  lastCheckOut          DateTime?        @map("last_check_out")
+  totalWorkedMinutes    Int              @default(0) @map("total_worked_minutes")
+  overtimeMinutes       Int              @default(0) @map("overtime_minutes")
+  lateMinutes           Int              @default(0) @map("late_minutes")
+  earlyDepartureMinutes Int              @default(0) @map("early_departure_minutes")
+  isIpCompliant         Boolean?         @map("is_ip_compliant")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([organizationId])
+  @@index([organizationId, date])
+  @@map("attendance_daily_summaries")
+}
+
+// ============================================
+// Attendance Correction Requests
+// ============================================
+
+model AttendanceCorrectionRequest {
+  id                String                  @id @default(uuid())
+  organizationId    String                  @map("organization_id")
+  employeeId        String                  @map("employee_id")
+  date              DateTime                @db.Date
+  originalCheckIn   DateTime?               @map("original_check_in")
+  originalCheckOut  DateTime?               @map("original_check_out")
+  requestedCheckIn  DateTime?               @map("requested_check_in")
+  requestedCheckOut DateTime?               @map("requested_check_out")
+  reason            String
+  status            CorrectionRequestStatus @default(PENDING)
+  reviewedById      String?                 @map("reviewed_by_id")
+  reviewedAt        DateTime?               @map("reviewed_at")
+  reviewerRemarks   String?                 @map("reviewer_remarks")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy   Employee?    @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("attendance_correction_requests")
+}
+
+// ============================================
+// Leave Management — Enums
+// ============================================
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApproverRole {
+  MANAGER
+  HR
+}
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+}
+
+enum LeaveDayType {
+  FULL_DAY
+  FIRST_HALF
+  SECOND_HALF
+}
+
+// ============================================
+// Leave Policies
+// ============================================
+
+model LeavePolicy {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  name               String
+  code               String
+  description        String?
+  annualQuotaDefault Decimal  @map("annual_quota_default") @db.Decimal(5, 2)
+  carryForwardLimit  Decimal  @default(0) @map("carry_forward_limit") @db.Decimal(5, 2)
+  maxConsecutiveDays Int?     @map("max_consecutive_days")
+  allowHalfDay       Boolean  @default(true) @map("allow_half_day")
+  requiresApproval   Boolean  @default(true) @map("requires_approval")
+  isPaid             Boolean  @default(true) @map("is_paid")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  organization  Organization                    @relation(fields: [organizationId], references: [id])
+  assignments   EmployeeLeavePolicyAssignment[]
+  balances      EmployeeLeaveBalance[]
+  leaveRequests LeaveRequest[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("leave_policies")
+}
+
+// ============================================
+// Employee → Leave Policy Assignments
+// ============================================
+
+model EmployeeLeavePolicyAssignment {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  employeeId       String    @map("employee_id")
+  leavePolicyId    String    @map("leave_policy_id")
+  customAnnualQuota Decimal? @map("custom_annual_quota") @db.Decimal(5, 2)
+  effectiveFrom    DateTime  @map("effective_from") @db.Date
+  effectiveTo      DateTime? @map("effective_to") @db.Date
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leavePolicy  LeavePolicy  @relation(fields: [leavePolicyId], references: [id])
+
+  @@unique([employeeId, leavePolicyId, effectiveFrom])
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([leavePolicyId])
+  @@map("employee_leave_policy_assignments")
+}
+
+// ============================================
+// Employee Leave Balances (per policy per year)
+// ============================================
+
+model EmployeeLeaveBalance {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  employeeId     String   @map("employee_id")
+  leavePolicyId  String   @map("leave_policy_id")
+  year           Int
+  totalEntitled  Decimal  @default(0) @map("total_entitled") @db.Decimal(5, 2)
+  used           Decimal  @default(0) @db.Decimal(5, 2)
+  carriedForward Decimal  @default(0) @map("carried_forward") @db.Decimal(5, 2)
+  adjustments    Decimal  @default(0) @db.Decimal(5, 2)
+  balance        Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leavePolicy  LeavePolicy  @relation(fields: [leavePolicyId], references: [id])
+
+  @@unique([employeeId, leavePolicyId, year])
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([leavePolicyId])
+  @@map("employee_leave_balances")
+}
+
+// ============================================
+// Leave Requests
+// ============================================
+
+model LeaveRequest {
+  id                String             @id @default(uuid())
+  organizationId    String             @map("organization_id")
+  employeeId        String             @map("employee_id")
+  leavePolicyId     String             @map("leave_policy_id")
+  startDate         DateTime           @map("start_date") @db.Date
+  endDate           DateTime           @map("end_date") @db.Date
+  totalDays         Decimal            @map("total_days") @db.Decimal(5, 2)
+  isHalfDay         Boolean            @default(false) @map("is_half_day")
+  reason            String?
+  status            LeaveRequestStatus @default(PENDING)
+  submittedAt       DateTime           @default(now()) @map("submitted_at")
+  managerDecisionAt DateTime?          @map("manager_decision_at")
+  hrDecisionAt      DateTime?          @map("hr_decision_at")
+  finalDecisionAt   DateTime?          @map("final_decision_at")
+  finalDecisionById String?            @map("final_decision_by_id")
+  cancelledAt       DateTime?          @map("cancelled_at")
+  cancelReason      String?            @map("cancel_reason")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  organization    Organization          @relation(fields: [organizationId], references: [id])
+  employee        Employee              @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leavePolicy     LeavePolicy           @relation(fields: [leavePolicyId], references: [id])
+  finalDecisionBy Employee?             @relation("LeaveDecisionMaker", fields: [finalDecisionById], references: [id])
+  days            LeaveRequestDay[]
+  approvalActions LeaveApprovalAction[]
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([leavePolicyId])
+  @@index([status])
+  @@index([employeeId, startDate, endDate])
+  @@map("leave_requests")
+}
+
+// ============================================
+// Leave Request Days (individual day breakdown)
+// ============================================
+
+model LeaveRequestDay {
+  id             String       @id @default(uuid())
+  leaveRequestId String       @map("leave_request_id")
+  date           DateTime     @db.Date
+  dayType        LeaveDayType @default(FULL_DAY) @map("day_type")
+  days           Decimal      @default(1) @db.Decimal(4, 2)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([leaveRequestId, date])
+  @@map("leave_request_days")
+}
+
+// ============================================
+// Leave Approval Actions (actual decisions only)
+// ============================================
+
+model LeaveApprovalAction {
+  id                 String       @id @default(uuid())
+  leaveRequestId     String       @map("leave_request_id")
+  approverEmployeeId String       @map("approver_employee_id")
+  approverRole       ApproverRole @map("approver_role")
+  action             ApprovalAction
+  remarks            String?
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  leaveRequest     LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  approverEmployee Employee     @relation(fields: [approverEmployeeId], references: [id])
+
+  @@index([leaveRequestId])
+  @@index([approverEmployeeId])
+  @@map("leave_approval_actions")
+}
+
+// ============================================
+// Holidays (organization-level)
+// ============================================
+
+model Holiday {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  date           DateTime @db.Date
+  isOptional     Boolean  @default(false) @map("is_optional")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, date])
+  @@index([organizationId])
+  @@map("holidays")
+}

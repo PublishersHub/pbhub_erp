@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hrms-postgres
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${DB_USER:-hrms}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hrms_password}
+      POSTGRES_DB: ${DB_NAME:-hrms_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-hrms}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: hrms-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    container_name: hrms-api
+    restart: unless-stopped
+    ports:
+      - '${APP_PORT:-3001}:3001'
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+      - ./packages:/app/packages
+      # Preserve container-installed node_modules from being
+      # overwritten by bind mounts. These anonymous volumes are
+      # populated at container creation from the image layer,
+      # then take precedence over any bind mount at the same path.
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    environment:
+      NODE_ENV: development
+      APP_PORT: 3001
+      DATABASE_URL: postgresql://${DB_USER:-hrms}:${DB_PASSWORD:-hrms_password}@postgres:5432/${DB_NAME:-hrms_db}
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-in-production}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      APP_BASE_URL: http://localhost:${WEB_PORT:-3000}
+      STORAGE_DRIVER: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: hrms-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-3000}:3000'
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:${APP_PORT:-3001}
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
