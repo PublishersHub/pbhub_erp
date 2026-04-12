@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -32,7 +33,7 @@ export class LeaveBalancesController {
     return this.balancesService.getMyBalances(
       user.userId,
       user.organizationId,
-      parseInt(year, 10),
+      this.parseYear(year),
     );
   }
 
@@ -50,7 +51,7 @@ export class LeaveBalancesController {
     return this.balancesService.getEmployeeBalances(
       user.organizationId,
       employeeId,
-      parseInt(year, 10),
+      this.parseYear(year),
     );
   }
 
@@ -66,7 +67,7 @@ export class LeaveBalancesController {
     return this.balancesService.initializeBalances(
       user.organizationId,
       employeeId,
-      parseInt(year, 10),
+      this.parseYear(year),
     );
   }
 
@@ -78,5 +79,15 @@ export class LeaveBalancesController {
     @Body() dto: AdjustBalanceDto,
   ) {
     return this.balancesService.adjustBalance(user.organizationId, dto);
+  }
+
+  // ─── Helpers ──────────────────────────
+
+  private parseYear(value: string): number {
+    const year = parseInt(value, 10);
+    if (isNaN(year) || year < 2000 || year > 2100) {
+      throw new BadRequestException('year must be a valid number between 2000 and 2100');
+    }
+    return year;
   }
 }

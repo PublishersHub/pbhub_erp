@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -40,10 +41,7 @@ export class HolidaysController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('year') year?: string,
   ) {
-    return this.holidaysService.findAll(
-      user.organizationId,
-      year ? parseInt(year, 10) : undefined,
-    );
+    return this.holidaysService.findAll(user.organizationId, this.parseYear(year));
   }
 
   @Get(':id')
@@ -75,5 +73,16 @@ export class HolidaysController {
     @Param('id') id: string,
   ) {
     return this.holidaysService.deactivate(user.organizationId, id);
+  }
+
+  // ─── Helpers ──────────────────────────
+
+  private parseYear(value?: string): number | undefined {
+    if (value === undefined) return undefined;
+    const year = parseInt(value, 10);
+    if (isNaN(year) || year < 2000 || year > 2100) {
+      throw new BadRequestException('year must be a valid number between 2000 and 2100');
+    }
+    return year;
   }
 }

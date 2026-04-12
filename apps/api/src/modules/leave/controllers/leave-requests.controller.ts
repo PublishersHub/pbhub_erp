@@ -11,6 +11,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger'
 import { LeaveRequestsService } from '../services/leave-requests.service';
 import { CreateLeaveRequestDto } from '../dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from '../dto/review-leave-request.dto';
+import { CancelLeaveRequestDto } from '../dto/cancel-leave-request.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../../../common/types';
@@ -50,9 +51,9 @@ export class LeaveRequestsController {
   async cancel(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body('cancelReason') cancelReason?: string,
+    @Body() dto: CancelLeaveRequestDto,
   ) {
-    return this.requestsService.cancel(user.userId, user.organizationId, id, cancelReason);
+    return this.requestsService.cancel(user.userId, user.organizationId, id, dto);
   }
 
   // ─── Approver ─────────────────────────
@@ -61,7 +62,11 @@ export class LeaveRequestsController {
   @RequirePermissions('leave.approve')
   @ApiOperation({ summary: 'List pending requests for approver' })
   async findPendingForApprover(@CurrentUser() user: AuthenticatedUser) {
-    return this.requestsService.findPendingForApprover(user.userId, user.organizationId);
+    return this.requestsService.findPendingForApprover(
+      user.userId,
+      user.organizationId,
+      user.roles,
+    );
   }
 
   @Patch(':id/review')
@@ -72,7 +77,13 @@ export class LeaveRequestsController {
     @Param('id') id: string,
     @Body() dto: ReviewLeaveRequestDto,
   ) {
-    return this.requestsService.review(user.userId, user.organizationId, id, dto);
+    return this.requestsService.review(
+      user.userId,
+      user.organizationId,
+      id,
+      dto,
+      user.roles,
+    );
   }
 
   // ─── Admin/HR ─────────────────────────

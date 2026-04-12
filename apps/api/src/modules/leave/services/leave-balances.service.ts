@@ -17,7 +17,7 @@ export class LeaveBalancesService {
     const employee = await this.findEmployeeByUserId(userId, organizationId);
 
     return this.prisma.employeeLeaveBalance.findMany({
-      where: { employeeId: employee.id, year },
+      where: { employeeId: employee.id, organizationId, year },
       include: {
         leavePolicy: {
           select: { id: true, name: true, code: true, isPaid: true },
@@ -43,7 +43,7 @@ export class LeaveBalancesService {
     }
 
     const balances = await this.prisma.employeeLeaveBalance.findMany({
-      where: { employeeId, year },
+      where: { employeeId, organizationId, year },
       include: {
         leavePolicy: {
           select: { id: true, name: true, code: true, isPaid: true },
@@ -72,7 +72,6 @@ export class LeaveBalancesService {
       throw new NotFoundException('Leave policy not found in this organization');
     }
 
-    // Upsert balance record
     const existing = await this.prisma.employeeLeaveBalance.findUnique({
       where: {
         employeeId_leavePolicyId_year: {
@@ -124,7 +123,7 @@ export class LeaveBalancesService {
       throw new NotFoundException('Employee not found in this organization');
     }
 
-    // Find all active policy assignments for this employee
+    // Find all active policy assignments for this employee where the policy is also active
     const assignments = await this.prisma.employeeLeavePolicyAssignment.findMany({
       where: {
         employeeId,
@@ -134,6 +133,7 @@ export class LeaveBalancesService {
           { effectiveTo: null },
           { effectiveTo: { gte: new Date(Date.UTC(year, 0, 1)) } },
         ],
+        leavePolicy: { isActive: true },
       },
       include: { leavePolicy: true },
     });
@@ -165,9 +165,9 @@ export class LeaveBalancesService {
       }
 
       const totalEntitled = new Decimal(entitled.toString());
-      const balance = totalEntitled.plus(carriedForward);
 
-      const record = await this.prisma.employeeLeaveBalance.upsert({
+      // Check if a balance record already exists for this employee/policy/year
+      const existing = await this.prisma.employeeLeaveBalance.findUnique({
         where: {
           employeeId_leavePolicyId_year: {
             employeeId,
@@ -175,24 +175,56 @@ export class LeaveBalancesService {
             year,
           },
         },
-        create: {
-          organizationId,
-          employeeId,
-          leavePolicyId: assignment.leavePolicyId,
-          year,
-          totalEntitled,
-          carriedForward,
-          used: 0,
-          adjustments: 0,
-          balance,
-        },
-        update: {},
-        include: {
-          leavePolicy: {
-            select: { id: true, name: true, code: true },
-          },
-        },
       });
+
+      let record;
+
+      if (existing) {
+        // Re-initialization: update totalEntitled and carriedForward,
+        // preserve used and adjustments, recompute balance
+        const existingUsed = new Decimal(existing.used.toString());
+        const existingAdjustments = new Decimal(existing.adjustments.toString());
+        const newBalance = totalEntitled
+          .plus(carriedForward)
+          .plus(existingAdjustments)
+          .minus(existingUsed);
+
+        record = await this.prisma.employeeLeaveBalance.update({
+          where: { id: existing.id },
+          data: {
+            totalEntitled,
+            carriedForward,
+            balance: newBalance,
+          },
+          include: {
+            leavePolicy: {
+              select: { id: true, name: true, code: true },
+            },
+          },
+        });
+      } else {
+        // First-time initialization
+        const balance = totalEntitled.plus(carriedForward);
+
+        record = await this.prisma.employeeLeaveBalance.create({
+          data: {
+            organizationId,
+            employeeId,
+            leavePolicyId: assignment.leavePolicyId,
+            year,
+            totalEntitled,
+            carriedForward,
+            used: 0,
+            adjustments: 0,
+            balance,
+          },
+          include: {
+            leavePolicy: {
+              select: { id: true, name: true, code: true },
+            },
+          },
+        });
+      }
 
       results.push(record);
     }

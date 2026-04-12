@@ -3,16 +3,19 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AttendanceService } from './attendance.service';
 import { CreateCorrectionRequestDto } from '../dto/create-correction-request.dto';
 import { ReviewCorrectionRequestDto } from '../dto/review-correction-request.dto';
+import { NotificationEvents } from '../../notification/events/event-types';
 
 @Injectable()
 export class AttendanceCorrectionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly attendanceService: AttendanceService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ─── Employee submits a correction ──────
@@ -30,7 +33,7 @@ export class AttendanceCorrectionsService {
       where: { employeeId_date: { employeeId: employee.id, date } },
     });
 
-    return this.prisma.attendanceCorrectionRequest.create({
+    const created = await this.prisma.attendanceCorrectionRequest.create({
       data: {
         organizationId,
         employeeId: employee.id,
@@ -44,6 +47,26 @@ export class AttendanceCorrectionsService {
         reason: dto.reason,
       },
     });
+
+    // Notify: manager (if any)
+    const recipientEmployeeIds: string[] = [];
+    if (employee.reportingManagerId) {
+      recipientEmployeeIds.push(employee.reportingManagerId);
+    }
+
+    this.eventEmitter.emit(NotificationEvents.ATTENDANCE_CORRECTION_SUBMITTED, {
+      organizationId,
+      actorUserId: userId,
+      referenceId: created.id,
+      referenceType: 'AttendanceCorrectionRequest',
+      recipientEmployeeIds,
+      variables: {
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        date: date.toISOString().slice(0, 10),
+      },
+    });
+
+    return created;
   }
 
   // ─── Employee views own requests ────────
@@ -115,6 +138,20 @@ export class AttendanceCorrectionsService {
     if (dto.status === 'APPROVED') {
       await this.applyCorrection(request);
     }
+
+    // Notify the requesting employee of the decision
+    this.eventEmitter.emit(NotificationEvents.ATTENDANCE_CORRECTION_DECIDED, {
+      organizationId,
+      actorUserId: reviewerUserId,
+      referenceId: requestId,
+      referenceType: 'AttendanceCorrectionRequest',
+      recipientEmployeeIds: [request.employeeId],
+      variables: {
+        date: request.date.toISOString().slice(0, 10),
+        decision: dto.status,
+        remarks: dto.remarks ?? '',
+      },
+    });
 
     return updated;
   }

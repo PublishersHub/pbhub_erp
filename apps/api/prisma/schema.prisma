@@ -59,11 +59,43 @@ model Organization {
   attendanceCorrectionRequests AttendanceCorrectionRequest[]
 
   // Leave Management
-  leavePolicies                LeavePolicy[]
+  leavePolicies                  LeavePolicy[]
   employeeLeavePolicyAssignments EmployeeLeavePolicyAssignment[]
-  employeeLeaveBalances        EmployeeLeaveBalance[]
-  leaveRequests                LeaveRequest[]
-  holidays                     Holiday[]
+  employeeLeaveBalances          EmployeeLeaveBalance[]
+  leaveRequests                  LeaveRequest[]
+  holidays                       Holiday[]
+
+  // Performance Management
+  performanceCycles  PerformanceCycle[]
+  goals              Goal[]
+  performanceReviews PerformanceReview[]
+
+  // Payroll
+  salaryComponents         SalaryComponent[]
+  employeeSalaryStructures EmployeeSalaryStructure[]
+  payrollCycles            PayrollCycle[]
+  payrolls                 Payroll[]
+
+  // Expense Management
+  expenseCategories ExpenseCategory[]
+  expensePolicies   ExpensePolicy[]
+  expenseClaims     ExpenseClaim[]
+
+  // Notifications
+  notificationTemplates NotificationTemplate[]
+  notifications         Notification[]
+
+  // Recruitment
+  jobRequisitions JobRequisition[]
+  jobPostings     JobPosting[]
+  candidates      Candidate[]
+  jobApplications JobApplication[]
+  interviews      Interview[]
+  offers          Offer[]
+
+  // Onboarding
+  onboardingTemplates OnboardingTemplate[]
+  onboardingInstances OnboardingInstance[]
 
   @@map("organizations")
 }
@@ -90,6 +122,10 @@ model User {
   refreshTokens     RefreshToken[]
   employee          Employee?
   uploadedDocuments EmployeeDocument[]
+
+  // Notifications
+  notificationPreferences NotificationPreference[]
+  notifications           Notification[]
 
   @@unique([organizationId, email])
   @@map("users")
@@ -207,6 +243,10 @@ model Department {
   children     Department[] @relation("DepartmentHierarchy")
   employees    Employee[]
 
+  // Recruitment
+  jobRequisitions  JobRequisition[]
+  offerDepartments Offer[]          @relation("OfferDepartment")
+
   @@unique([organizationId, code])
   @@index([organizationId])
   @@map("departments")
@@ -227,6 +267,10 @@ model Designation {
 
   organization Organization @relation(fields: [organizationId], references: [id])
   employees    Employee[]
+
+  // Recruitment
+  jobRequisitions   JobRequisition[]
+  offerDesignations Offer[]          @relation("OfferDesignation")
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -273,14 +317,56 @@ model Employee {
   attendanceLogs               AttendanceLog[]
   attendanceDailySummaries     AttendanceDailySummary[]
   attendanceCorrectionRequests AttendanceCorrectionRequest[]
-  reviewedCorrections          AttendanceCorrectionRequest[]  @relation("CorrectionReviewer")
+  reviewedCorrections          AttendanceCorrectionRequest[]        @relation("CorrectionReviewer")
 
   // Leave Management
   leavePolicyAssignments EmployeeLeavePolicyAssignment[]
   leaveBalances          EmployeeLeaveBalance[]
   leaveRequests          LeaveRequest[]
-  leaveDecisions         LeaveRequest[]          @relation("LeaveDecisionMaker")
+  leaveDecisions         LeaveRequest[]                  @relation("LeaveDecisionMaker")
   leaveApprovalActions   LeaveApprovalAction[]
+
+  // Performance Management
+  goals               Goal[]
+  createdGoals        Goal[]               @relation("GoalCreator")
+  approvedGoals       Goal[]               @relation("GoalApprover")
+  goalProgressUpdates GoalProgressUpdate[]
+  performanceReviews  PerformanceReview[]
+  managedReviews      PerformanceReview[]  @relation("ReviewManager")
+  calibratedReviews   PerformanceReview[]  @relation("ReviewCalibrator")
+
+  // Payroll
+  salaryStructures        EmployeeSalaryStructure[]
+  payrolls                Payroll[]
+  payrollAdjustmentsAdded PayrollAdjustment[]       @relation("PayrollAdjustmentAdder")
+  payrollCyclesFinalized  PayrollCycle[]            @relation("PayrollCycleFinalizer")
+
+  // Expense Management
+  expenseClaims          ExpenseClaim[]
+  expenseDecisions       ExpenseClaim[]          @relation("ExpenseDecisionMaker")
+  expenseReimbursements  ExpenseClaim[]          @relation("ExpenseReimburser")
+  expenseApprovalActions ExpenseApprovalAction[]
+
+  // Recruitment
+  requisitionsCreated   JobRequisition[]          @relation("RequisitionCreator")
+  requisitionsManaging  JobRequisition[]          @relation("RequisitionHiringManager")
+  requisitionsApproved  JobRequisition[]          @relation("RequisitionApprover")
+  candidateReferrals    Candidate[]               @relation("CandidateReferrer")
+  candidateConversion   Candidate?                @relation("CandidateToEmployee")
+  applicationReferrals  JobApplication[]          @relation("ApplicationReferrer")
+  applicationRejections JobApplication[]          @relation("ApplicationRejector")
+  hiredFromApplication  JobApplication?           @relation("ApplicationHiredEmployee")
+  stageHistoryMovements ApplicationStageHistory[] @relation("StageHistoryMover")
+  interviewsScheduled   Interview[]               @relation("InterviewScheduler")
+  interviewPanels       InterviewPanelist[]       @relation("InterviewPanelistEmployee")
+  interviewFeedback     InterviewFeedback[]       @relation("InterviewFeedbackPanelist")
+  offersExtended        Offer[]                   @relation("OfferExtender")
+  offersRescinded       Offer[]                   @relation("OfferRescinder")
+  reportingForOffers    Offer[]                   @relation("OfferReportingManager")
+
+  // Onboarding
+  onboardingInstance      OnboardingInstance? @relation("OnboardingEmployee")
+  assignedOnboardingTasks OnboardingTask[]    @relation("OnboardingAssignee")
 
   @@unique([organizationId, employeeCode])
   @@index([organizationId])
@@ -382,7 +468,7 @@ model AttendancePolicy {
   id                      String               @id @default(uuid())
   organizationId          String               @map("organization_id")
   name                    String
-  policyType              AttendancePolicyType  @map("policy_type")
+  policyType              AttendancePolicyType @map("policy_type")
   startTime               String?              @map("start_time")
   endTime                 String?              @map("end_time")
   minHoursPerDay          Decimal?             @map("min_hours_per_day") @db.Decimal(4, 2)
@@ -396,7 +482,7 @@ model AttendancePolicy {
   createdAt               DateTime             @default(now()) @map("created_at")
   updatedAt               DateTime             @updatedAt @map("updated_at")
 
-  organization Organization                        @relation(fields: [organizationId], references: [id])
+  organization Organization                         @relation(fields: [organizationId], references: [id])
   assignments  EmployeeAttendancePolicyAssignment[]
 
   @@unique([organizationId, name])
@@ -573,6 +659,111 @@ enum LeaveDayType {
 }
 
 // ============================================
+// Payroll — Enums
+// ============================================
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+}
+
+enum PayrollCycleStatus {
+  DRAFT
+  PROCESSING
+  PROCESSED
+  FINALIZED
+}
+
+enum PayrollAdjustmentType {
+  EARNING
+  DEDUCTION
+}
+
+enum PayrollAdjustmentCategory {
+  BONUS
+  REIMBURSEMENT
+  PENALTY
+  OVERTIME_PAY
+  LOAN_REPAYMENT
+  OTHER
+}
+
+// ============================================
+// Expense Management — Enums
+// ============================================
+
+enum ExpenseClaimStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_APPROVED
+  FINANCE_APPROVED
+  REJECTED
+  REIMBURSED
+  CANCELLED
+}
+
+enum ExpenseApprovalDecision {
+  APPROVED
+  REJECTED
+}
+
+enum ExpenseApproverRole {
+  MANAGER
+  FINANCE
+}
+
+// ============================================
+// Notification Enums
+// ============================================
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================================
+// Performance Management — Enums
+// ============================================
+
+enum PerformanceCycleStatus {
+  DRAFT
+  GOAL_SETTING
+  ACTIVE
+  SELF_REVIEW
+  MANAGER_REVIEW
+  CALIBRATION
+  CLOSED
+}
+
+enum GoalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum GoalMeasurementType {
+  PERCENTAGE
+  NUMERIC
+  QUALITATIVE
+}
+
+enum ReviewStatus {
+  NOT_STARTED
+  SELF_REVIEW_IN_PROGRESS
+  SELF_REVIEW_SUBMITTED
+  MANAGER_REVIEW_IN_PROGRESS
+  MANAGER_REVIEW_SUBMITTED
+  COMPLETED
+}
+
+// ============================================
 // Leave Policies
 // ============================================
 
@@ -607,15 +798,15 @@ model LeavePolicy {
 // ============================================
 
 model EmployeeLeavePolicyAssignment {
-  id               String    @id @default(uuid())
-  organizationId   String    @map("organization_id")
-  employeeId       String    @map("employee_id")
-  leavePolicyId    String    @map("leave_policy_id")
-  customAnnualQuota Decimal? @map("custom_annual_quota") @db.Decimal(5, 2)
-  effectiveFrom    DateTime  @map("effective_from") @db.Date
-  effectiveTo      DateTime? @map("effective_to") @db.Date
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(uuid())
+  organizationId    String    @map("organization_id")
+  employeeId        String    @map("employee_id")
+  leavePolicyId     String    @map("leave_policy_id")
+  customAnnualQuota Decimal?  @map("custom_annual_quota") @db.Decimal(5, 2)
+  effectiveFrom     DateTime  @map("effective_from") @db.Date
+  effectiveTo       DateTime? @map("effective_to") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -720,13 +911,13 @@ model LeaveRequestDay {
 // ============================================
 
 model LeaveApprovalAction {
-  id                 String       @id @default(uuid())
-  leaveRequestId     String       @map("leave_request_id")
-  approverEmployeeId String       @map("approver_employee_id")
-  approverRole       ApproverRole @map("approver_role")
+  id                 String         @id @default(uuid())
+  leaveRequestId     String         @map("leave_request_id")
+  approverEmployeeId String         @map("approver_employee_id")
+  approverRole       ApproverRole   @map("approver_role")
   action             ApprovalAction
   remarks            String?
-  createdAt          DateTime     @default(now()) @map("created_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
 
   leaveRequest     LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
   approverEmployee Employee     @relation(fields: [approverEmployeeId], references: [id])
@@ -755,4 +946,1195 @@ model Holiday {
   @@unique([organizationId, date])
   @@index([organizationId])
   @@map("holidays")
+}
+
+// ============================================
+// Performance Cycles
+// ============================================
+
+model PerformanceCycle {
+  id                    String                 @id @default(uuid())
+  organizationId        String                 @map("organization_id")
+  name                  String
+  year                  Int
+  quarter               Int
+  startDate             DateTime               @map("start_date") @db.Date
+  endDate               DateTime               @map("end_date") @db.Date
+  goalSettingDeadline   DateTime?              @map("goal_setting_deadline") @db.Date
+  selfReviewDeadline    DateTime?              @map("self_review_deadline") @db.Date
+  managerReviewDeadline DateTime?              @map("manager_review_deadline") @db.Date
+  status                PerformanceCycleStatus @default(DRAFT)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  goals        Goal[]
+  reviews      PerformanceReview[]
+
+  @@unique([organizationId, year, quarter])
+  @@index([organizationId])
+  @@map("performance_cycles")
+}
+
+// ============================================
+// Goals
+// ============================================
+
+model Goal {
+  id                   String              @id @default(uuid())
+  organizationId       String              @map("organization_id")
+  cycleId              String              @map("cycle_id")
+  employeeId           String              @map("employee_id")
+  createdByEmployeeId  String              @map("created_by_employee_id")
+  title                String
+  description          String?
+  measurementType      GoalMeasurementType @map("measurement_type")
+  targetValue          Decimal?            @map("target_value") @db.Decimal(10, 2)
+  currentValue         Decimal?            @default(0) @map("current_value") @db.Decimal(10, 2)
+  weight               Decimal             @default(0) @db.Decimal(5, 2)
+  status               GoalStatus          @default(DRAFT)
+  isActive             Boolean             @default(true) @map("is_active")
+  approvedByEmployeeId String?             @map("approved_by_employee_id")
+  approvedAt           DateTime?           @map("approved_at")
+  rejectionReason      String?             @map("rejection_reason")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  organization       Organization         @relation(fields: [organizationId], references: [id])
+  cycle              PerformanceCycle     @relation(fields: [cycleId], references: [id])
+  employee           Employee             @relation(fields: [employeeId], references: [id])
+  createdByEmployee  Employee             @relation("GoalCreator", fields: [createdByEmployeeId], references: [id])
+  approvedByEmployee Employee?            @relation("GoalApprover", fields: [approvedByEmployeeId], references: [id])
+  progressUpdates    GoalProgressUpdate[]
+  goalReviews        GoalReview[]
+
+  @@index([organizationId])
+  @@index([cycleId])
+  @@index([employeeId])
+  @@index([createdByEmployeeId])
+  @@map("goals")
+}
+
+// ============================================
+// Goal Progress Updates
+// ============================================
+
+model GoalProgressUpdate {
+  id                  String   @id @default(uuid())
+  goalId              String   @map("goal_id")
+  updatedByEmployeeId String   @map("updated_by_employee_id")
+  value               Decimal? @db.Decimal(10, 2)
+  note                String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  goal              Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  updatedByEmployee Employee @relation(fields: [updatedByEmployeeId], references: [id])
+
+  @@index([goalId])
+  @@map("goal_progress_updates")
+}
+
+// ============================================
+// Performance Reviews
+// ============================================
+
+model PerformanceReview {
+  id                 String       @id @default(uuid())
+  organizationId     String       @map("organization_id")
+  cycleId            String       @map("cycle_id")
+  employeeId         String       @map("employee_id")
+  reviewerEmployeeId String?      @map("reviewer_employee_id")
+  status             ReviewStatus @default(NOT_STARTED)
+
+  // Self review
+  selfComment     String?   @map("self_comment")
+  selfRating      Decimal?  @map("self_rating") @db.Decimal(3, 2)
+  selfSubmittedAt DateTime? @map("self_submitted_at")
+
+  // Manager review
+  managerComment     String?   @map("manager_comment")
+  managerRating      Decimal?  @map("manager_rating") @db.Decimal(3, 2)
+  managerSubmittedAt DateTime? @map("manager_submitted_at")
+
+  // HR / final calibration
+  finalRating            Decimal?  @map("final_rating") @db.Decimal(3, 2)
+  calibrationComment     String?   @map("calibration_comment")
+  calibratedByEmployeeId String?   @map("calibrated_by_employee_id")
+  calibratedAt           DateTime? @map("calibrated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization         Organization     @relation(fields: [organizationId], references: [id])
+  cycle                PerformanceCycle @relation(fields: [cycleId], references: [id])
+  employee             Employee         @relation(fields: [employeeId], references: [id])
+  reviewerEmployee     Employee?        @relation("ReviewManager", fields: [reviewerEmployeeId], references: [id])
+  calibratedByEmployee Employee?        @relation("ReviewCalibrator", fields: [calibratedByEmployeeId], references: [id])
+  goalReviews          GoalReview[]
+
+  @@unique([cycleId, employeeId])
+  @@index([organizationId])
+  @@index([cycleId])
+  @@index([employeeId])
+  @@index([reviewerEmployeeId])
+  @@map("performance_reviews")
+}
+
+// ============================================
+// Goal Reviews (per-goal assessment within a review)
+// ============================================
+
+model GoalReview {
+  id       String @id @default(uuid())
+  reviewId String @map("review_id")
+  goalId   String @map("goal_id")
+
+  selfRating  Decimal? @map("self_rating") @db.Decimal(3, 2)
+  selfComment String?  @map("self_comment")
+
+  managerRating  Decimal? @map("manager_rating") @db.Decimal(3, 2)
+  managerComment String?  @map("manager_comment")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  review PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  goal   Goal              @relation(fields: [goalId], references: [id])
+
+  @@unique([reviewId, goalId])
+  @@index([reviewId])
+  @@index([goalId])
+  @@map("goal_reviews")
+}
+
+// ============================================
+// Salary Components (org-level catalog)
+// ============================================
+
+model SalaryComponent {
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  name           String
+  code           String
+  type           SalaryComponentType
+  description    String?
+  isTaxable      Boolean             @default(false) @map("is_taxable")
+  isDefault      Boolean             @default(false) @map("is_default")
+  isActive       Boolean             @default(true) @map("is_active")
+  sortOrder      Int                 @default(0) @map("sort_order")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  organization             Organization              @relation(fields: [organizationId], references: [id])
+  employeeSalaryComponents EmployeeSalaryComponent[]
+  payrollLineItems         PayrollLineItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("salary_components")
+}
+
+// ============================================
+// Employee Salary Structures (versioned header)
+// ============================================
+
+model EmployeeSalaryStructure {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  employeeId      String   @map("employee_id")
+  effectiveFrom   DateTime @map("effective_from") @db.Date
+  grossSalary     Decimal  @map("gross_salary") @db.Decimal(12, 2)
+  totalDeductions Decimal  @map("total_deductions") @db.Decimal(12, 2)
+  netSalary       Decimal  @map("net_salary") @db.Decimal(12, 2)
+  notes           String?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization              @relation(fields: [organizationId], references: [id])
+  employee     Employee                  @relation(fields: [employeeId], references: [id])
+  components   EmployeeSalaryComponent[]
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([employeeId, effectiveFrom])
+  @@map("employee_salary_structures")
+}
+
+// ============================================
+// Employee Salary Components (line items per structure)
+// ============================================
+
+model EmployeeSalaryComponent {
+  id                        String   @id @default(uuid())
+  employeeSalaryStructureId String   @map("employee_salary_structure_id")
+  salaryComponentId         String   @map("salary_component_id")
+  amount                    Decimal  @db.Decimal(12, 2)
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  employeeSalaryStructure EmployeeSalaryStructure @relation(fields: [employeeSalaryStructureId], references: [id], onDelete: Cascade)
+  salaryComponent         SalaryComponent         @relation(fields: [salaryComponentId], references: [id])
+
+  @@unique([employeeSalaryStructureId, salaryComponentId])
+  @@map("employee_salary_components")
+}
+
+// ============================================
+// Payroll Cycles (one per org per month)
+// ============================================
+
+model PayrollCycle {
+  id              String             @id @default(uuid())
+  organizationId  String             @map("organization_id")
+  year            Int
+  month           Int
+  periodStart     DateTime           @map("period_start") @db.Date
+  periodEnd       DateTime           @map("period_end") @db.Date
+  status          PayrollCycleStatus @default(DRAFT)
+  totalGross      Decimal?           @map("total_gross") @db.Decimal(12, 2)
+  totalDeductions Decimal?           @map("total_deductions") @db.Decimal(12, 2)
+  totalNet        Decimal?           @map("total_net") @db.Decimal(12, 2)
+  employeeCount   Int?               @map("employee_count")
+  generatedAt     DateTime?          @map("generated_at")
+  finalizedAt     DateTime?          @map("finalized_at")
+  finalizedById   String?            @map("finalized_by_id")
+  notes           String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  finalizedBy  Employee?    @relation("PayrollCycleFinalizer", fields: [finalizedById], references: [id])
+  payrolls     Payroll[]
+
+  @@unique([organizationId, year, month])
+  @@index([organizationId])
+  @@map("payroll_cycles")
+}
+
+// ============================================
+// Payroll (per-employee-per-cycle — IS the payslip)
+// ============================================
+
+model Payroll {
+  id                   String   @id @default(uuid())
+  organizationId       String   @map("organization_id")
+  payrollCycleId       String   @map("payroll_cycle_id")
+  employeeId           String   @map("employee_id")
+  totalWorkingDays     Decimal  @map("total_working_days") @db.Decimal(5, 2)
+  paidLeaveDays        Decimal  @default(0) @map("paid_leave_days") @db.Decimal(5, 2)
+  unpaidLeaveDays      Decimal  @default(0) @map("unpaid_leave_days") @db.Decimal(5, 2)
+  halfDays             Decimal  @default(0) @map("half_days") @db.Decimal(5, 2)
+  holidayDays          Decimal  @default(0) @map("holiday_days") @db.Decimal(5, 2)
+  effectiveWorkingDays Decimal  @map("effective_working_days") @db.Decimal(5, 2)
+  baseSalary           Decimal  @map("base_salary") @db.Decimal(12, 2)
+  grossEarnings        Decimal  @map("gross_earnings") @db.Decimal(12, 2)
+  totalDeductions      Decimal  @map("total_deductions") @db.Decimal(12, 2)
+  totalAdjustments     Decimal  @default(0) @map("total_adjustments") @db.Decimal(12, 2)
+  lossOfPayDeduction   Decimal  @default(0) @map("loss_of_pay_deduction") @db.Decimal(12, 2)
+  netPayable           Decimal  @map("net_payable") @db.Decimal(12, 2)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  payrollCycle PayrollCycle        @relation(fields: [payrollCycleId], references: [id], onDelete: Cascade)
+  employee     Employee            @relation(fields: [employeeId], references: [id])
+  lineItems    PayrollLineItem[]
+  adjustments  PayrollAdjustment[]
+
+  @@unique([payrollCycleId, employeeId])
+  @@index([organizationId])
+  @@index([payrollCycleId])
+  @@index([employeeId])
+  @@map("payrolls")
+}
+
+// ============================================
+// Payroll Line Items (component snapshots)
+// ============================================
+
+model PayrollLineItem {
+  id                String              @id @default(uuid())
+  payrollId         String              @map("payroll_id")
+  salaryComponentId String              @map("salary_component_id")
+  componentName     String              @map("component_name")
+  componentCode     String              @map("component_code")
+  type              SalaryComponentType
+  amount            Decimal             @db.Decimal(12, 2)
+  sortOrder         Int                 @default(0) @map("sort_order")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  payroll         Payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  salaryComponent SalaryComponent @relation(fields: [salaryComponentId], references: [id])
+
+  @@unique([payrollId, salaryComponentId])
+  @@index([payrollId])
+  @@map("payroll_line_items")
+}
+
+// ============================================
+// Payroll Adjustments (manual additions/deductions)
+// ============================================
+
+model PayrollAdjustment {
+  id          String                    @id @default(uuid())
+  payrollId   String                    @map("payroll_id")
+  type        PayrollAdjustmentType
+  category    PayrollAdjustmentCategory @default(OTHER)
+  description String
+  amount      Decimal                   @db.Decimal(12, 2)
+  addedById   String                    @map("added_by_id")
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+
+  payroll      Payroll       @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  addedBy      Employee      @relation("PayrollAdjustmentAdder", fields: [addedById], references: [id])
+  expenseClaim ExpenseClaim?
+
+  @@index([payrollId])
+  @@map("payroll_adjustments")
+}
+
+// ============================================
+// Expense Categories (org-level catalog)
+// ============================================
+
+model ExpenseCategory {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  code           String
+  description    String?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  expenseItems ExpenseItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("expense_categories")
+}
+
+// ============================================
+// Expense Policies (org-level rules)
+// ============================================
+
+model ExpensePolicy {
+  id                   String   @id @default(uuid())
+  organizationId       String   @map("organization_id")
+  name                 String
+  maxClaimAmount       Decimal? @map("max_claim_amount") @db.Decimal(12, 2)
+  maxItemAmount        Decimal? @map("max_item_amount") @db.Decimal(12, 2)
+  receiptRequiredAbove Decimal? @map("receipt_required_above") @db.Decimal(12, 2)
+  autoApproveBelow     Decimal? @map("auto_approve_below") @db.Decimal(12, 2)
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  organization  Organization   @relation(fields: [organizationId], references: [id])
+  expenseClaims ExpenseClaim[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("expense_policies")
+}
+
+// ============================================
+// Expense Claims (employee submissions)
+// ============================================
+
+model ExpenseClaim {
+  id                  String             @id @default(uuid())
+  organizationId      String             @map("organization_id")
+  employeeId          String             @map("employee_id")
+  expensePolicyId     String?            @map("expense_policy_id")
+  claimNumber         String             @map("claim_number")
+  title               String
+  description         String?
+  totalAmount         Decimal            @default(0) @map("total_amount") @db.Decimal(12, 2)
+  status              ExpenseClaimStatus @default(DRAFT)
+  submittedAt         DateTime?          @map("submitted_at")
+  managerDecisionAt   DateTime?          @map("manager_decision_at")
+  financeDecisionAt   DateTime?          @map("finance_decision_at")
+  finalDecisionAt     DateTime?          @map("final_decision_at")
+  finalDecisionById   String?            @map("final_decision_by_id")
+  reimbursedAt        DateTime?          @map("reimbursed_at")
+  reimbursedById      String?            @map("reimbursed_by_id")
+  payrollAdjustmentId String?            @unique @map("payroll_adjustment_id")
+  cancelledAt         DateTime?          @map("cancelled_at")
+  cancelReason        String?            @map("cancel_reason")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  organization      Organization            @relation(fields: [organizationId], references: [id])
+  employee          Employee                @relation(fields: [employeeId], references: [id])
+  expensePolicy     ExpensePolicy?          @relation(fields: [expensePolicyId], references: [id])
+  finalDecisionBy   Employee?               @relation("ExpenseDecisionMaker", fields: [finalDecisionById], references: [id])
+  reimbursedBy      Employee?               @relation("ExpenseReimburser", fields: [reimbursedById], references: [id])
+  payrollAdjustment PayrollAdjustment?      @relation(fields: [payrollAdjustmentId], references: [id])
+  items             ExpenseItem[]
+  approvalActions   ExpenseApprovalAction[]
+
+  @@unique([organizationId, claimNumber])
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("expense_claims")
+}
+
+// ============================================
+// Expense Items (line items within a claim)
+// ============================================
+
+model ExpenseItem {
+  id                String   @id @default(uuid())
+  expenseClaimId    String   @map("expense_claim_id")
+  expenseCategoryId String   @map("expense_category_id")
+  description       String
+  amount            Decimal  @db.Decimal(12, 2)
+  expenseDate       DateTime @map("expense_date") @db.Date
+  receiptUrl        String?  @map("receipt_url")
+  receiptFileName   String?  @map("receipt_file_name")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  expenseClaim    ExpenseClaim    @relation(fields: [expenseClaimId], references: [id], onDelete: Cascade)
+  expenseCategory ExpenseCategory @relation(fields: [expenseCategoryId], references: [id])
+
+  @@index([expenseClaimId])
+  @@map("expense_items")
+}
+
+// ============================================
+// Expense Approval Actions (audit trail)
+// ============================================
+
+model ExpenseApprovalAction {
+  id                 String                  @id @default(uuid())
+  expenseClaimId     String                  @map("expense_claim_id")
+  approverEmployeeId String                  @map("approver_employee_id")
+  approverRole       ExpenseApproverRole     @map("approver_role")
+  action             ExpenseApprovalDecision
+  remarks            String?
+  createdAt          DateTime                @default(now()) @map("created_at")
+
+  expenseClaim     ExpenseClaim @relation(fields: [expenseClaimId], references: [id], onDelete: Cascade)
+  approverEmployee Employee     @relation(fields: [approverEmployeeId], references: [id])
+
+  @@index([expenseClaimId])
+  @@index([approverEmployeeId])
+  @@map("expense_approval_actions")
+}
+
+// ============================================
+// Notification Templates
+// ============================================
+
+/// Organization-scoped templates for notification content.
+/// organizationId = null → system default template.
+/// Uniqueness enforced via partial indexes in migration (same pattern as Role).
+model NotificationTemplate {
+  id             String              @id @default(uuid())
+  organizationId String?             @map("organization_id")
+  eventType      String              @map("event_type")
+  channel        NotificationChannel @default(IN_APP)
+  subject        String
+  body           String
+  isActive       Boolean             @default(true) @map("is_active")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  // Uniqueness is enforced via partial indexes in the migration:
+  //   notification_templates_system_default_unique → (event_type, channel) WHERE organization_id IS NULL
+  //   notification_templates_org_unique → (organization_id, event_type, channel) WHERE organization_id IS NOT NULL
+  @@index([organizationId])
+  @@index([eventType])
+  @@map("notification_templates")
+}
+
+// ============================================
+// Notification Preferences
+// ============================================
+
+model NotificationPreference {
+  id        String              @id @default(uuid())
+  userId    String              @map("user_id")
+  eventType String              @map("event_type")
+  channel   NotificationChannel @default(IN_APP)
+  enabled   Boolean             @default(true)
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, eventType, channel])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+// ============================================
+// Notifications (in-app inbox)
+// ============================================
+
+model Notification {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  recipientUserId String    @map("recipient_user_id")
+  eventType       String    @map("event_type")
+  title           String
+  body            String
+  referenceId     String?   @map("reference_id")
+  referenceType   String?   @map("reference_type")
+  isRead          Boolean   @default(false) @map("is_read")
+  readAt          DateTime? @map("read_at")
+  isArchived      Boolean   @default(false) @map("is_archived")
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  organization  Organization              @relation(fields: [organizationId], references: [id])
+  recipientUser User                      @relation(fields: [recipientUserId], references: [id])
+  deliveryLogs  NotificationDeliveryLog[]
+
+  @@index([organizationId])
+  @@index([recipientUserId, isRead])
+  @@index([recipientUserId, isArchived])
+  @@index([eventType])
+  @@index([referenceId, referenceType])
+  @@map("notifications")
+}
+
+// ============================================
+// Notification Delivery Logs (audit trail)
+// ============================================
+
+model NotificationDeliveryLog {
+  id             String              @id @default(uuid())
+  notificationId String              @map("notification_id")
+  channel        NotificationChannel
+  status         NotificationStatus
+  errorMessage   String?             @map("error_message")
+  deliveredAt    DateTime?           @map("delivered_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@map("notification_delivery_logs")
+}
+
+// ============================================
+// Recruitment — Enums
+// ============================================
+
+enum JobRequisitionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  OPEN
+  ON_HOLD
+  FILLED
+  CANCELLED
+  CLOSED
+}
+
+enum JobPostingStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum JobPostingChannel {
+  INTERNAL
+  CAREERS_PAGE
+  LINKEDIN
+  INDEED
+  REFERRAL
+  OTHER
+}
+
+enum CandidateSource {
+  CAREERS_PAGE
+  LINKEDIN
+  INDEED
+  REFERRAL
+  AGENCY
+  DIRECT_OUTREACH
+  WALK_IN
+  OTHER
+}
+
+enum ApplicationStatus {
+  APPLIED
+  IN_PROGRESS
+  OFFER_EXTENDED
+  HIRED
+  REJECTED
+  WITHDRAWN
+  ON_HOLD
+}
+
+enum ApplicationRejectionReason {
+  NOT_QUALIFIED
+  FAILED_INTERVIEW
+  FAILED_ASSESSMENT
+  CULTURAL_FIT
+  COMPENSATION_MISMATCH
+  POSITION_FILLED
+  DUPLICATE
+  OTHER
+}
+
+enum InterviewType {
+  PHONE_SCREEN
+  TECHNICAL
+  BEHAVIORAL
+  PANEL
+  SYSTEM_DESIGN
+  HIRING_MANAGER
+  HR_ROUND
+  FINAL
+  OTHER
+}
+
+enum InterviewMode {
+  IN_PERSON
+  VIDEO
+  PHONE
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum InterviewRecommendation {
+  STRONG_HIRE
+  HIRE
+  NO_HIRE
+  STRONG_NO_HIRE
+  NEEDS_ANOTHER_ROUND
+}
+
+enum OfferStatus {
+  DRAFT
+  EXTENDED
+  ACCEPTED
+  DECLINED
+  RESCINDED
+  EXPIRED
+}
+
+// ============================================
+// Recruitment — Job Requisitions
+// ============================================
+
+model JobRequisition {
+  id                   String               @id @default(uuid())
+  organizationId       String               @map("organization_id")
+  requisitionNumber    String               @map("requisition_number")
+  title                String
+  departmentId         String?              @map("department_id")
+  designationId        String?              @map("designation_id")
+  hiringManagerId      String               @map("hiring_manager_id")
+  employmentType       EmploymentType       @map("employment_type")
+  numberOfOpenings     Int                  @default(1) @map("number_of_openings")
+  positionsFilled      Int                  @default(0) @map("positions_filled")
+  location             String?
+  minSalary            Decimal?             @map("min_salary") @db.Decimal(12, 2)
+  maxSalary            Decimal?             @map("max_salary") @db.Decimal(12, 2)
+  description          String?
+  requirements         String?
+  targetStartDate      DateTime?            @map("target_start_date") @db.Date
+  status               JobRequisitionStatus @default(DRAFT)
+  createdByEmployeeId  String               @map("created_by_employee_id")
+  submittedAt          DateTime?            @map("submitted_at")
+  approvedByEmployeeId String?              @map("approved_by_employee_id")
+  approvedAt           DateTime?            @map("approved_at")
+  rejectionReason      String?              @map("rejection_reason")
+  closedAt             DateTime?            @map("closed_at")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  organization  Organization     @relation(fields: [organizationId], references: [id])
+  department    Department?      @relation(fields: [departmentId], references: [id])
+  designation   Designation?     @relation(fields: [designationId], references: [id])
+  hiringManager Employee         @relation("RequisitionHiringManager", fields: [hiringManagerId], references: [id])
+  createdBy     Employee         @relation("RequisitionCreator", fields: [createdByEmployeeId], references: [id])
+  approvedBy    Employee?        @relation("RequisitionApprover", fields: [approvedByEmployeeId], references: [id])
+  postings      JobPosting[]
+  applications  JobApplication[]
+
+  @@unique([organizationId, requisitionNumber])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([hiringManagerId])
+  @@index([status])
+  @@map("job_requisitions")
+}
+
+// ============================================
+// Recruitment — Job Postings
+// ============================================
+
+model JobPosting {
+  id               String            @id @default(uuid())
+  organizationId   String            @map("organization_id")
+  jobRequisitionId String            @map("job_requisition_id")
+  title            String
+  slug             String
+  channel          JobPostingChannel
+  description      String
+  isInternal       Boolean           @default(false) @map("is_internal")
+  publishedAt      DateTime?         @map("published_at")
+  closedAt         DateTime?         @map("closed_at")
+  status           JobPostingStatus  @default(DRAFT)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  jobRequisition JobRequisition     @relation(fields: [jobRequisitionId], references: [id], onDelete: Cascade)
+  stages         ApplicationStage[]
+  applications   JobApplication[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([jobRequisitionId])
+  @@index([status])
+  @@map("job_postings")
+}
+
+// ============================================
+// Recruitment — Application Stages (per posting)
+// ============================================
+
+model ApplicationStage {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  jobPostingId   String   @map("job_posting_id")
+  name           String
+  slug           String
+  sortOrder      Int      @map("sort_order")
+  isTerminal     Boolean  @default(false) @map("is_terminal")
+  isHired        Boolean  @default(false) @map("is_hired")
+  isRejected     Boolean  @default(false) @map("is_rejected")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  jobPosting       JobPosting                @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  applicationsHere JobApplication[]          @relation("ApplicationCurrentStage")
+  stageHistory     ApplicationStageHistory[]
+  interviews       Interview[]               @relation("InterviewStage")
+
+  @@unique([jobPostingId, slug])
+  @@unique([jobPostingId, sortOrder])
+  @@index([jobPostingId])
+  @@map("application_stages")
+}
+
+// ============================================
+// Recruitment — Candidates (person)
+// ============================================
+
+model Candidate {
+  id                  String          @id @default(uuid())
+  organizationId      String          @map("organization_id")
+  firstName           String          @map("first_name")
+  lastName            String          @map("last_name")
+  email               String
+  phone               String?
+  currentCompany      String?         @map("current_company")
+  currentTitle        String?         @map("current_title")
+  totalExperience     Decimal?        @map("total_experience") @db.Decimal(4, 1)
+  linkedinUrl         String?         @map("linkedin_url")
+  portfolioUrl        String?         @map("portfolio_url")
+  resumeUrl           String?         @map("resume_url")
+  resumeFileName      String?         @map("resume_file_name")
+  location            String?
+  noticePeriodDays    Int?            @map("notice_period_days")
+  source              CandidateSource @default(OTHER)
+  referrerEmployeeId  String?         @map("referrer_employee_id")
+  notes               String?
+  isBlacklisted       Boolean         @default(false) @map("is_blacklisted")
+  blacklistReason     String?         @map("blacklist_reason")
+  convertedEmployeeId String?         @unique @map("converted_employee_id")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  referrerEmployee  Employee?        @relation("CandidateReferrer", fields: [referrerEmployeeId], references: [id])
+  convertedEmployee Employee?        @relation("CandidateToEmployee", fields: [convertedEmployeeId], references: [id])
+  applications      JobApplication[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+  @@index([referrerEmployeeId])
+  @@index([isBlacklisted])
+  @@map("candidates")
+}
+
+// ============================================
+// Recruitment — Job Applications
+// ============================================
+
+model JobApplication {
+  id                   String                      @id @default(uuid())
+  organizationId       String                      @map("organization_id")
+  candidateId          String                      @map("candidate_id")
+  jobRequisitionId     String                      @map("job_requisition_id")
+  jobPostingId         String?                     @map("job_posting_id")
+  currentStageId       String?                     @map("current_stage_id")
+  status               ApplicationStatus           @default(APPLIED)
+  source               CandidateSource             @default(OTHER)
+  referrerEmployeeId   String?                     @map("referrer_employee_id")
+  appliedAt            DateTime                    @default(now()) @map("applied_at")
+  coverLetter          String?                     @map("cover_letter")
+  resumeUrl            String?                     @map("resume_url")
+  resumeFileName       String?                     @map("resume_file_name")
+  expectedSalary       Decimal?                    @map("expected_salary") @db.Decimal(12, 2)
+  rejectionReason      ApplicationRejectionReason? @map("rejection_reason")
+  rejectionNotes       String?                     @map("rejection_notes")
+  rejectedAt           DateTime?                   @map("rejected_at")
+  rejectedByEmployeeId String?                     @map("rejected_by_employee_id")
+  withdrawnAt          DateTime?                   @map("withdrawn_at")
+  withdrawnReason      String?                     @map("withdrawn_reason")
+  hiredAt              DateTime?                   @map("hired_at")
+  hiredEmployeeId      String?                     @unique @map("hired_employee_id")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
+
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  candidate      Candidate         @relation(fields: [candidateId], references: [id])
+  jobRequisition JobRequisition    @relation(fields: [jobRequisitionId], references: [id])
+  jobPosting     JobPosting?       @relation(fields: [jobPostingId], references: [id])
+  currentStage   ApplicationStage? @relation("ApplicationCurrentStage", fields: [currentStageId], references: [id])
+  referrer       Employee?         @relation("ApplicationReferrer", fields: [referrerEmployeeId], references: [id])
+  rejectedBy     Employee?         @relation("ApplicationRejector", fields: [rejectedByEmployeeId], references: [id])
+  hiredEmployee  Employee?         @relation("ApplicationHiredEmployee", fields: [hiredEmployeeId], references: [id])
+
+  stageHistory ApplicationStageHistory[]
+  interviews   Interview[]
+  offers       Offer[]
+
+  @@unique([candidateId, jobRequisitionId])
+  @@index([organizationId])
+  @@index([candidateId])
+  @@index([jobRequisitionId])
+  @@index([jobPostingId])
+  @@index([currentStageId])
+  @@index([status])
+  @@map("job_applications")
+}
+
+// ============================================
+// Recruitment — Application Stage History
+// ============================================
+
+model ApplicationStageHistory {
+  id                String   @id @default(uuid())
+  applicationId     String   @map("application_id")
+  fromStageId       String?  @map("from_stage_id")
+  toStageId         String   @map("to_stage_id")
+  movedByEmployeeId String   @map("moved_by_employee_id")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  application JobApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  toStage     ApplicationStage @relation(fields: [toStageId], references: [id])
+  movedBy     Employee         @relation("StageHistoryMover", fields: [movedByEmployeeId], references: [id])
+
+  @@index([applicationId])
+  @@index([toStageId])
+  @@map("application_stage_history")
+}
+
+// ============================================
+// Recruitment — Interviews
+// ============================================
+
+model Interview {
+  id                    String          @id @default(uuid())
+  organizationId        String          @map("organization_id")
+  applicationId         String          @map("application_id")
+  stageId               String?         @map("stage_id")
+  scheduledAt           DateTime        @map("scheduled_at")
+  durationMinutes       Int             @default(60) @map("duration_minutes")
+  type                  InterviewType
+  mode                  InterviewMode   @default(VIDEO)
+  location              String?
+  meetingUrl            String?         @map("meeting_url")
+  status                InterviewStatus @default(SCHEDULED)
+  scheduledByEmployeeId String          @map("scheduled_by_employee_id")
+  cancelledAt           DateTime?       @map("cancelled_at")
+  cancelReason          String?         @map("cancel_reason")
+  notes                 String?
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  application  JobApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage        ApplicationStage?   @relation("InterviewStage", fields: [stageId], references: [id])
+  scheduledBy  Employee            @relation("InterviewScheduler", fields: [scheduledByEmployeeId], references: [id])
+  interviewers InterviewPanelist[]
+  feedback     InterviewFeedback[]
+
+  @@index([organizationId])
+  @@index([applicationId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("interviews")
+}
+
+// ============================================
+// Recruitment — Interview Panelists (many-to-many)
+// ============================================
+
+model InterviewPanelist {
+  id          String   @id @default(uuid())
+  interviewId String   @map("interview_id")
+  employeeId  String   @map("employee_id")
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  employee  Employee  @relation("InterviewPanelistEmployee", fields: [employeeId], references: [id])
+
+  @@unique([interviewId, employeeId])
+  @@index([employeeId])
+  @@map("interview_panelists")
+}
+
+// ============================================
+// Recruitment — Interview Feedback
+// ============================================
+
+model InterviewFeedback {
+  id                 String                  @id @default(uuid())
+  interviewId        String                  @map("interview_id")
+  panelistEmployeeId String                  @map("panelist_employee_id")
+  rating             Int
+  recommendation     InterviewRecommendation
+  strengths          String?
+  weaknesses         String?
+  comments           String?
+  submittedAt        DateTime                @default(now()) @map("submitted_at")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  panelist  Employee  @relation("InterviewFeedbackPanelist", fields: [panelistEmployeeId], references: [id])
+
+  @@unique([interviewId, panelistEmployeeId])
+  @@index([interviewId])
+  @@index([panelistEmployeeId])
+  @@map("interview_feedback")
+}
+
+// ============================================
+// Recruitment — Offers
+// ============================================
+// At most one live offer per application is enforced via a partial unique
+// index (status IN 'DRAFT','EXTENDED','ACCEPTED') added as raw SQL in the
+// migration — see offers_application_active_unique.
+
+model Offer {
+  id                    String         @id @default(uuid())
+  organizationId        String         @map("organization_id")
+  applicationId         String         @map("application_id")
+  offerNumber           String         @map("offer_number")
+  version               Int            @default(1)
+  employmentType        EmploymentType @map("employment_type")
+  designationId         String?        @map("designation_id")
+  departmentId          String?        @map("department_id")
+  reportingManagerId    String?        @map("reporting_manager_id")
+  baseSalary            Decimal        @map("base_salary") @db.Decimal(12, 2)
+  joiningBonus          Decimal?       @map("joining_bonus") @db.Decimal(12, 2)
+  currency              String         @default("USD")
+  proposedJoiningDate   DateTime       @map("proposed_joining_date") @db.Date
+  expiresAt             DateTime       @map("expires_at")
+  offerLetterUrl        String?        @map("offer_letter_url")
+  offerLetterFileName   String?        @map("offer_letter_file_name")
+  status                OfferStatus    @default(DRAFT)
+  extendedAt            DateTime?      @map("extended_at")
+  extendedByEmployeeId  String?        @map("extended_by_employee_id")
+  respondedAt           DateTime?      @map("responded_at")
+  rescindedAt           DateTime?      @map("rescinded_at")
+  rescindedByEmployeeId String?        @map("rescinded_by_employee_id")
+  rescindReason         String?        @map("rescind_reason")
+  declineReason         String?        @map("decline_reason")
+  notes                 String?
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  organization     Organization   @relation(fields: [organizationId], references: [id])
+  application      JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  designation      Designation?   @relation("OfferDesignation", fields: [designationId], references: [id])
+  department       Department?    @relation("OfferDepartment", fields: [departmentId], references: [id])
+  reportingManager Employee?      @relation("OfferReportingManager", fields: [reportingManagerId], references: [id])
+  extendedBy       Employee?      @relation("OfferExtender", fields: [extendedByEmployeeId], references: [id])
+  rescindedBy      Employee?      @relation("OfferRescinder", fields: [rescindedByEmployeeId], references: [id])
+
+  @@unique([organizationId, offerNumber])
+  @@index([organizationId])
+  @@index([applicationId])
+  @@index([status])
+  @@map("offers")
+}
+
+// ============================================
+// Onboarding — Enums
+// ============================================
+
+enum OnboardingInstanceStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum OnboardingTaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+}
+
+enum OnboardingTaskAssigneeRole {
+  NEW_HIRE
+  MANAGER
+  HR
+  IT
+  CUSTOM
+}
+
+// ============================================
+// Onboarding — Templates (reusable blueprints)
+// ============================================
+// Single active default template per org is enforced via a partial unique
+// index added as raw SQL in the migration — see
+// onboarding_templates_default_unique.
+
+model OnboardingTemplate {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  description    String?
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization             @relation(fields: [organizationId], references: [id])
+  tasks        OnboardingTemplateTask[]
+  instances    OnboardingInstance[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, isDefault, isActive])
+  @@map("onboarding_templates")
+}
+
+model OnboardingTemplateTask {
+  id            String                     @id @default(uuid())
+  templateId    String                     @map("template_id")
+  title         String
+  description   String?
+  assigneeRole  OnboardingTaskAssigneeRole @map("assignee_role")
+  offsetDays    Int                        @map("offset_days")
+  sortOrder     Int                        @map("sort_order")
+  isRequired    Boolean                    @default(true) @map("is_required")
+  allowDocument Boolean                    @default(false) @map("allow_document")
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  updatedAt     DateTime                   @updatedAt @map("updated_at")
+
+  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, sortOrder])
+  @@index([templateId])
+  @@map("onboarding_template_tasks")
+}
+
+// ============================================
+// Onboarding — Instances (one per hired employee)
+// ============================================
+
+model OnboardingInstance {
+  id              String                   @id @default(uuid())
+  organizationId  String                   @map("organization_id")
+  employeeId      String                   @unique @map("employee_id")
+  templateId      String?                  @map("template_id")
+  templateName    String                   @map("template_name")
+  joiningDate     DateTime                 @map("joining_date") @db.Date
+  status          OnboardingInstanceStatus @default(NOT_STARTED)
+  startedAt       DateTime?                @map("started_at")
+  completedAt     DateTime?                @map("completed_at")
+  cancelledAt     DateTime?                @map("cancelled_at")
+  cancelReason    String?                  @map("cancel_reason")
+  createdByUserId String?                  @map("created_by_user_id")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  employee     Employee            @relation("OnboardingEmployee", fields: [employeeId], references: [id])
+  template     OnboardingTemplate? @relation(fields: [templateId], references: [id])
+  tasks        OnboardingTask[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("onboarding_instances")
+}
+
+model OnboardingTask {
+  id                   String                     @id @default(uuid())
+  onboardingInstanceId String                     @map("onboarding_instance_id")
+  templateTaskId       String?                    @map("template_task_id")
+  title                String
+  description          String?
+  assigneeRole         OnboardingTaskAssigneeRole @map("assignee_role")
+  assigneeEmployeeId   String?                    @map("assignee_employee_id")
+  sortOrder            Int                        @map("sort_order")
+  isRequired           Boolean                    @default(true) @map("is_required")
+  allowDocument        Boolean                    @default(false) @map("allow_document")
+  dueDate              DateTime                   @map("due_date") @db.Date
+  status               OnboardingTaskStatus       @default(NOT_STARTED)
+  startedAt            DateTime?                  @map("started_at")
+  completedAt          DateTime?                  @map("completed_at")
+  completedByUserId    String?                    @map("completed_by_user_id")
+  blockedReason        String?                    @map("blocked_reason")
+  notes                String?
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+
+  onboardingInstance OnboardingInstance       @relation(fields: [onboardingInstanceId], references: [id], onDelete: Cascade)
+  assigneeEmployee   Employee?                @relation("OnboardingAssignee", fields: [assigneeEmployeeId], references: [id])
+  documents          OnboardingTaskDocument[]
+
+  @@index([onboardingInstanceId])
+  @@index([assigneeEmployeeId])
+  @@index([status])
+  @@map("onboarding_tasks")
+}
+
+model OnboardingTaskDocument {
+  id               String   @id @default(uuid())
+  onboardingTaskId String   @map("onboarding_task_id")
+  fileUrl          String   @map("file_url")
+  fileName         String   @map("file_name")
+  uploadedByUserId String?  @map("uploaded_by_user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  onboardingTask OnboardingTask @relation(fields: [onboardingTaskId], references: [id], onDelete: Cascade)
+
+  @@index([onboardingTaskId])
+  @@map("onboarding_task_documents")
 }

@@ -4,18 +4,24 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { LeaveDayType } from '@prisma/client';
 import { LeaveBalancesService } from './leave-balances.service';
 import { CreateLeaveRequestDto } from '../dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from '../dto/review-leave-request.dto';
+import { CancelLeaveRequestDto } from '../dto/cancel-leave-request.dto';
+import { NotificationEvents } from '../../notification/events/event-types';
+
+const HR_ROLE_SLUGS = ['hr_admin', 'super_admin'];
 
 @Injectable()
 export class LeaveRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly balancesService: LeaveBalancesService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ─── Employee submits a leave request ──
@@ -31,6 +37,13 @@ export class LeaveRequestsService {
 
     if (endDate < startDate) {
       throw new BadRequestException('endDate cannot be before startDate');
+    }
+
+    // Reject cross-year requests
+    if (startDate.getUTCFullYear() !== endDate.getUTCFullYear()) {
+      throw new BadRequestException(
+        'Cross-year leave requests are not supported. Please submit separate requests for each year.',
+      );
     }
 
     // Validate policy exists and belongs to org
@@ -60,9 +73,10 @@ export class LeaveRequestsService {
       }
     }
 
-    // Check overlapping pending/approved requests
+    // Check overlapping pending/approved requests (org-scoped)
     const overlap = await this.prisma.leaveRequest.findFirst({
       where: {
+        organizationId,
         employeeId: employee.id,
         status: { in: ['PENDING', 'APPROVED'] },
         startDate: { lte: endDate },
@@ -101,7 +115,7 @@ export class LeaveRequestsService {
     }
 
     // Create the request with day breakdown
-    return this.prisma.leaveRequest.create({
+    const created = await this.prisma.leaveRequest.create({
       data: {
         organizationId,
         employeeId: employee.id,
@@ -125,6 +139,29 @@ export class LeaveRequestsService {
         leavePolicy: { select: { id: true, name: true, code: true } },
       },
     });
+
+    // Notify: manager (if any), otherwise HR
+    const recipientEmployeeIds: string[] = [];
+    if (employee.reportingManagerId) {
+      recipientEmployeeIds.push(employee.reportingManagerId);
+    }
+
+    this.eventEmitter.emit(NotificationEvents.LEAVE_SUBMITTED, {
+      organizationId,
+      actorUserId: userId,
+      referenceId: created.id,
+      referenceType: 'LeaveRequest',
+      recipientEmployeeIds,
+      variables: {
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        leaveType: created.leavePolicy.name,
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+        totalDays: totalDays.toString(),
+      },
+    });
+
+    return created;
   }
 
   // ─── Employee views own requests ──────
@@ -139,6 +176,7 @@ export class LeaveRequestsService {
     return this.prisma.leaveRequest.findMany({
       where: {
         employeeId: employee.id,
+        organizationId,
         ...(status && { status: status as any }),
       },
       include: {
@@ -151,11 +189,16 @@ export class LeaveRequestsService {
 
   // ─── Employee cancels own request ─────
 
-  async cancel(userId: string, organizationId: string, requestId: string, cancelReason?: string) {
+  async cancel(
+    userId: string,
+    organizationId: string,
+    requestId: string,
+    dto: CancelLeaveRequestDto,
+  ) {
     const employee = await this.findEmployeeByUserId(userId, organizationId);
 
     const request = await this.prisma.leaveRequest.findFirst({
-      where: { id: requestId, employeeId: employee.id },
+      where: { id: requestId, employeeId: employee.id, organizationId },
     });
     if (!request) throw new NotFoundException('Leave request not found');
 
@@ -173,7 +216,7 @@ export class LeaveRequestsService {
       data: {
         status: 'CANCELLED',
         cancelledAt: new Date(),
-        cancelReason: cancelReason ?? null,
+        cancelReason: dto.cancelReason ?? null,
       },
     });
 
@@ -187,6 +230,25 @@ export class LeaveRequestsService {
         new Decimal(request.totalDays.toString()),
       );
     }
+
+    // Notify: manager (if any)
+    const recipientEmployeeIds: string[] = [];
+    if (employee.reportingManagerId) {
+      recipientEmployeeIds.push(employee.reportingManagerId);
+    }
+
+    this.eventEmitter.emit(NotificationEvents.LEAVE_CANCELLED, {
+      organizationId,
+      actorUserId: userId,
+      referenceId: requestId,
+      referenceType: 'LeaveRequest',
+      recipientEmployeeIds,
+      variables: {
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        startDate: request.startDate.toISOString().slice(0, 10),
+        endDate: request.endDate.toISOString().slice(0, 10),
+      },
+    });
 
     return updated;
   }
@@ -259,6 +321,7 @@ export class LeaveRequestsService {
     organizationId: string,
     requestId: string,
     dto: ReviewLeaveRequestDto,
+    userRoles: string[],
   ) {
     const reviewer = await this.findEmployeeByUserId(reviewerUserId, organizationId);
 
@@ -276,128 +339,240 @@ export class LeaveRequestsService {
       throw new BadRequestException('This request is no longer pending');
     }
 
-    // Determine reviewer role
-    const approverRole = this.determineApproverRole(
+    // Determine reviewer role explicitly
+    const approverRole = this.resolveApproverRole(
       reviewer.id,
       request.employee.reportingManagerId,
+      userRoles,
     );
 
+    // Prevent same employee from acting twice on the same request
+    const alreadyActedByEmployee = request.approvalActions.some(
+      (a) => a.approverEmployeeId === reviewer.id,
+    );
+    if (alreadyActedByEmployee) {
+      throw new BadRequestException('You have already reviewed this request');
+    }
+
     // Check if this role has already acted
-    const alreadyActed = request.approvalActions.some(
+    const alreadyActedByRole = request.approvalActions.some(
       (a) => a.approverRole === approverRole,
     );
-    if (alreadyActed) {
+    if (alreadyActedByRole) {
       throw new BadRequestException(
         `${approverRole} has already reviewed this request`,
       );
     }
 
-    // For MANAGER approval, ensure manager acts first
+    // HR cannot act before manager
     if (approverRole === 'HR' && !request.approvalActions.some((a) => a.approverRole === 'MANAGER')) {
       throw new BadRequestException('Manager must review before HR');
     }
 
-    // Record the action
-    await this.prisma.leaveApprovalAction.create({
-      data: {
-        leaveRequestId: requestId,
-        approverEmployeeId: reviewer.id,
-        approverRole,
-        action: dto.action,
-        remarks: dto.remarks ?? null,
-      },
-    });
-
-    // Determine the new status
+    // Wrap in transaction: create action + update request + deduct balance
     const now = new Date();
 
-    if (dto.action === 'REJECTED') {
-      // Any rejection → REJECTED immediately
-      const updated = await this.prisma.leaveRequest.update({
-        where: { id: requestId },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Record the action
+      await tx.leaveApprovalAction.create({
         data: {
-          status: 'REJECTED',
-          ...(approverRole === 'MANAGER' && { managerDecisionAt: now }),
-          ...(approverRole === 'HR' && { hrDecisionAt: now }),
-          finalDecisionAt: now,
-          finalDecisionById: reviewer.id,
+          leaveRequestId: requestId,
+          approverEmployeeId: reviewer.id,
+          approverRole,
+          action: dto.action,
+          remarks: dto.remarks ?? null,
         },
       });
-      return updated;
-    }
 
-    // APPROVED action
-    const updateData: any = {
-      ...(approverRole === 'MANAGER' && { managerDecisionAt: now }),
-      ...(approverRole === 'HR' && { hrDecisionAt: now }),
-    };
-
-    // Check if fully approved (both MANAGER and HR have approved)
-    const managerApproved =
-      approverRole === 'MANAGER' ||
-      request.approvalActions.some(
-        (a) => a.approverRole === 'MANAGER' && a.action === 'APPROVED',
-      );
-    const hrApproved =
-      approverRole === 'HR' ||
-      request.approvalActions.some(
-        (a) => a.approverRole === 'HR' && a.action === 'APPROVED',
-      );
-
-    if (managerApproved && hrApproved) {
-      updateData.status = 'APPROVED';
-      updateData.finalDecisionAt = now;
-      updateData.finalDecisionById = reviewer.id;
-
-      // Deduct balance
-      const year = request.startDate.getUTCFullYear();
-      await this.balancesService.deductBalance(
-        request.employeeId,
-        request.leavePolicyId,
-        year,
-        new Decimal(request.totalDays.toString()),
-      );
-    }
-
-    const updated = await this.prisma.leaveRequest.update({
-      where: { id: requestId },
-      data: updateData,
-      include: {
-        approvalActions: {
+      if (dto.action === 'REJECTED') {
+        // Any rejection → REJECTED immediately
+        return tx.leaveRequest.update({
+          where: { id: requestId },
+          data: {
+            status: 'REJECTED',
+            ...(approverRole === 'MANAGER' && { managerDecisionAt: now }),
+            ...(approverRole === 'HR' && { hrDecisionAt: now }),
+            finalDecisionAt: now,
+            finalDecisionById: reviewer.id,
+          },
           include: {
-            approverEmployee: {
-              select: { id: true, firstName: true, lastName: true },
+            approvalActions: {
+              include: {
+                approverEmployee: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+              orderBy: { createdAt: 'asc' },
             },
           },
-          orderBy: { createdAt: 'asc' },
+        });
+      }
+
+      // APPROVED action
+      const updateData: any = {
+        ...(approverRole === 'MANAGER' && { managerDecisionAt: now }),
+        ...(approverRole === 'HR' && { hrDecisionAt: now }),
+      };
+
+      // Check if fully approved (both MANAGER and HR have approved)
+      const managerApproved =
+        approverRole === 'MANAGER' ||
+        request.approvalActions.some(
+          (a) => a.approverRole === 'MANAGER' && a.action === 'APPROVED',
+        );
+      const hrApproved =
+        approverRole === 'HR' ||
+        request.approvalActions.some(
+          (a) => a.approverRole === 'HR' && a.action === 'APPROVED',
+        );
+
+      if (managerApproved && hrApproved) {
+        updateData.status = 'APPROVED';
+        updateData.finalDecisionAt = now;
+        updateData.finalDecisionById = reviewer.id;
+
+        // Deduct balance inside the transaction
+        const year = request.startDate.getUTCFullYear();
+        const totalDays = new Decimal(request.totalDays.toString());
+
+        const balance = await tx.employeeLeaveBalance.findUnique({
+          where: {
+            employeeId_leavePolicyId_year: {
+              employeeId: request.employeeId,
+              leavePolicyId: request.leavePolicyId,
+              year,
+            },
+          },
+        });
+
+        if (!balance) {
+          throw new BadRequestException('No balance record found for this leave type and year');
+        }
+
+        const currentBalance = new Decimal(balance.balance.toString());
+        if (currentBalance.lessThan(totalDays)) {
+          throw new BadRequestException('Insufficient leave balance');
+        }
+
+        const newUsed = new Decimal(balance.used.toString()).plus(totalDays);
+        const newBalance = currentBalance.minus(totalDays);
+
+        await tx.employeeLeaveBalance.update({
+          where: { id: balance.id },
+          data: { used: newUsed, balance: newBalance },
+        });
+      }
+
+      return tx.leaveRequest.update({
+        where: { id: requestId },
+        data: updateData,
+        include: {
+          approvalActions: {
+            include: {
+              approverEmployee: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
+      });
     });
 
-    return updated;
+    // Emit notification events based on final state
+    if (result.status === 'REJECTED') {
+      this.eventEmitter.emit(NotificationEvents.LEAVE_REJECTED, {
+        organizationId,
+        actorUserId: reviewerUserId,
+        referenceId: requestId,
+        referenceType: 'LeaveRequest',
+        recipientEmployeeIds: [request.employeeId],
+        variables: {
+          startDate: request.startDate.toISOString().slice(0, 10),
+          endDate: request.endDate.toISOString().slice(0, 10),
+          remarks: dto.remarks ?? '',
+        },
+      });
+    } else if (result.status === 'APPROVED') {
+      this.eventEmitter.emit(NotificationEvents.LEAVE_APPROVED, {
+        organizationId,
+        actorUserId: reviewerUserId,
+        referenceId: requestId,
+        referenceType: 'LeaveRequest',
+        recipientEmployeeIds: [request.employeeId],
+        variables: {
+          startDate: request.startDate.toISOString().slice(0, 10),
+          endDate: request.endDate.toISOString().slice(0, 10),
+          totalDays: request.totalDays.toString(),
+        },
+      });
+    }
+
+    return result;
   }
 
   // ─── Pending requests for approver ────
 
-  async findPendingForApprover(userId: string, organizationId: string) {
+  async findPendingForApprover(
+    userId: string,
+    organizationId: string,
+    userRoles: string[],
+  ) {
     const approver = await this.findEmployeeByUserId(userId, organizationId);
 
-    // Find direct reports (manager role)
-    const directReportIds = await this.prisma.employee.findMany({
+    const isManager = await this.prisma.employee.count({
       where: { reportingManagerId: approver.id, organizationId, isActive: true },
-      select: { id: true },
-    });
-    const reportIds = directReportIds.map((e) => e.id);
+    }) > 0;
+
+    const isHR = userRoles.some((r) => HR_ROLE_SLUGS.includes(r));
+
+    if (!isManager && !isHR) {
+      return [];
+    }
+
+    // Filter out requests this approver has already acted on
+    const alreadyActedFilter = {
+      approvalActions: {
+        none: { approverEmployeeId: approver.id },
+      },
+    };
+
+    const conditions: any[] = [];
+
+    if (isManager) {
+      // Direct reports, pending, manager has not acted yet
+      const directReportIds = await this.prisma.employee.findMany({
+        where: { reportingManagerId: approver.id, organizationId, isActive: true },
+        select: { id: true },
+      });
+      const reportIds = directReportIds.map((e) => e.id);
+
+      if (reportIds.length > 0) {
+        conditions.push({
+          employeeId: { in: reportIds },
+          managerDecisionAt: null,
+        });
+      }
+    }
+
+    if (isHR) {
+      // Pending requests where manager has already decided, HR has not
+      conditions.push({
+        managerDecisionAt: { not: null },
+        hrDecisionAt: null,
+      });
+    }
+
+    if (conditions.length === 0) {
+      return [];
+    }
 
     return this.prisma.leaveRequest.findMany({
       where: {
         organizationId,
         status: 'PENDING',
-        OR: [
-          // Requests from direct reports (manager role)
-          { employeeId: { in: reportIds } },
-          // All pending requests (HR role) — HR sees everything pending
-        ],
+        ...alreadyActedFilter,
+        OR: conditions,
       },
       include: {
         employee: {
@@ -419,15 +594,53 @@ export class LeaveRequestsService {
 
   // ─── Helpers ──────────────────────────
 
+  private resolveApproverRole(
+    reviewerId: string,
+    reportingManagerId: string | null,
+    userRoles: string[],
+  ): 'MANAGER' | 'HR' {
+    const isDirectManager = reportingManagerId && reviewerId === reportingManagerId;
+    const isHR = userRoles.some((r) => HR_ROLE_SLUGS.includes(r));
+
+    if (isDirectManager) {
+      return 'MANAGER';
+    }
+    if (isHR) {
+      return 'HR';
+    }
+
+    throw new ForbiddenException(
+      'You are not authorized to review this request. Must be the direct manager or HR.',
+    );
+  }
+
   private buildDayEntries(
     startDate: Date,
     endDate: Date,
     dto: CreateLeaveRequestDto,
     allowHalfDay: boolean,
   ): { date: Date; dayType: LeaveDayType; days: Decimal }[] {
-    // If explicit day breakdown provided, use it
+    // If explicit day breakdown provided, validate and use it
     if (dto.days && dto.days.length > 0) {
+      const seenDates = new Set<string>();
+
       return dto.days.map((d) => {
+        const dayDate = new Date(d.date);
+
+        // Every day must fall within startDate..endDate
+        if (dayDate < startDate || dayDate > endDate) {
+          throw new BadRequestException(
+            `Day ${d.date} is outside the leave request range ${dto.startDate} to ${dto.endDate}`,
+          );
+        }
+
+        // No duplicate dates
+        const dateKey = dayDate.toISOString().slice(0, 10);
+        if (seenDates.has(dateKey)) {
+          throw new BadRequestException(`Duplicate date in day breakdown: ${dateKey}`);
+        }
+        seenDates.add(dateKey);
+
         const dayType = d.dayType;
         if (
           !allowHalfDay &&
@@ -439,7 +652,7 @@ export class LeaveRequestsService {
         }
         const days =
           dayType === 'FULL_DAY' ? new Decimal(1) : new Decimal(0.5);
-        return { date: new Date(d.date), dayType, days };
+        return { date: dayDate, dayType, days };
       });
     }
 
@@ -481,16 +694,6 @@ export class LeaveRequestsService {
   private countCalendarDays(start: Date, end: Date): number {
     const msPerDay = 86400000;
     return Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1;
-  }
-
-  private determineApproverRole(
-    reviewerId: string,
-    reportingManagerId: string | null,
-  ): 'MANAGER' | 'HR' {
-    if (reportingManagerId && reviewerId === reportingManagerId) {
-      return 'MANAGER';
-    }
-    return 'HR';
   }
 
   private async findEmployeeByUserId(userId: string, organizationId: string) {
