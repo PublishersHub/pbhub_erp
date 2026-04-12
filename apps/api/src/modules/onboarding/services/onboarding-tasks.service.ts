@@ -8,7 +8,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   OnboardingInstanceStatus,
   OnboardingTaskStatus,
-  Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateTaskStatusDto } from '../dto/update-task-status.dto';
@@ -101,17 +100,21 @@ export class OnboardingTasksService {
         },
       },
     });
-    if (!task) throw new NotFoundException('Task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Task ${taskId} not found in your organization`,
+      );
+    }
 
     const instance = task.onboardingInstance;
     if (instance.status === OnboardingInstanceStatus.CANCELLED) {
       throw new BadRequestException(
-        'Cannot update tasks on a cancelled instance',
+        `Cannot update task because instance is ${OnboardingInstanceStatus.CANCELLED}`,
       );
     }
     if (instance.status === OnboardingInstanceStatus.COMPLETED) {
       throw new BadRequestException(
-        'Cannot update tasks on a completed instance',
+        `Cannot update task because instance is ${OnboardingInstanceStatus.COMPLETED}`,
       );
     }
 
@@ -141,7 +144,9 @@ export class OnboardingTasksService {
     }
 
     const now = new Date();
-    const data: Prisma.OnboardingTaskUpdateInput = {
+
+    // Build the fields to set based on target status
+    const updateFields: Record<string, unknown> = {
       status: dto.status,
       ...(dto.notes !== undefined && { notes: dto.notes }),
     };
@@ -150,36 +155,42 @@ export class OnboardingTasksService {
       dto.status === OnboardingTaskStatus.IN_PROGRESS &&
       task.status === OnboardingTaskStatus.NOT_STARTED
     ) {
-      data.startedAt = now;
+      updateFields.startedAt = now;
     }
     if (dto.status === OnboardingTaskStatus.BLOCKED) {
-      data.blockedReason = dto.blockedReason ?? null;
+      updateFields.blockedReason = dto.blockedReason ?? null;
     }
     if (
       dto.status === OnboardingTaskStatus.IN_PROGRESS &&
       task.status === OnboardingTaskStatus.BLOCKED
     ) {
-      data.blockedReason = null;
+      updateFields.blockedReason = null;
     }
     if (dto.status === OnboardingTaskStatus.COMPLETED) {
-      data.completedAt = now;
-      data.completedByUserId = userId;
-      data.blockedReason = null;
+      updateFields.completedAt = now;
+      updateFields.completedByUserId = userId;
+      updateFields.blockedReason = null;
       if (!task.startedAt) {
-        data.startedAt = now;
+        updateFields.startedAt = now;
       }
     }
 
-    const {
-      completed,
-      instanceTransitionedToInProgress,
-    } = await this.prisma.$transaction(async (tx) => {
-      await tx.onboardingTask.update({
-        where: { id: taskId },
-        data,
+    // Transaction: guarded updateMany to prevent race conditions, then
+    // check instance auto-transitions. NO events emitted inside.
+    const { completed } = await this.prisma.$transaction(async (tx) => {
+      // Guarded update: only succeeds if current status matches expected
+      const res = await tx.onboardingTask.updateMany({
+        where: {
+          id: taskId,
+          status: task.status, // guard against concurrent mutation
+        },
+        data: updateFields,
       });
-
-      let instanceTransitionedToInProgress = false;
+      if (res.count === 0) {
+        throw new BadRequestException(
+          `Task "${task.title}" was concurrently modified — please retry`,
+        );
+      }
 
       // Instance auto-transition to IN_PROGRESS on first task starting
       if (
@@ -187,7 +198,7 @@ export class OnboardingTasksService {
         (dto.status === OnboardingTaskStatus.IN_PROGRESS ||
           dto.status === OnboardingTaskStatus.COMPLETED)
       ) {
-        const updated = await tx.onboardingInstance.updateMany({
+        await tx.onboardingInstance.updateMany({
           where: {
             id: instance.id,
             status: OnboardingInstanceStatus.NOT_STARTED,
@@ -197,7 +208,6 @@ export class OnboardingTasksService {
             startedAt: now,
           },
         });
-        if (updated.count > 0) instanceTransitionedToInProgress = true;
       }
 
       let completed = false;
@@ -211,7 +221,7 @@ export class OnboardingTasksService {
           },
         });
         if (openRequired === 0) {
-          const res = await tx.onboardingInstance.updateMany({
+          const instRes = await tx.onboardingInstance.updateMany({
             where: {
               id: instance.id,
               status: {
@@ -226,14 +236,14 @@ export class OnboardingTasksService {
               completedAt: now,
             },
           });
-          if (res.count > 0) completed = true;
+          if (instRes.count > 0) completed = true;
         }
       }
 
-      return { completed, instanceTransitionedToInProgress };
+      return { completed };
     });
 
-    // Post-transaction notifications
+    // Post-transaction notifications only
     const employeeName = `${instance.employee.firstName} ${instance.employee.lastName}`;
 
     if (dto.status === OnboardingTaskStatus.COMPLETED) {
@@ -268,9 +278,6 @@ export class OnboardingTasksService {
       });
     }
 
-    // Suppress unused var warning for the flag
-    void instanceTransitionedToInProgress;
-
     return this.prisma.onboardingTask.findUniqueOrThrow({
       where: { id: taskId },
       include: {
@@ -290,7 +297,9 @@ export class OnboardingTasksService {
       throw new BadRequestException(`Task is already ${from}`);
     }
     if (from === OnboardingTaskStatus.COMPLETED) {
-      throw new BadRequestException('Completed tasks cannot be re-opened');
+      throw new BadRequestException(
+        'Task is already COMPLETED and cannot be re-opened',
+      );
     }
     const allowed: Record<OnboardingTaskStatus, OnboardingTaskStatus[]> = {
       [OnboardingTaskStatus.NOT_STARTED]: [
@@ -310,7 +319,7 @@ export class OnboardingTasksService {
     };
     if (!allowed[from].includes(to)) {
       throw new BadRequestException(
-        `Invalid status transition ${from} → ${to}`,
+        `Invalid status transition: cannot move from ${from} to ${to}`,
       );
     }
   }
@@ -331,17 +340,23 @@ export class OnboardingTasksService {
         onboardingInstance: { select: { status: true } },
       },
     });
-    if (!task) throw new NotFoundException('Task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Task ${taskId} not found in your organization`,
+      );
+    }
 
     if (task.status === OnboardingTaskStatus.COMPLETED) {
-      throw new BadRequestException('Cannot reassign a completed task');
+      throw new BadRequestException(
+        `Task "${task.title}" is already COMPLETED and cannot be reassigned`,
+      );
     }
     if (
       task.onboardingInstance.status === OnboardingInstanceStatus.CANCELLED ||
       task.onboardingInstance.status === OnboardingInstanceStatus.COMPLETED
     ) {
       throw new BadRequestException(
-        'Cannot reassign tasks on a terminal instance',
+        `Cannot reassign task because instance is ${task.onboardingInstance.status}`,
       );
     }
 
@@ -354,7 +369,9 @@ export class OnboardingTasksService {
       select: { id: true },
     });
     if (!assignee) {
-      throw new NotFoundException('Assignee employee not found');
+      throw new NotFoundException(
+        `Assignee employee ${dto.assigneeEmployeeId} not found or inactive`,
+      );
     }
 
     return this.prisma.onboardingTask.update({
@@ -380,20 +397,24 @@ export class OnboardingTasksService {
         onboardingInstance: { select: { status: true } },
       },
     });
-    if (!task) throw new NotFoundException('Task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Task ${taskId} not found in your organization`,
+      );
+    }
 
     if (
       task.onboardingInstance.status === OnboardingInstanceStatus.CANCELLED ||
       task.onboardingInstance.status === OnboardingInstanceStatus.COMPLETED
     ) {
       throw new BadRequestException(
-        'Cannot add documents to a terminal instance',
+        `Cannot add documents because instance is ${task.onboardingInstance.status}`,
       );
     }
 
     if (!task.allowDocument) {
       throw new BadRequestException(
-        'This task does not accept document uploads',
+        `Task "${task.title}" does not accept document uploads`,
       );
     }
 
@@ -415,7 +436,11 @@ export class OnboardingTasksService {
       },
       select: { id: true },
     });
-    if (!task) throw new NotFoundException('Task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Task ${taskId} not found in your organization`,
+      );
+    }
 
     return this.prisma.onboardingTaskDocument.findMany({
       where: { onboardingTaskId: taskId },
@@ -437,7 +462,11 @@ export class OnboardingTasksService {
         },
       },
     });
-    if (!document) throw new NotFoundException('Document not found');
+    if (!document) {
+      throw new NotFoundException(
+        `Document ${documentId} not found for task ${taskId}`,
+      );
+    }
 
     return this.prisma.onboardingTaskDocument.delete({
       where: { id: documentId },

@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma, OnboardingTaskAssigneeRole } from '@prisma/client';
+import { OnboardingTaskAssigneeRole } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateOnboardingTemplateDto } from '../dto/create-onboarding-template.dto';
 import { UpdateOnboardingTemplateDto } from '../dto/update-onboarding-template.dto';
@@ -23,7 +23,7 @@ export class OnboardingTemplatesService {
     });
     if (nameConflict) {
       throw new BadRequestException(
-        'A template with this name already exists',
+        `Template name "${dto.name}" is already in use in this organization`,
       );
     }
 
@@ -65,7 +65,11 @@ export class OnboardingTemplatesService {
         _count: { select: { instances: true } },
       },
     });
-    if (!template) throw new NotFoundException('Template not found');
+    if (!template) {
+      throw new NotFoundException(
+        `Onboarding template ${id} not found in your organization`,
+      );
+    }
     return template;
   }
 
@@ -77,7 +81,11 @@ export class OnboardingTemplatesService {
     const template = await this.prisma.onboardingTemplate.findFirst({
       where: { id, organizationId },
     });
-    if (!template) throw new NotFoundException('Template not found');
+    if (!template) {
+      throw new NotFoundException(
+        `Onboarding template ${id} not found in your organization`,
+      );
+    }
 
     if (dto.name && dto.name !== template.name) {
       const conflict = await this.prisma.onboardingTemplate.findFirst({
@@ -89,7 +97,7 @@ export class OnboardingTemplatesService {
       });
       if (conflict) {
         throw new BadRequestException(
-          'A template with this name already exists',
+          `Template name "${dto.name}" is already in use in this organization`,
         );
       }
     }
@@ -135,7 +143,11 @@ export class OnboardingTemplatesService {
     const template = await this.prisma.onboardingTemplate.findFirst({
       where: { id: templateId, organizationId },
     });
-    if (!template) throw new NotFoundException('Template not found');
+    if (!template) {
+      throw new NotFoundException(
+        `Onboarding template ${templateId} not found in your organization`,
+      );
+    }
 
     // Shift existing tasks at or above dto.sortOrder to keep uniqueness
     return this.prisma.$transaction(async (tx) => {
@@ -178,7 +190,11 @@ export class OnboardingTemplatesService {
         template: { organizationId },
       },
     });
-    if (!task) throw new NotFoundException('Template task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Template task ${taskId} not found in template ${templateId}`,
+      );
+    }
 
     if (dto.sortOrder !== undefined && dto.sortOrder !== task.sortOrder) {
       throw new BadRequestException(
@@ -211,7 +227,11 @@ export class OnboardingTemplatesService {
         template: { organizationId },
       },
     });
-    if (!task) throw new NotFoundException('Template task not found');
+    if (!task) {
+      throw new NotFoundException(
+        `Template task ${taskId} not found in template ${templateId}`,
+      );
+    }
 
     return this.prisma.onboardingTemplateTask.delete({
       where: { id: taskId },
@@ -226,7 +246,11 @@ export class OnboardingTemplatesService {
     const template = await this.prisma.onboardingTemplate.findFirst({
       where: { id: templateId, organizationId },
     });
-    if (!template) throw new NotFoundException('Template not found');
+    if (!template) {
+      throw new NotFoundException(
+        `Onboarding template ${templateId} not found in your organization`,
+      );
+    }
 
     const tasks = await this.prisma.onboardingTemplateTask.findMany({
       where: { templateId },

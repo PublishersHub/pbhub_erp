@@ -2091,6 +2091,7 @@ model OnboardingInstance {
 
   @@index([organizationId])
   @@index([status])
+  @@index([employeeId, status])
   @@map("onboarding_instances")
 }
 

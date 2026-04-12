@@ -36,13 +36,21 @@ export class OnboardingInstancesService {
 
   /**
    * Called from HireService.hireAndNotify after a successful hire.
-   * Resolves the org's active default template and spawns a new onboarding
-   * instance with all tasks. If no default template exists, no-ops silently.
-   *
-   * Wrapped in its own try-catch at the call site — failures here must never
-   * bubble up and roll back the hire.
+   * Idempotent: if an instance already exists for this employee (e.g. retry),
+   * returns the existing one without error.
    */
   async startForNewHire(params: StartForNewHireParams) {
+    // Idempotent guard: return existing instance on retry
+    const existing = await this.prisma.onboardingInstance.findUnique({
+      where: { employeeId: params.employeeId },
+    });
+    if (existing) {
+      this.logger.log(
+        `Onboarding instance already exists for employee ${params.employeeId} — returning existing`,
+      );
+      return existing;
+    }
+
     const template = await this.prisma.onboardingTemplate.findFirst({
       where: {
         organizationId: params.organizationId,
@@ -134,9 +142,15 @@ export class OnboardingInstancesService {
         tasks: { orderBy: { sortOrder: 'asc' } },
       },
     });
-    if (!template) throw new NotFoundException('Template not found');
+    if (!template) {
+      throw new NotFoundException(
+        `Onboarding template ${templateId} not found in your organization`,
+      );
+    }
     if (!template.isActive) {
-      throw new BadRequestException('Template is inactive');
+      throw new BadRequestException(
+        `Onboarding template "${template.name}" is inactive`,
+      );
     }
 
     // Load employee (for reportingManagerId)
@@ -150,7 +164,11 @@ export class OnboardingInstancesService {
         reportingManagerId: true,
       },
     });
-    if (!employee) throw new NotFoundException('Employee not found');
+    if (!employee) {
+      throw new NotFoundException(
+        `Employee ${employeeId} not found in your organization`,
+      );
+    }
 
     // Guard: one instance per employee
     const existing = await this.prisma.onboardingInstance.findUnique({
@@ -159,7 +177,7 @@ export class OnboardingInstancesService {
     });
     if (existing) {
       throw new BadRequestException(
-        'An onboarding instance already exists for this employee',
+        `An onboarding instance already exists for employee ${employee.employeeCode}`,
       );
     }
 
@@ -195,6 +213,7 @@ export class OnboardingInstancesService {
       };
     });
 
+    // Transaction: create instance + tasks (NO events inside)
     let instanceId: string;
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -236,28 +255,30 @@ export class OnboardingInstancesService {
         error.code === 'P2002'
       ) {
         throw new BadRequestException(
-          'An onboarding instance already exists for this employee',
+          `An onboarding instance already exists for employee ${employee.employeeCode}`,
         );
       }
       throw error;
     }
 
-    // Fire notifications post-transaction
+    // Emit AFTER transaction commit — deduplicated recipient list
     const employeeName = `${employee.firstName} ${employee.lastName}`;
     const joiningDateStr = joiningDay.toISOString().slice(0, 10);
+
+    const uniqueAssignees = Array.from(
+      new Set(
+        taskData
+          .map((t) => t.assigneeEmployeeId)
+          .filter((id): id is string => id !== null),
+      ),
+    );
 
     this.eventEmitter.emit(NotificationEvents.ONBOARDING_STARTED, {
       organizationId,
       actorUserId: createdByUserId,
       referenceId: instanceId,
       referenceType: 'OnboardingInstance',
-      recipientEmployeeIds: Array.from(
-        new Set(
-          taskData
-            .map((t) => t.assigneeEmployeeId)
-            .filter((id): id is string => id !== null),
-        ),
-      ),
+      recipientEmployeeIds: uniqueAssignees,
       variables: {
         employeeName,
         employeeCode: employee.employeeCode,
@@ -321,7 +342,11 @@ export class OnboardingInstancesService {
         },
       },
     });
-    if (!instance) throw new NotFoundException('Onboarding instance not found');
+    if (!instance) {
+      throw new NotFoundException(
+        `Onboarding instance ${id} not found in your organization`,
+      );
+    }
 
     return this.decorateInstance(instance);
   }
@@ -376,14 +401,18 @@ export class OnboardingInstancesService {
     const instance = await this.prisma.onboardingInstance.findFirst({
       where: { id, organizationId },
     });
-    if (!instance) throw new NotFoundException('Onboarding instance not found');
+    if (!instance) {
+      throw new NotFoundException(
+        `Onboarding instance ${id} not found in your organization`,
+      );
+    }
 
     if (
       instance.status === OnboardingInstanceStatus.COMPLETED ||
       instance.status === OnboardingInstanceStatus.CANCELLED
     ) {
       throw new BadRequestException(
-        `Cannot cancel a ${instance.status} instance`,
+        `Cannot cancel instance because it is already ${instance.status}`,
       );
     }
 
