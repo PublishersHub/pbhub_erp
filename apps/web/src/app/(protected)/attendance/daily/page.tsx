@@ -1,0 +1,218 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
+import { Loading } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorMessage } from '@/components/ui/error-message';
+import { Pagination } from '@/components/ui/pagination';
+import { SortableHeader } from '@/components/ui/sortable-header';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { StatusBadge } from '@/components/ui/status-badge';
+import {
+  useAsync,
+  usePermission,
+  useTableParams,
+  sortLocal,
+  paginateLocal,
+} from '@/lib/hooks';
+import { getMySummaries, getAllSummaries } from '@/lib/attendance-api';
+import { formatDate } from '@/lib/format';
+import { employeeName } from '@/lib/format';
+
+type ViewMode = 'my' | 'all';
+
+export default function DailySummaryPage() {
+  const { can } = usePermission();
+  const canReadAll = can('attendance.read');
+  const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
+    useTableParams();
+
+  const [view, setView] = useState<ViewMode>('my');
+
+  // Default date range: last 30 days
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const fromFilter = searchParams.get('from') || thirtyDaysAgo.toISOString().slice(0, 10);
+  const toFilter = searchParams.get('to') || today.toISOString().slice(0, 10);
+  const statusFilter = searchParams.get('status') || '';
+
+  const { data, error, loading, refetch } = useAsync(
+    () =>
+      view === 'all' && canReadAll
+        ? getAllSummaries({ from: fromFilter, to: toFilter })
+        : getMySummaries(fromFilter, toFilter),
+    [view, fromFilter, toFilter],
+  );
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!statusFilter) return data;
+    return data.filter((s) => s.status === statusFilter);
+  }, [data, statusFilter]);
+
+  const sorted = useMemo(
+    () =>
+      sortLocal(filtered, sort, order, (item, key) => {
+        switch (key) {
+          case 'date':
+            return item.date;
+          case 'employee':
+            return item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : '';
+          case 'status':
+            return item.status;
+          case 'worked':
+            return item.totalWorkedMinutes;
+          case 'late':
+            return item.lateMinutes;
+          default:
+            return null;
+        }
+      }),
+    [filtered, sort, order],
+  );
+
+  const { items, total, totalPages } = useMemo(
+    () => paginateLocal(sorted, page, pageSize),
+    [sorted, page, pageSize],
+  );
+
+  function formatMinutes(mins: number) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  const statuses = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LATE', 'ON_LEAVE', 'HOLIDAY', 'WEEKEND'];
+
+  return (
+    <div>
+      <PageHeader title="Daily Attendance Summary" />
+
+      {canReadAll && (
+        <div className="mb-4 flex gap-2">
+          <button
+            onClick={() => setView('my')}
+            className={`rounded-md px-4 py-2 text-sm font-medium ${
+              view === 'my' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            My Attendance
+          </button>
+          <button
+            onClick={() => setView('all')}
+            className={`rounded-md px-4 py-2 text-sm font-medium ${
+              view === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All Employees
+          </button>
+        </div>
+      )}
+
+      <FilterBar
+        onClear={() => setParams({ from: null, to: null, status: null, page: null })}
+        hasActiveFilters={!!statusFilter || !!searchParams.get('from') || !!searchParams.get('to')}
+      >
+        <input
+          type="date"
+          value={fromFilter}
+          onChange={(e) => setParams({ from: e.target.value || null, page: null })}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        />
+        <span className="text-sm text-gray-500">to</span>
+        <input
+          type="date"
+          value={toFilter}
+          onChange={(e) => setParams({ to: e.target.value || null, page: null })}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setParams({ status: e.target.value || null, page: null })}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">All Statuses</option>
+          {statuses.map((s) => (
+            <option key={s} value={s}>
+              {s.replace(/_/g, ' ')}
+            </option>
+          ))}
+        </select>
+      </FilterBar>
+
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {data && total === 0 && (
+        <EmptyState title="No records found" description="Adjust filters or check back later." />
+      )}
+      {data && total > 0 && (
+        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <SortableHeader label="Date" sortKey="date" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  {view === 'all' && (
+                    <SortableHeader label="Employee" sortKey="employee" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  )}
+                  <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">First In</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Last Out</th>
+                  <SortableHeader label="Worked" sortKey="worked" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <SortableHeader label="Late" sortKey="late" currentSort={sort} currentOrder={order} onSort={setSort} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {items.map((s) => (
+                  <tr key={s.id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                      {formatDate(s.date)}
+                    </td>
+                    {view === 'all' && (
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                        {employeeName(s.employee)}
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <StatusBadge status={s.status} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {s.firstCheckIn
+                        ? new Date(s.firstCheckIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                        : '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {s.lastCheckOut
+                        ? new Date(s.lastCheckOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                        : '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                      {formatMinutes(s.totalWorkedMinutes)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {s.lateMinutes > 0 ? (
+                        <span className="text-red-600">{formatMinutes(s.lateMinutes)}</span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

@@ -8,6 +8,7 @@ import { CandidatesController } from './controllers/candidates.controller';
 import { JobApplicationsController } from './controllers/job-applications.controller';
 import { InterviewsController } from './controllers/interviews.controller';
 import { OffersController } from './controllers/offers.controller';
+import { DashboardSummaryController } from './controllers/dashboard-summary.controller';
 
 import { JobRequisitionsService } from './services/job-requisitions.service';
 import { JobPostingsService } from './services/job-postings.service';
@@ -17,6 +18,7 @@ import { JobApplicationsService } from './services/job-applications.service';
 import { InterviewsService } from './services/interviews.service';
 import { OffersService } from './services/offers.service';
 import { HireService } from './services/hire.service';
+import { DashboardSummaryService } from './services/dashboard-summary.service';
 
 @Module({
   imports: [PrismaModule, OnboardingModule],
@@ -27,6 +29,7 @@ import { HireService } from './services/hire.service';
     JobApplicationsController,
     InterviewsController,
     OffersController,
+    DashboardSummaryController,
   ],
   providers: [
     JobRequisitionsService,
@@ -37,6 +40,7 @@ import { HireService } from './services/hire.service';
     InterviewsService,
     OffersService,
     HireService,
+    DashboardSummaryService,
   ],
   exports: [HireService],
 })

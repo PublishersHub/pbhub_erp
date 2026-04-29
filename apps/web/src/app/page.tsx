@@ -1,10 +1,18 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
+
 export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">PbHub HRMS</h1>
-        <p className="mt-4 text-gray-600">Human Resource Management System</p>
-      </div>
-    </main>
-  );
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading) {
+      router.replace(isAuthenticated ? '/dashboard' : '/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  return null;
 }

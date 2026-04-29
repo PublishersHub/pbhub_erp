@@ -1,0 +1,113 @@
+'use client';
+
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { PageHeader } from '@/components/ui/page-header';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Loading } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorMessage } from '@/components/ui/error-message';
+import { Pagination } from '@/components/ui/pagination';
+import { SortableHeader } from '@/components/ui/sortable-header';
+import { useAsync, usePermission, useTableParams, sortLocal, paginateLocal } from '@/lib/hooks';
+import { listOffers } from '@/lib/recruitment-api';
+import { formatDate, formatCurrency } from '@/lib/format';
+
+export default function OffersListPage() {
+  const { can } = usePermission();
+  const { page, sort, order, pageSize, setPage, setSort, searchParams } =
+    useTableParams();
+  const applicationId = searchParams.get('applicationId') || '';
+
+  const { data, error, loading, refetch } = useAsync(
+    () => (applicationId ? listOffers(applicationId) : Promise.resolve([])),
+    [applicationId],
+  );
+
+  const sorted = useMemo(
+    () =>
+      sortLocal(data ?? [], sort, order, (item, key) => {
+        switch (key) {
+          case 'offerNumber': return item.offerNumber;
+          case 'salary': return item.baseSalary;
+          case 'joiningDate': return item.proposedJoiningDate;
+          case 'expiresAt': return item.expiresAt;
+          case 'status': return item.status;
+          default: return null;
+        }
+      }),
+    [data, sort, order],
+  );
+
+  const { items, total, totalPages } = useMemo(
+    () => paginateLocal(sorted, page, pageSize),
+    [sorted, page, pageSize],
+  );
+
+  return (
+    <div>
+      <PageHeader
+        title="Offers"
+        backHref="/recruitment"
+        actions={
+          applicationId && can('recruitment.offer.manage') ? (
+            <Link
+              href={`/recruitment/offers/new?applicationId=${applicationId}`}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Create Offer
+            </Link>
+          ) : undefined
+        }
+      />
+
+      {!applicationId && (
+        <EmptyState
+          title="Select an application"
+          description="Navigate to an application detail page and click 'Create Offer' to view offers."
+        />
+      )}
+
+      {applicationId && loading && <Loading />}
+      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {data && total === 0 && applicationId && (
+        <EmptyState title="No offers found" description="Create the first offer for this application." />
+      )}
+      {data && total > 0 && (
+        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <SortableHeader label="Offer #" sortKey="offerNumber" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Version</th>
+                  <SortableHeader label="Salary" sortKey="salary" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <SortableHeader label="Joining Date" sortKey="joiningDate" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <SortableHeader label="Expires" sortKey="expiresAt" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {items.map((offer) => (
+                  <tr key={offer.id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <Link href={`/recruitment/offers/${offer.id}`} className="font-medium text-blue-600 hover:underline">
+                        {offer.offerNumber}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">v{offer.version}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatCurrency(offer.baseSalary)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(offer.proposedJoiningDate)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(offer.expiresAt)}</td>
+                    <td className="px-4 py-3"><StatusBadge status={offer.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+    </div>
+  );
+}

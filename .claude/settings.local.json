@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(which npm && npm --version && which node && node --version)"
+      "Bash(which npm && npm --version && which node && node --version)",
+      "Bash(npx tsc --noEmit 2>&1)"
     ]
   }
 }
