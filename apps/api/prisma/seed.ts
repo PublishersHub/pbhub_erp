@@ -357,18 +357,33 @@ async function main() {
   }
   console.log('Role-permission assignments seeded');
 
-  // 5. Super Admin user
+  // 5. Super Admin account + membership in the seed org
   const passwordHash = await bcrypt.hash('admin123', 12);
 
-  const superAdmin = await prisma.user.upsert({
-    where: { organizationId_email: { organizationId: org.id, email: 'admin@pbhub.com' } },
+  const account = await prisma.account.upsert({
+    where: { email: 'admin@pbhub.com' },
     update: {},
     create: {
-      organizationId: org.id,
       email: 'admin@pbhub.com',
       passwordHash,
       firstName: 'Super',
       lastName: 'Admin',
+      isActive: true,
+    },
+  });
+  console.log(`Account: ${account.email} (${account.id})`);
+
+  const superAdmin = await prisma.user.upsert({
+    where: {
+      accountId_organizationId: {
+        accountId: account.id,
+        organizationId: org.id,
+      },
+    },
+    update: {},
+    create: {
+      accountId: account.id,
+      organizationId: org.id,
       isActive: true,
     },
   });
@@ -390,7 +405,7 @@ async function main() {
       organizationId: org.id,
     },
   });
-  console.log(`Super Admin: ${superAdmin.email} (password: admin123)`);
+  console.log(`Super Admin: ${account.email} (password: admin123)`);
 
   // 6. System default notification templates (organizationId = null)
   // Using findFirst + create/update to avoid null-compound-unique issues
