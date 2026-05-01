@@ -5,7 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 
 interface JwtRefreshPayload {
-  sub: string;
+  sub: string;       // accountId
   tokenId: string;
 }
 
@@ -19,14 +19,10 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     });
   }
 
-  /**
-   * Passes the raw refresh token string alongside the decoded payload
-   * so the auth service can verify the token hash in the DB.
-   */
   async validate(req: Request, payload: JwtRefreshPayload) {
     const refreshToken = req.body.refreshToken;
     return {
-      userId: payload.sub,
+      accountId: payload.sub,
       tokenId: payload.tokenId,
       refreshToken,
     };
