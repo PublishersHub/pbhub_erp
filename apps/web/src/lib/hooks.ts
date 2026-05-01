@@ -66,8 +66,8 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
 export function usePermission() {
   const { user } = useAuth();
   const permSet = useMemo(
-    () => new Set(user?.permissions ?? []),
-    [user?.permissions],
+    () => new Set(user?.user?.permissions ?? []),
+    [user?.user?.permissions],
   );
 
   const can = useCallback(

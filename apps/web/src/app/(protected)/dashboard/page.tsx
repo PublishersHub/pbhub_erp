@@ -88,7 +88,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description={`Welcome back, ${user?.firstName ?? 'User'}`}
+        description={`Welcome back, ${user?.account?.firstName ?? 'User'}`}
       />
 
       {/* KPI Cards */}
