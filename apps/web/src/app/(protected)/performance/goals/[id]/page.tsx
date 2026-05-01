@@ -131,8 +131,8 @@ export default function GoalDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Goal details */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Goal Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Goal Details</h3>
             <dl>
               <DetailRow label="Description">{goal.description}</DetailRow>
               <DetailRow label="Employee">{employeeName(goal.employee)}</DetailRow>
@@ -150,22 +150,22 @@ export default function GoalDetailPage() {
               )}
               {goal.rejectionReason && (
                 <DetailRow label="Rejection Reason">
-                  <span className="text-red-600">{goal.rejectionReason}</span>
+                  <span className="text-destructive">{goal.rejectionReason}</span>
                 </DetailRow>
               )}
             </dl>
           </div>
 
           {/* Progress History */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase text-gray-500">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground">
                 Progress Updates ({(progress ?? []).length})
               </h3>
               {canTrackProgress && !showProgress && (
                 <button
                   onClick={() => setShowProgress(true)}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 motion-press"
                 >
                   Add Progress
                 </button>
@@ -173,35 +173,35 @@ export default function GoalDetailPage() {
             </div>
 
             {showProgress && (
-              <form onSubmit={handleAddProgress} className="mb-4 space-y-3 rounded-md border border-blue-100 bg-blue-50 p-3">
+              <form onSubmit={handleAddProgress} className="mb-4 space-y-3 rounded-md border border-primary/20 bg-primary-soft/30 p-3">
                 {goal.measurementType !== 'QUALITATIVE' && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700">Value</label>
+                    <label className="block text-xs font-medium text-foreground">Value</label>
                     <input
                       type="number"
                       step="0.01"
                       value={progressValue}
                       onChange={(e) => setProgressValue(e.target.value)}
-                      className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="w-full rounded border border-input bg-card px-2 py-1.5 text-sm"
                       placeholder="New current value"
                     />
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Note</label>
+                  <label className="block text-xs font-medium text-foreground">Note</label>
                   <textarea
                     value={progressNote}
                     onChange={(e) => setProgressNote(e.target.value)}
                     rows={2}
-                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    className="w-full rounded border border-input bg-card px-2 py-1.5 text-sm"
                     placeholder="Describe progress..."
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button type="submit" disabled={actionLoading} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                  <button type="submit" disabled={actionLoading} className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50 motion-press">
                     {actionLoading ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" onClick={() => setShowProgress(false)} className="rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200">
+                  <button type="button" onClick={() => setShowProgress(false)} className="rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80 motion-press">
                     Cancel
                   </button>
                 </div>
@@ -209,25 +209,25 @@ export default function GoalDetailPage() {
             )}
 
             {(progress ?? []).length === 0 ? (
-              <p className="text-sm text-gray-500">No progress updates yet.</p>
+              <p className="text-sm text-muted-foreground">No progress updates yet.</p>
             ) : (
               <div className="space-y-3">
                 {(progress ?? []).map((p) => (
-                  <div key={p.id} className="flex items-start gap-3 rounded-md border border-gray-100 p-3">
-                    <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                  <div key={p.id} className="flex items-start gap-3 rounded-md border border-border/50 bg-muted/30 p-3">
+                    <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-primary" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-foreground">
                           {employeeName(p.updatedByEmployee)}
                         </span>
                         {p.value && (
-                          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                          <span className="rounded bg-primary-soft px-1.5 py-0.5 text-xs font-medium text-primary">
                             Value: {p.value}
                           </span>
                         )}
                       </div>
-                      {p.note && <p className="mt-1 text-sm text-gray-600">{p.note}</p>}
-                      <p className="mt-1 text-xs text-gray-400">{formatDateTime(p.createdAt)}</p>
+                      {p.note && <p className="mt-1 text-sm text-foreground/80">{p.note}</p>}
+                      <p className="mt-1 text-xs text-muted-foreground/70">{formatDateTime(p.createdAt)}</p>
                     </div>
                   </div>
                 ))}
@@ -238,14 +238,14 @@ export default function GoalDetailPage() {
 
         {/* Sidebar actions */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft space-y-3">
+            <h3 className="text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
 
             {canSubmitGoal && (
               <button
                 onClick={handleSubmit}
                 disabled={actionLoading}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="w-full rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
               >
                 {actionLoading ? 'Submitting...' : 'Submit for Approval'}
               </button>
@@ -254,38 +254,38 @@ export default function GoalDetailPage() {
             {canApproveThisGoal && !showApproval && (
               <button
                 onClick={() => setShowApproval(true)}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="w-full rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 motion-press"
               >
                 Review Goal
               </button>
             )}
 
             {showApproval && (
-              <div className="space-y-2 rounded-md border border-indigo-100 bg-indigo-50 p-3">
+              <div className="space-y-2 rounded-md border border-primary/20 bg-primary-soft/30 p-3">
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Rejection reason (required if rejecting)"
                   rows={2}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-input bg-card px-2 py-1.5 text-sm"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleApproval('APPROVED')}
                     disabled={actionLoading}
-                    className="flex-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex-1 rounded-md bg-success text-success-foreground px-3 py-1.5 text-xs font-medium hover:bg-success/90 disabled:opacity-50 motion-press"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleApproval('REJECTED')}
                     disabled={actionLoading}
-                    className="flex-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="flex-1 rounded-md bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-medium hover:bg-destructive/90 disabled:opacity-50 motion-press"
                   >
                     Reject
                   </button>
                 </div>
-                <button onClick={() => setShowApproval(false)} className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200">
+                <button onClick={() => setShowApproval(false)} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80 motion-press">
                   Cancel
                 </button>
               </div>
@@ -295,37 +295,37 @@ export default function GoalDetailPage() {
               <button
                 onClick={handleDeactivate}
                 disabled={actionLoading}
-                className="w-full rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
+                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 motion-press"
               >
                 Deactivate Goal
               </button>
             )}
 
             {!canSubmitGoal && !canApproveThisGoal && !canTrackProgress && !canDeactivateGoal && (
-              <p className="text-xs text-gray-500">No actions available.</p>
+              <p className="text-xs text-muted-foreground">No actions available.</p>
             )}
           </div>
 
           {/* Progress summary */}
           {goal.measurementType !== 'QUALITATIVE' && (
-            <div className="rounded-lg border bg-white p-5 shadow-sm">
-              <h3 className="mb-2 text-sm font-semibold uppercase text-gray-500">Progress</h3>
+            <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+              <h3 className="mb-2 text-sm font-semibold uppercase text-muted-foreground">Progress</h3>
               <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">{goal.currentValue}</p>
+                <p className="text-3xl font-bold text-foreground">{goal.currentValue}</p>
                 {goal.targetValue && (
-                  <p className="text-sm text-gray-500">of {goal.targetValue} target</p>
+                  <p className="text-sm text-muted-foreground">of {goal.targetValue} target</p>
                 )}
                 {goal.targetValue && parseFloat(goal.targetValue) > 0 && (
                   <div className="mt-3">
-                    <div className="h-2 w-full rounded-full bg-gray-200">
+                    <div className="h-2 w-full rounded-full bg-secondary">
                       <div
-                        className="h-2 rounded-full bg-blue-600 transition-all"
+                        className="h-2 rounded-full bg-primary transition-all duration-500"
                         style={{
                           width: `${Math.min(100, (parseFloat(goal.currentValue) / parseFloat(goal.targetValue)) * 100)}%`,
                         }}
                       />
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {Math.round((parseFloat(goal.currentValue) / parseFloat(goal.targetValue)) * 100)}%
                     </p>
                   </div>
@@ -334,10 +334,10 @@ export default function GoalDetailPage() {
             </div>
           )}
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created By</h3>
-            <p className="text-sm text-gray-600">{employeeName(goal.createdByEmployee)}</p>
-            <p className="text-xs text-gray-400">{formatDateTime(goal.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created By</h3>
+            <p className="text-sm text-foreground/80">{employeeName(goal.createdByEmployee)}</p>
+            <p className="text-xs text-muted-foreground/70">{formatDateTime(goal.createdAt)}</p>
           </div>
         </div>
       </div>

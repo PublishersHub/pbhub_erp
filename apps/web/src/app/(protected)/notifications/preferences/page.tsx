@@ -156,14 +156,14 @@ export default function NotificationPreferencesPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDiscard}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted motion-press"
               >
                 Discard
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-md bg-primary text-primary-foreground px-3 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
               >
                 {saving ? 'Saving...' : 'Save changes'}
               </button>
@@ -179,33 +179,33 @@ export default function NotificationPreferencesPage() {
           {EVENT_MODULES.map((mod) => (
             <div
               key={mod.module}
-              className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+              className="overflow-hidden rounded-lg border border-border bg-card shadow-soft"
             >
-              <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">{mod.module}</h3>
+              <div className="border-b border-border bg-muted/60 px-4 py-3">
+                <h3 className="text-sm font-semibold text-foreground">{mod.module}</h3>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {mod.events.map((evt) => {
                   const enabled = isEnabled(evt.type);
                   return (
                     <div
                       key={evt.type}
-                      className="flex items-center justify-between px-4 py-3"
+                      className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
                     >
                       <div>
-                        <p className="text-sm text-gray-700">{evt.label}</p>
-                        <p className="text-xs text-gray-400">{evt.type}</p>
+                        <p className="text-sm text-foreground/80">{evt.label}</p>
+                        <p className="text-xs text-muted-foreground/70">{evt.type}</p>
                       </div>
                       <button
                         onClick={() => handleToggle(evt.type, enabled)}
                         className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                          enabled ? 'bg-blue-600' : 'bg-gray-300'
+                          enabled ? 'bg-primary' : 'bg-muted'
                         }`}
                         role="switch"
                         aria-checked={enabled}
                       >
                         <span
-                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                          className={`inline-block h-3.5 w-3.5 rounded-full bg-card transition-transform ${
                             enabled ? 'translate-x-4' : 'translate-x-0.5'
                           }`}
                         />

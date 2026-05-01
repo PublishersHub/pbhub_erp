@@ -131,7 +131,7 @@ export default function PerformanceCyclesPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50';
 
   return (
     <div>
@@ -141,7 +141,7 @@ export default function PerformanceCyclesPage() {
           canManage && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 motion-press"
             >
               Create Cycle
             </button>
@@ -150,15 +150,15 @@ export default function PerformanceCyclesPage() {
       />
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-lg border bg-white p-4 shadow-sm space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">New Performance Cycle</h3>
+        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-border bg-card p-4 shadow-soft space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">New Performance Cycle</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="sm:col-span-3">
-              <label className="block text-xs font-medium text-gray-700">Name *</label>
+              <label className="block text-xs font-medium text-foreground">Name *</label>
               <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. Q1 2026 Review" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Year *</label>
+              <label className="block text-xs font-medium text-foreground">Year *</label>
               <input type="number" required value={year} onChange={(e) => setYear(e.target.value)} className={inputCls} />
             </div>
             <div>
@@ -195,10 +195,10 @@ export default function PerformanceCyclesPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press">
               {submitting ? 'Creating...' : 'Create'}
             </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground px-4 py-2 text-sm font-medium hover:bg-secondary/80 motion-press">
               Cancel
             </button>
           </div>
@@ -215,33 +215,33 @@ export default function PerformanceCyclesPage() {
         <EmptyState title="No cycles" description="Create performance cycles to start reviews." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Year" sortKey="year" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Quarter</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Quarter</th>
                   <SortableHeader label="Start" sortKey="startDate" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">End</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">End</th>
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                   {canManage && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((c) => {
                   const nextStatus = TRANSITIONS[c.status];
                   const nextLabel = TRANSITION_LABELS[c.status];
                   return (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{c.name}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{c.year}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">Q{c.quarter}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{formatDate(c.startDate)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{formatDate(c.endDate)}</td>
+                    <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{c.year}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">Q{c.quarter}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{formatDate(c.startDate)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{formatDate(c.endDate)}</td>
                       <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                       {canManage && (
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
@@ -249,13 +249,13 @@ export default function PerformanceCyclesPage() {
                             <button
                               onClick={() => handleTransition(c.id, nextStatus)}
                               disabled={transitioning === c.id}
-                              className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                              className="rounded bg-primary-soft px-2 py-1 text-xs text-primary hover:bg-primary/20 disabled:opacity-50 motion-press"
                             >
                               {transitioning === c.id ? 'Processing...' : nextLabel}
                             </button>
                           )}
                           {c.status === 'CLOSED' && (
-                            <span className="text-xs text-gray-400">Closed</span>
+                            <span className="text-xs text-muted-foreground/70">Closed</span>
                           )}
                         </td>
                       )}

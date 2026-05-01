@@ -62,11 +62,11 @@ export default function GoalsPage() {
   );
 
   const selectCls =
-    'rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50';
 
   const viewBtnCls = (v: ViewMode) =>
     `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-      view === v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      view === v ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
     }`;
 
   return (
@@ -77,7 +77,7 @@ export default function GoalsPage() {
           canCreate ? (
             <Link
               href="/performance/goals/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 motion-press"
             >
               Create Goal
             </Link>
@@ -116,37 +116,37 @@ export default function GoalsPage() {
         <EmptyState title="No goals" description="Create goals for your performance cycle." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Title" sortKey="title" currentSort={sort} currentOrder={order} onSort={setSort} />
                   {view !== 'my' && (
                     <SortableHeader label="Employee" sortKey="employee" currentSort={sort} currentOrder={order} onSort={setSort} />
                   )}
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Cycle</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Cycle</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Type</th>
                   <SortableHeader label="Weight" sortKey="weight" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Progress" sortKey="progress" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((g) => (
-                  <tr key={g.id} className="hover:bg-gray-50">
+                  <tr key={g.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 text-sm">
-                      <Link href={`/performance/goals/${g.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/performance/goals/${g.id}`} className="font-medium text-primary hover:underline">
                         {g.title}
                       </Link>
                     </td>
                     {view !== 'my' && (
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{employeeName(g.employee)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{employeeName(g.employee)}</td>
                     )}
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{g.cycle?.name ?? '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{g.cycle?.name ?? '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={g.measurementType} /></td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{g.weight}%</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{g.weight}%</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">
                       {g.measurementType === 'QUALITATIVE' ? g.currentValue || '—' : `${g.currentValue}${g.targetValue ? ` / ${g.targetValue}` : ''}`}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={g.status} /></td>

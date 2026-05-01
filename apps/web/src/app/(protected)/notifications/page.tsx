@@ -54,14 +54,14 @@ function eventIcon(eventType: string): string {
 }
 
 function eventColor(eventType: string): string {
-  if (eventType.startsWith('leave.')) return 'bg-green-100 text-green-700';
-  if (eventType.startsWith('expense.')) return 'bg-yellow-100 text-yellow-700';
-  if (eventType.startsWith('payroll.')) return 'bg-purple-100 text-purple-700';
-  if (eventType.startsWith('performance.')) return 'bg-indigo-100 text-indigo-700';
-  if (eventType.startsWith('attendance.')) return 'bg-cyan-100 text-cyan-700';
-  if (eventType.startsWith('recruitment.')) return 'bg-blue-100 text-blue-700';
-  if (eventType.startsWith('onboarding.')) return 'bg-orange-100 text-orange-700';
-  return 'bg-gray-100 text-gray-700';
+  if (eventType.startsWith('leave.')) return 'bg-success-soft text-success';
+  if (eventType.startsWith('expense.')) return 'bg-warning-soft text-warning';
+  if (eventType.startsWith('payroll.')) return 'bg-primary-soft text-primary';
+  if (eventType.startsWith('performance.')) return 'bg-primary-soft text-primary';
+  if (eventType.startsWith('attendance.')) return 'bg-info-soft text-info';
+  if (eventType.startsWith('recruitment.')) return 'bg-primary-soft text-primary';
+  if (eventType.startsWith('onboarding.')) return 'bg-warning-soft text-warning';
+  return 'bg-secondary text-secondary-foreground';
 }
 
 export default function NotificationsPage() {
@@ -132,14 +132,14 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/notifications/preferences"
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted motion-press"
             >
               Preferences
             </Link>
             <button
               onClick={handleMarkAllRead}
               disabled={actionLoading === 'all'}
-              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-primary text-primary-foreground px-3 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
             >
               {actionLoading === 'all' ? 'Marking...' : 'Mark all read'}
             </button>
@@ -148,15 +148,15 @@ export default function NotificationsPage() {
       />
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1">
+      <div className="mb-4 flex gap-1 rounded-lg bg-secondary p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setParams({ tab: t.key === 'all' ? null : t.key, page: null })}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === t.key
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-card text-foreground shadow-soft'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t.label}
@@ -187,8 +187,8 @@ export default function NotificationsPage() {
       )}
 
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div className="divide-y divide-gray-100">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+          <div className="divide-y divide-border">
             {items.map((n) => {
               const href = referenceHref(n);
               const isActing = actionLoading === n.id;
@@ -196,8 +196,8 @@ export default function NotificationsPage() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 ${
-                    !n.isRead ? 'bg-blue-50/40' : ''
+                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                    !n.isRead ? 'bg-primary-soft/50' : 'hover:bg-muted/50'
                   }`}
                 >
                   <div
@@ -209,12 +209,12 @@ export default function NotificationsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className={`text-sm ${!n.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                        <p className={`text-sm ${!n.isRead ? 'font-semibold text-foreground' : 'text-foreground/80'}`}>
                           {n.title}
                         </p>
-                        <p className="mt-0.5 text-sm text-gray-500">{n.body}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>
                       </div>
-                      <span className="shrink-0 text-xs text-gray-400">
+                      <span className="shrink-0 text-xs text-muted-foreground/70">
                         {formatDateTime(n.createdAt)}
                       </span>
                     </div>
@@ -223,7 +223,7 @@ export default function NotificationsPage() {
                       {href && (
                         <Link
                           href={href}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                          className="text-xs font-medium text-primary hover:text-primary/80 motion-press"
                         >
                           View details
                         </Link>
@@ -232,7 +232,7 @@ export default function NotificationsPage() {
                         <button
                           onClick={() => handleMarkRead(n.id)}
                           disabled={isActing}
-                          className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                          className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 motion-press"
                         >
                           Mark read
                         </button>
@@ -241,7 +241,7 @@ export default function NotificationsPage() {
                         <button
                           onClick={() => handleArchive(n.id)}
                           disabled={isActing}
-                          className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                          className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 motion-press"
                         >
                           Archive
                         </button>
@@ -250,7 +250,7 @@ export default function NotificationsPage() {
                   </div>
 
                   {!n.isRead && (
-                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
                   )}
                 </div>
               );

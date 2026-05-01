@@ -45,8 +45,8 @@ export default function NewGoalPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-xs font-medium text-gray-700';
+    'block w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50';
+  const labelCls = 'block text-xs font-medium text-foreground';
 
   // Filter to cycles that are in GOAL_SETTING or DRAFT status for creating goals
   const availableCycles = (cycles ?? []).filter((c) =>
@@ -57,7 +57,7 @@ export default function NewGoalPage() {
     <div>
       <PageHeader title="Create Goal" backHref="/performance/goals" />
 
-      <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-4 rounded-lg border bg-white p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-4 rounded-lg border border-border bg-card p-6 shadow-soft">
         <div>
           <label className={labelCls}>Cycle *</label>
           <select required value={cycleId} onChange={(e) => setCycleId(e.target.value)} className={inputCls}>
@@ -128,14 +128,14 @@ export default function NewGoalPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
           >
             {submitting ? 'Creating...' : 'Create Goal'}
           </button>
           <button
             type="button"
             onClick={() => router.push('/performance/goals')}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary text-secondary-foreground px-4 py-2 text-sm font-medium hover:bg-secondary/80 motion-press"
           >
             Cancel
           </button>
