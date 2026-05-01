@@ -1,6 +1,23 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-class UserProfileDto {
+class MembershipDto {
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  organizationId: string;
+
+  @ApiProperty()
+  organizationName: string;
+
+  @ApiProperty()
+  organizationSlug: string;
+
+  @ApiProperty({ type: [String] })
+  roles: string[];
+}
+
+class AccountProfileDto {
   @ApiProperty()
   id: string;
 
@@ -12,6 +29,11 @@ class UserProfileDto {
 
   @ApiProperty()
   lastName: string;
+}
+
+class ActiveUserDto {
+  @ApiProperty()
+  id: string;
 
   @ApiProperty()
   organizationId: string;
@@ -24,12 +46,21 @@ class UserProfileDto {
 }
 
 export class AuthResponseDto {
-  @ApiProperty()
-  accessToken: string;
+  @ApiPropertyOptional({ description: 'Present when an org was selected (single membership or post-pick).' })
+  accessToken?: string;
 
   @ApiProperty()
   refreshToken: string;
 
-  @ApiProperty({ type: UserProfileDto })
-  user: UserProfileDto;
+  @ApiProperty({ type: AccountProfileDto })
+  account: AccountProfileDto;
+
+  @ApiPropertyOptional({ type: ActiveUserDto, description: 'Present when an org was selected.' })
+  user?: ActiveUserDto;
+
+  @ApiPropertyOptional({ description: 'Present when an org was selected.' })
+  activeOrganizationId?: string;
+
+  @ApiProperty({ type: [MembershipDto] })
+  memberships: MembershipDto[];
 }
