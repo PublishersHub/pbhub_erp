@@ -98,8 +98,8 @@ export default function NewExpenseClaimPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-xs font-medium text-gray-700';
+    'block w-full rounded-md border border-input px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors bg-card text-foreground';
+  const labelCls = 'block text-xs font-medium text-foreground/80';
 
   return (
     <div>
@@ -107,8 +107,8 @@ export default function NewExpenseClaimPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
-        <div className="rounded-lg border bg-white p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold uppercase text-gray-500">Claim Details</h3>
+        <div className="rounded-lg border border-border bg-card p-6 shadow-soft space-y-4">
+          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Claim Details</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Title *</label>
@@ -130,7 +130,7 @@ export default function NewExpenseClaimPage() {
           </div>
 
           {selectedPolicy && (
-            <div className="rounded-md bg-blue-50 p-3 text-xs text-blue-800 space-y-1">
+            <div className="rounded-md bg-info-soft p-3 text-xs text-info space-y-1">
               <p className="font-medium">Policy: {selectedPolicy.name}</p>
               {selectedPolicy.maxClaimAmount && <p>Max claim: {formatCurrency(selectedPolicy.maxClaimAmount)}</p>}
               {selectedPolicy.maxItemAmount && <p>Max per item: {formatCurrency(selectedPolicy.maxItemAmount)}</p>}
@@ -141,21 +141,21 @@ export default function NewExpenseClaimPage() {
         </div>
 
         {/* Line Items */}
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase text-gray-500">Line Items</h3>
-            <button type="button" onClick={addItem} className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+            <h3 className="text-sm font-semibold uppercase text-muted-foreground">Line Items</h3>
+            <button type="button" onClick={addItem} className="rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-medium hover:bg-secondary/80">
               + Add Item
             </button>
           </div>
 
           <div className="space-y-4">
             {items.map((item, idx) => (
-              <div key={idx} className="rounded-md border border-gray-200 p-4 space-y-3">
+              <div key={idx} className="rounded-md border border-border bg-background p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500">Item {idx + 1}</span>
+                  <span className="text-xs font-medium text-muted-foreground">Item {idx + 1}</span>
                   {items.length > 1 && (
-                    <button type="button" onClick={() => removeItem(idx)} className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100">
+                    <button type="button" onClick={() => removeItem(idx)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">
                       Remove
                     </button>
                   )}
@@ -203,9 +203,9 @@ export default function NewExpenseClaimPage() {
 
           {/* Total */}
           <div className="mt-4 flex justify-end">
-            <div className="rounded-md bg-gray-50 px-4 py-2 text-right">
-              <span className="text-sm text-gray-500">Total: </span>
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(totalAmount)}</span>
+            <div className="rounded-md bg-primary-soft border border-primary/20 px-4 py-2 text-right">
+              <span className="text-sm text-muted-foreground">Total: </span>
+              <span className="text-lg font-bold text-primary">{formatCurrency(totalAmount)}</span>
             </div>
           </div>
         </div>
@@ -213,10 +213,10 @@ export default function NewExpenseClaimPage() {
         {formError && <ErrorMessage message={formError} />}
 
         <div className="flex gap-3">
-          <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-6 py-2 text-sm font-medium disabled:opacity-50">
             {submitting ? 'Creating...' : 'Create Draft'}
           </button>
-          <button type="button" onClick={() => router.push('/expenses/claims')} className="rounded-md bg-gray-100 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+          <button type="button" onClick={() => router.push('/expenses/claims')} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-6 py-2 text-sm font-medium">
             Cancel
           </button>
         </div>

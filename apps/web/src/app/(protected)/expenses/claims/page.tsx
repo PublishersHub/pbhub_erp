@@ -87,7 +87,7 @@ export default function ExpenseClaimsPage() {
         actions={
           <Link
             href="/expenses/claims/new"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
           >
             New Claim
           </Link>
@@ -96,10 +96,21 @@ export default function ExpenseClaimsPage() {
 
       {/* View toggle */}
       <div className="mb-4 flex gap-2">
+        <Link
+          href="/expenses/claims/new"
+          className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
+        >
+          New Claim
+        </Link>
+      )}
+      />
+
+      {/* View toggle */}
+      <div className="mb-4 flex gap-2">
         <button
           onClick={() => setView('my')}
           className={`rounded-md px-4 py-2 text-sm font-medium ${
-            view === 'my' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            view === 'my' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}
         >
           My Claims
@@ -108,7 +119,7 @@ export default function ExpenseClaimsPage() {
           <button
             onClick={() => setView('pending')}
             className={`rounded-md px-4 py-2 text-sm font-medium ${
-              view === 'pending' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              view === 'pending' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
           >
             Pending Approvals
@@ -118,7 +129,7 @@ export default function ExpenseClaimsPage() {
           <button
             onClick={() => setView('all')}
             className={`rounded-md px-4 py-2 text-sm font-medium ${
-              view === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              view === 'all' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
           >
             All Claims
@@ -134,7 +145,7 @@ export default function ExpenseClaimsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setParams({ status: e.target.value || null, page: null })}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input px-3 py-2 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
           >
             <option value="">All Statuses</option>
             {STATUSES.map((s) => (
@@ -153,39 +164,39 @@ export default function ExpenseClaimsPage() {
         />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Claim #" sortKey="claimNumber" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Title" sortKey="title" currentSort={sort} currentOrder={order} onSort={setSort} />
                   {view !== 'my' && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Employee</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Employee</th>
                   )}
                   <SortableHeader label="Amount" sortKey="amount" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Policy</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Policy</th>
                   <SortableHeader label="Created" sortKey="created" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500" />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{c.claimNumber}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px] truncate" title={c.title}>{c.title}</td>
+                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.claimNumber}</td>
+                    <td className="px-4 py-3 text-sm text-foreground max-w-[200px] truncate" title={c.title}>{c.title}</td>
                     {view !== 'my' && (
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{employeeName(c.employee)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{employeeName(c.employee)}</td>
                     )}
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(c.totalAmount)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{formatCurrency(c.totalAmount)}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">{c.expensePolicy?.name ?? '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(c.createdAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground/70">{c.expensePolicy?.name ?? '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(c.createdAt)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link
                         href={`/expenses/claims/${c.id}`}
-                        className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                        className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20 font-medium"
                       >
                         View
                       </Link>

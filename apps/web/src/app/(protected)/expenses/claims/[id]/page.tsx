@@ -140,8 +140,8 @@ export default function ExpenseClaimDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Claim details */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Claim Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Claim Details</h3>
             <dl>
               <DetailRow label="Title">{claim.title}</DetailRow>
               <DetailRow label="Description">{claim.description}</DetailRow>
@@ -167,50 +167,50 @@ export default function ExpenseClaimDetailPage() {
           </div>
 
           {/* Line Items */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">
               Items ({earnings.length})
             </h3>
             {earnings.length === 0 ? (
-              <p className="text-sm text-gray-500">No items.</p>
+              <p className="text-sm text-muted-foreground">No items.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Category</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Description</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Date</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Amount</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Receipt</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Category</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Date</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium uppercase text-muted-foreground">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Receipt</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {earnings.map((item) => (
                       <tr key={item.id}>
-                        <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                        <td className="whitespace-nowrap px-4 py-2 text-foreground">
                           <span className="font-medium">{item.expenseCategory?.code}</span>
-                          <span className="ml-1 text-gray-400">— {item.expenseCategory?.name}</span>
+                          <span className="ml-1 text-muted-foreground/70">— {item.expenseCategory?.name}</span>
                         </td>
-                        <td className="px-4 py-2 text-gray-700">{item.description}</td>
-                        <td className="whitespace-nowrap px-4 py-2 text-gray-600">{formatDate(item.expenseDate)}</td>
-                        <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-gray-900">{formatCurrency(item.amount)}</td>
+                        <td className="px-4 py-2 text-foreground">{item.description}</td>
+                        <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{formatDate(item.expenseDate)}</td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-foreground">{formatCurrency(item.amount)}</td>
                         <td className="px-4 py-2">
                           {item.receiptUrl ? (
-                            <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
+                            <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs font-medium">
                               {item.receiptFileName || 'View'}
                             </a>
                           ) : (
-                            <span className="text-xs text-gray-400">None</span>
+                            <span className="text-xs text-muted-foreground/70">None</span>
                           )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50">
+                  <tfoot className="bg-primary-soft border-t border-primary/20">
                     <tr>
-                      <td colSpan={3} className="px-4 py-2 font-bold text-gray-900">Total</td>
-                      <td className="px-4 py-2 text-right font-bold text-gray-900">{formatCurrency(claim.totalAmount)}</td>
+                      <td colSpan={3} className="px-4 py-2 font-bold text-foreground">Total</td>
+                      <td className="px-4 py-2 text-right font-bold text-primary">{formatCurrency(claim.totalAmount)}</td>
                       <td />
                     </tr>
                   </tfoot>
@@ -221,20 +221,20 @@ export default function ExpenseClaimDetailPage() {
 
           {/* Approval History */}
           {approvalHistory.length > 0 && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Approval History</h3>
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Approval History</h3>
               <div className="space-y-3">
                 {approvalHistory.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3 rounded-md border border-gray-100 p-3">
-                    <div className={`mt-0.5 h-2.5 w-2.5 rounded-full ${a.action === 'APPROVED' ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div key={a.id} className="flex items-start gap-3 rounded-md border border-border p-3 bg-background">
+                    <div className={`mt-0.5 h-2.5 w-2.5 rounded-full ${a.action === 'APPROVED' ? 'bg-success' : 'bg-destructive'}`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">{employeeName(a.approverEmployee)}</span>
+                        <span className="text-sm font-medium text-foreground">{employeeName(a.approverEmployee)}</span>
                         <StatusBadge status={a.action} />
-                        <span className="text-xs text-gray-400">as {a.approverRole}</span>
+                        <span className="text-xs text-muted-foreground/70">as {a.approverRole}</span>
                       </div>
-                      {a.remarks && <p className="mt-1 text-sm text-gray-600">{a.remarks}</p>}
-                      <p className="mt-1 text-xs text-gray-400">{formatDateTime(a.createdAt)}</p>
+                      {a.remarks && <p className="mt-1 text-sm text-muted-foreground">{a.remarks}</p>}
+                      <p className="mt-1 text-xs text-muted-foreground/70">{formatDateTime(a.createdAt)}</p>
                     </div>
                   </div>
                 ))}
@@ -244,24 +244,24 @@ export default function ExpenseClaimDetailPage() {
 
           {/* Payroll Adjustment */}
           {claim.payrollAdjustment && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <h4 className="text-sm font-semibold text-green-800">Payroll Adjustment Created</h4>
-              <p className="mt-1 text-sm text-green-700">{claim.payrollAdjustment.description}</p>
-              <p className="mt-1 text-sm font-bold text-green-800">Amount: {formatCurrency(claim.payrollAdjustment.amount)}</p>
+            <div className="rounded-lg border border-success/20 bg-success-soft p-4">
+              <h4 className="text-sm font-semibold text-success">Payroll Adjustment Created</h4>
+              <p className="mt-1 text-sm text-success/90">{claim.payrollAdjustment.description}</p>
+              <p className="mt-1 text-sm font-bold text-success">Amount: {formatCurrency(claim.payrollAdjustment.amount)}</p>
             </div>
           )}
         </div>
 
         {/* Sidebar actions */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft space-y-3">
+            <h3 className="text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
 
             {canSubmitClaim && (
               <button
                 onClick={handleSubmit}
                 disabled={actionLoading}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Submitting...' : 'Submit Claim'}
               </button>
@@ -270,38 +270,38 @@ export default function ExpenseClaimDetailPage() {
             {canReviewClaim && !showReview && (
               <button
                 onClick={() => setShowReview(true)}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="w-full rounded-md bg-info text-info-foreground hover:bg-info/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
               >
                 Review
               </button>
             )}
 
             {showReview && (
-              <div className="space-y-2 rounded-md border border-indigo-100 bg-indigo-50 p-3">
+              <div className="space-y-2 rounded-md border border-info/20 bg-info-soft p-3">
                 <textarea
                   value={reviewRemarks}
                   onChange={(e) => setReviewRemarks(e.target.value)}
                   placeholder="Remarks (optional)"
                   rows={2}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-input px-2 py-1.5 text-sm bg-card text-foreground"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleReview('APPROVED')}
                     disabled={actionLoading}
-                    className="flex-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex-1 rounded-md bg-success text-success-foreground px-3 py-1.5 text-xs font-medium hover:bg-success/90 disabled:opacity-50"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleReview('REJECTED')}
                     disabled={actionLoading}
-                    className="flex-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="flex-1 rounded-md bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-medium hover:bg-destructive/90 disabled:opacity-50"
                   >
                     Reject
                   </button>
                 </div>
-                <button onClick={() => setShowReview(false)} className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200">
+                <button onClick={() => setShowReview(false)} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80">
                   Cancel
                 </button>
               </div>
@@ -310,32 +310,32 @@ export default function ExpenseClaimDetailPage() {
             {canReimburseClaim && !showReimburse && (
               <button
                 onClick={() => setShowReimburse(true)}
-                className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
               >
                 Reimburse
               </button>
             )}
 
             {showReimburse && (
-              <div className="space-y-2 rounded-md border border-green-100 bg-green-50 p-3">
-                <label className="block text-xs font-medium text-gray-700">Payroll Record ID *</label>
+              <div className="space-y-2 rounded-md border border-success/20 bg-success-soft p-3">
+                <label className="block text-xs font-medium text-foreground/80">Payroll Record ID *</label>
                 <input
                   value={payrollId}
                   onChange={(e) => setPayrollId(e.target.value)}
                   placeholder="Paste payroll ID"
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-input px-2 py-1.5 text-sm bg-card text-foreground"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   The payroll must be in PROCESSED status for this employee.
                 </p>
                 <button
                   onClick={handleReimburse}
                   disabled={actionLoading}
-                  className="w-full rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  className="w-full rounded-md bg-success text-success-foreground px-3 py-1.5 text-xs font-medium hover:bg-success/90 disabled:opacity-50"
                 >
                   {actionLoading ? 'Processing...' : 'Confirm Reimbursement'}
                 </button>
-                <button onClick={() => { setShowReimburse(false); setPayrollId(''); }} className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200">
+                <button onClick={() => { setShowReimburse(false); setPayrollId(''); }} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80">
                   Cancel
                 </button>
               </div>
@@ -344,48 +344,48 @@ export default function ExpenseClaimDetailPage() {
             {canCancelClaim && !showCancel && (
               <button
                 onClick={() => setShowCancel(true)}
-                className="w-full rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
+                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20"
               >
                 Cancel Claim
               </button>
             )}
 
             {showCancel && (
-              <div className="space-y-2 rounded-md border border-red-100 bg-red-50 p-3">
+              <div className="space-y-2 rounded-md border border-destructive/20 bg-destructive-soft p-3">
                 <textarea
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="Reason for cancellation (optional)"
                   rows={2}
-                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-input px-2 py-1.5 text-sm bg-card text-foreground"
                 />
                 <button
                   onClick={handleCancel}
                   disabled={actionLoading}
-                  className="w-full rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="w-full rounded-md bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-medium hover:bg-destructive/90 disabled:opacity-50"
                 >
                   {actionLoading ? 'Cancelling...' : 'Confirm Cancel'}
                 </button>
-                <button onClick={() => setShowCancel(false)} className="w-full rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200">
+                <button onClick={() => setShowCancel(false)} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80">
                   Back
                 </button>
               </div>
             )}
 
             {!canSubmitClaim && !canReviewClaim && !canReimburseClaim && !canCancelClaim && (
-              <p className="text-xs text-gray-500">No actions available.</p>
+              <p className="text-xs text-muted-foreground">No actions available.</p>
             )}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDate(claim.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-foreground">{formatDate(claim.createdAt)}</p>
           </div>
           {claim.finalDecisionBy && (
-            <div className="rounded-lg border bg-white p-5 shadow-sm">
-              <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Final Decision</h3>
-              <p className="text-sm text-gray-600">{employeeName(claim.finalDecisionBy)}</p>
-              <p className="text-xs text-gray-400">{formatDateTime(claim.finalDecisionAt)}</p>
+            <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+              <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Final Decision</h3>
+              <p className="text-sm text-foreground">{employeeName(claim.finalDecisionBy)}</p>
+              <p className="text-xs text-muted-foreground">{formatDateTime(claim.finalDecisionAt)}</p>
             </div>
           )}
         </div>

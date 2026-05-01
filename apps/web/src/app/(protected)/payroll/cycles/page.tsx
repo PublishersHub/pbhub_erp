@@ -100,7 +100,7 @@ export default function PayrollCyclesPage() {
   }, [currentYear]);
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors bg-card text-foreground';
 
   return (
     <div>
@@ -110,7 +110,7 @@ export default function PayrollCyclesPage() {
           canRun && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Create Cycle
             </button>
@@ -125,7 +125,7 @@ export default function PayrollCyclesPage() {
         <select
           value={yearFilter}
           onChange={(e) => setParams({ year: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input px-3 py-2 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
         >
           <option value="">All Years</option>
           {years.map((y) => (
@@ -135,11 +135,11 @@ export default function PayrollCyclesPage() {
       </FilterBar>
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-lg border bg-white p-4 shadow-sm space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">New Payroll Cycle</h3>
+        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-border bg-card p-4 shadow-soft space-y-3">
+          <h3 className="text-sm font-semibold text-foreground/80">New Payroll Cycle</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Year *</label>
+              <label className="block text-xs font-medium text-foreground/80">Year *</label>
               <select value={createYear} onChange={(e) => setCreateYear(e.target.value)} className={inputCls}>
                 {years.map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -147,7 +147,7 @@ export default function PayrollCyclesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Month *</label>
+              <label className="block text-xs font-medium text-foreground/80">Month *</label>
               <select value={createMonth} onChange={(e) => setCreateMonth(e.target.value)} className={inputCls}>
                 {MONTHS.map((m, i) => (
                   <option key={i} value={i + 1}>{m}</option>
@@ -155,16 +155,16 @@ export default function PayrollCyclesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Notes</label>
+              <label className="block text-xs font-medium text-foreground/80">Notes</label>
               <input value={createNotes} onChange={(e) => setCreateNotes(e.target.value)} className={inputCls} placeholder="Optional" />
             </div>
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
               {submitting ? 'Creating...' : 'Create'}
             </button>
-            <button type="button" onClick={() => { setShowCreate(false); setFormError(''); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+            <button type="button" onClick={() => { setShowCreate(false); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
           </div>
@@ -181,36 +181,36 @@ export default function PayrollCyclesPage() {
         <EmptyState title="No payroll cycles" description="Create a payroll cycle to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Period" sortKey="period" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Dates</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Dates</th>
                   <SortableHeader label="Employees" sortKey="employees" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Gross</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Deductions</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Gross</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Deductions</th>
                   <SortableHeader label="Net" sortKey="net" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {items.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-blue-700">
-                      <Link href={`/payroll/cycles/${c.id}`} className="hover:underline">
+                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-primary">
+                      <Link href={`/payroll/cycles/${c.id}`} className="hover:underline font-medium">
                         {MONTHS[c.month - 1]} {c.year}
                       </Link>
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
                       {formatDate(c.periodStart)} — {formatDate(c.periodEnd)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{c.employeeCount ?? '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-600">{c.totalGross ? formatCurrency(c.totalGross) : '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-red-600">{c.totalDeductions ? formatCurrency(c.totalDeductions) : '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900">{c.totalNet ? formatCurrency(c.totalNet) : '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">{c.employeeCount ?? '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{c.totalGross ? formatCurrency(c.totalGross) : '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-destructive">{c.totalDeductions ? formatCurrency(c.totalDeductions) : '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-foreground">{c.totalNet ? formatCurrency(c.totalNet) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

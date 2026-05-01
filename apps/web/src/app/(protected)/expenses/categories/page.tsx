@@ -113,7 +113,7 @@ export default function ExpenseCategoriesPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors bg-card text-foreground';
 
   return (
     <div>
@@ -123,7 +123,7 @@ export default function ExpenseCategoriesPage() {
           canManage && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Add Category
             </button>
@@ -132,23 +132,23 @@ export default function ExpenseCategoriesPage() {
       />
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 shadow-sm">
+        <form onSubmit={handleCreate} className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 shadow-soft">
           <div>
-            <label className="block text-xs font-medium text-gray-700">Code *</label>
+            <label className="block text-xs font-medium text-foreground/80">Code *</label>
             <input required value={code} onChange={(e) => setCode(e.target.value)} className={inputCls} placeholder="TRAVEL" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Name *</label>
+            <label className="block text-xs font-medium text-foreground/80">Name *</label>
             <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Travel" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Description</label>
+            <label className="block text-xs font-medium text-foreground/80">Description</label>
             <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputCls} placeholder="Optional" />
           </div>
-          <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
             {submitting ? 'Creating...' : 'Create'}
           </button>
-          <button type="button" onClick={() => { setShowCreate(false); setName(''); setCode(''); setDescription(''); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+          <button type="button" onClick={() => { setShowCreate(false); setName(''); setCode(''); setDescription(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
             Cancel
           </button>
         </form>
@@ -164,55 +164,55 @@ export default function ExpenseCategoriesPage() {
         <EmptyState title="No categories" description="Create expense categories to classify expenses." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Code" sortKey="code" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Description</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                   {canManage && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((c) =>
                   editingId === c.id ? (
-                    <tr key={c.id} className="bg-blue-50">
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">{c.code}</td>
+                    <tr key={c.id} className="bg-primary-soft">
+                      <td className="px-4 py-2 text-sm font-medium text-foreground">{c.code}</td>
                       <td className="px-4 py-2">
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded border border-gray-300 px-2 py-1 text-sm w-full" />
+                        <input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded border border-input px-2 py-1 text-sm w-full bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2">
-                        <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="rounded border border-gray-300 px-2 py-1 text-sm w-full" />
+                        <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="rounded border border-input px-2 py-1 text-sm w-full bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2" />
                       <td className="px-4 py-2 flex gap-1">
-                        <button onClick={handleUpdate} className="rounded bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100">Save</button>
-                        <button onClick={() => setEditingId('')} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200">Cancel</button>
+                        <button onClick={handleUpdate} className="rounded bg-success-soft text-success px-2 py-1 text-xs hover:bg-success/20">Save</button>
+                        <button onClick={() => setEditingId('')} className="rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs hover:bg-secondary/80">Cancel</button>
                       </td>
                     </tr>
                   ) : (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{c.code}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{c.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{c.description || '—'}</td>
+                    <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.code}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">{c.name}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{c.description || '—'}</td>
                       <td className="px-4 py-3">
                         {c.isActive ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Active</span>
+                          <span className="inline-flex items-center rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">Active</span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">Inactive</span>
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-xs font-medium">Inactive</span>
                         )}
                       </td>
                       {canManage && (
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                           <div className="flex gap-1">
-                            <button onClick={() => startEdit(c)} className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100">Edit</button>
+                            <button onClick={() => startEdit(c)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
                             {c.isActive && (
-                              <button onClick={() => handleDeactivate(c.id)} className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100">Deactivate</button>
+                              <button onClick={() => handleDeactivate(c.id)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
                             )}
                           </div>
                         </td>

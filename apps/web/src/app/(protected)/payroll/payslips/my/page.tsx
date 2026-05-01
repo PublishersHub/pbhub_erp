@@ -78,7 +78,7 @@ export default function MyPayslipsPage() {
         <select
           value={year}
           onChange={(e) => { setYear(e.target.value); setParams({ year: e.target.value || null, page: null }); }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input px-3 py-2 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
         >
           <option value="">All Years</option>
           {years.map((y) => (
@@ -93,41 +93,41 @@ export default function MyPayslipsPage() {
         <EmptyState title="No payslips" description="Your payslips will appear here once payroll is processed." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Period" sortKey="period" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Dates</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Working Days</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Dates</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Working Days</th>
                   <SortableHeader label="Gross" sortKey="gross" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Deductions</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Deductions</th>
                   <SortableHeader label="Net Pay" sortKey="net" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500" />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                  <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
                       {p.payrollCycle ? `${MONTHS[p.payrollCycle.month - 1]} ${p.payrollCycle.year}` : '—'}
                     </td>
                     <td className="px-4 py-3">
                       {p.payrollCycle && <StatusBadge status={p.payrollCycle.status} />}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
                       {p.payrollCycle ? `${formatDate(p.payrollCycle.periodStart)} — ${formatDate(p.payrollCycle.periodEnd)}` : '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-600">{p.effectiveWorkingDays}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-green-700">{formatCurrency(p.grossEarnings)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-red-600">{formatCurrency(p.totalDeductions)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-bold text-gray-900">{formatCurrency(p.netPayable)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.effectiveWorkingDays}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-success">{formatCurrency(p.grossEarnings)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-destructive">{formatCurrency(p.totalDeductions)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-bold text-foreground">{formatCurrency(p.netPayable)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link
                         href={`/payroll/payslips/my/${p.payrollCycleId}`}
-                        className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                        className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20 font-medium"
                       >
                         View
                       </Link>

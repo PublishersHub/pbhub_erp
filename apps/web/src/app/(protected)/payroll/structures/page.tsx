@@ -101,7 +101,7 @@ export default function SalaryStructuresPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors bg-card text-foreground';
 
   return (
     <div>
@@ -114,7 +114,7 @@ export default function SalaryStructuresPage() {
                 setShowSetForm(true);
                 if (compRows.length === 0) addRow();
               }}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Set Structure
             </button>
@@ -124,11 +124,11 @@ export default function SalaryStructuresPage() {
 
       {/* Set structure form */}
       {showSetForm && (
-        <form onSubmit={handleSet} className="mb-6 rounded-lg border bg-white p-4 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold text-gray-700">Set Employee Salary Structure</h3>
+        <form onSubmit={handleSet} className="mb-6 rounded-lg border border-border bg-card p-4 shadow-soft space-y-4">
+          <h3 className="text-sm font-semibold text-foreground/80">Set Employee Salary Structure</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Employee *</label>
+              <label className="block text-xs font-medium text-foreground/80">Employee *</label>
               <select required value={setEmpId} onChange={(e) => setSetEmpId(e.target.value)} className={inputCls}>
                 <option value="">Select...</option>
                 {(employees ?? []).map((emp) => (
@@ -139,24 +139,24 @@ export default function SalaryStructuresPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Effective From *</label>
+              <label className="block text-xs font-medium text-foreground/80">Effective From *</label>
               <input type="date" required value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Notes</label>
+              <label className="block text-xs font-medium text-foreground/80">Notes</label>
               <input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} placeholder="Optional notes" />
             </div>
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="block text-xs font-medium text-gray-700">Components *</label>
-              <button type="button" onClick={addRow} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200">
+              <label className="block text-xs font-medium text-foreground/80">Components *</label>
+              <button type="button" onClick={addRow} className="rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs hover:bg-secondary/80">
                 + Add Row
               </button>
             </div>
             {compRows.length === 0 && (
-              <p className="text-xs text-gray-500">Click &quot;+ Add Row&quot; to add salary components.</p>
+              <p className="text-xs text-muted-foreground">Click &quot;+ Add Row&quot; to add salary components.</p>
             )}
             <div className="space-y-2">
               {compRows.map((row, idx) => (
@@ -164,7 +164,7 @@ export default function SalaryStructuresPage() {
                   <select
                     value={row.salaryComponentId}
                     onChange={(e) => updateRow(idx, 'salaryComponentId', e.target.value)}
-                    className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                    className="flex-1 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground"
                   >
                     <option value="">Select component...</option>
                     {activeComponents.map((c) => (
@@ -180,9 +180,9 @@ export default function SalaryStructuresPage() {
                     placeholder="Amount"
                     value={row.amount}
                     onChange={(e) => updateRow(idx, 'amount', e.target.value)}
-                    className="w-32 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                    className="w-32 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground"
                   />
-                  <button type="button" onClick={() => removeRow(idx)} className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100">
+                  <button type="button" onClick={() => removeRow(idx)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">
                     Remove
                   </button>
                 </div>
@@ -192,10 +192,10 @@ export default function SalaryStructuresPage() {
 
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
               {submitting ? 'Saving...' : 'Save Structure'}
             </button>
-            <button type="button" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+            <button type="button" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
           </div>
@@ -205,12 +205,12 @@ export default function SalaryStructuresPage() {
       {/* Lookup */}
       {canRead && (
         <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Lookup by Employee</label>
+          <label className="block text-xs font-medium text-foreground/80 mb-1">Lookup by Employee</label>
           <div className="flex gap-2">
             <select
               value={selectedEmpId}
               onChange={(e) => { setSelectedEmpId(e.target.value); setShowHistory(false); }}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="rounded-md border border-input px-3 py-2 text-sm focus:border-primary focus:outline-none bg-card text-foreground"
             >
               <option value="">Select employee...</option>
               {(employees ?? []).map((emp) => (
@@ -222,7 +222,7 @@ export default function SalaryStructuresPage() {
             {selectedEmpId && (
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                className="rounded-md bg-secondary text-secondary-foreground px-3 py-2 text-sm font-medium hover:bg-secondary/80"
               >
                 {showHistory ? 'Current' : 'History'}
               </button>
@@ -240,45 +240,45 @@ export default function SalaryStructuresPage() {
             <EmptyState title="No salary structure" description="This employee has no active salary structure." />
           )}
           {structure && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase text-gray-500">Current Structure</h3>
-                <span className="text-xs text-gray-500">Effective from {formatDate(structure.effectiveFrom)}</span>
+                <h3 className="text-sm font-semibold uppercase text-muted-foreground">Current Structure</h3>
+                <span className="text-xs text-muted-foreground">Effective from {formatDate(structure.effectiveFrom)}</span>
               </div>
               {structure.notes && (
-                <p className="mb-4 text-sm text-gray-600">{structure.notes}</p>
+                <p className="mb-4 text-sm text-muted-foreground">{structure.notes}</p>
               )}
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/60">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Component</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Code</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Type</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-gray-500">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Component</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Code</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Type</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium uppercase text-muted-foreground">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {structure.components.map((sc) => (
                     <tr key={sc.id}>
-                      <td className="px-4 py-2 text-gray-900">{sc.salaryComponent.name}</td>
-                      <td className="px-4 py-2 text-gray-600">{sc.salaryComponent.code}</td>
+                      <td className="px-4 py-2 text-foreground">{sc.salaryComponent.name}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{sc.salaryComponent.code}</td>
                       <td className="px-4 py-2"><StatusBadge status={sc.salaryComponent.type} /></td>
-                      <td className="px-4 py-2 text-right font-medium text-gray-900">{formatCurrency(sc.amount)}</td>
+                      <td className="px-4 py-2 text-right font-medium text-foreground">{formatCurrency(sc.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-gray-50">
+                <tfoot className="bg-primary-soft border-t border-primary/20">
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-700">Gross Salary</td>
-                    <td className="px-4 py-2 text-right font-bold text-green-700">{formatCurrency(structure.grossSalary)}</td>
+                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-foreground">Gross Salary</td>
+                    <td className="px-4 py-2 text-right font-bold text-success">{formatCurrency(structure.grossSalary)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-700">Total Deductions</td>
-                    <td className="px-4 py-2 text-right font-bold text-red-600">{formatCurrency(structure.totalDeductions)}</td>
+                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-foreground">Total Deductions</td>
+                    <td className="px-4 py-2 text-right font-bold text-destructive">{formatCurrency(structure.totalDeductions)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-sm font-bold text-gray-900">Net Salary</td>
-                    <td className="px-4 py-2 text-right font-bold text-gray-900">{formatCurrency(structure.netSalary)}</td>
+                    <td colSpan={3} className="px-4 py-2 text-sm font-bold text-foreground">Net Salary</td>
+                    <td className="px-4 py-2 text-right font-bold text-foreground">{formatCurrency(structure.netSalary)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -297,22 +297,22 @@ export default function SalaryStructuresPage() {
           {history && history.length > 0 && (
             <div className="space-y-4">
               {history.map((h) => (
-                <div key={h.id} className={`rounded-lg border p-4 shadow-sm ${h.isActive ? 'bg-white border-blue-200' : 'bg-gray-50'}`}>
+                <div key={h.id} className={`rounded-lg border p-4 shadow-soft ${h.isActive ? 'bg-primary-soft border-primary/20' : 'bg-muted'}`}>
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">Effective: {formatDate(h.effectiveFrom)}</span>
+                      <span className="text-sm font-medium text-foreground">Effective: {formatDate(h.effectiveFrom)}</span>
                       {h.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Current</span>
+                        <span className="inline-flex items-center rounded-full bg-success-soft text-success px-2 py-0.5 text-xs font-medium">Current</span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">Superseded</span>
+                        <span className="inline-flex items-center rounded-full bg-muted-foreground/20 text-muted-foreground px-2 py-0.5 text-xs font-medium">Superseded</span>
                       )}
                     </div>
-                    <span className="text-sm font-bold text-gray-900">Net: {formatCurrency(h.netSalary)}</span>
+                    <span className="text-sm font-bold text-foreground">Net: {formatCurrency(h.netSalary)}</span>
                   </div>
-                  {h.notes && <p className="mb-2 text-xs text-gray-500">{h.notes}</p>}
+                  {h.notes && <p className="mb-2 text-xs text-muted-foreground">{h.notes}</p>}
                   <div className="flex flex-wrap gap-2">
                     {h.components.map((sc) => (
-                      <span key={sc.id} className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs">
+                      <span key={sc.id} className="inline-flex items-center gap-1 rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs">
                         <span className="font-medium">{sc.salaryComponent.code}:</span>
                         <span>{formatCurrency(sc.amount)}</span>
                       </span>

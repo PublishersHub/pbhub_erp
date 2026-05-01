@@ -183,7 +183,7 @@ export default function PayrollCycleDetailPage() {
               <button
                 onClick={handleGenerate}
                 disabled={actionLoading}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Generating...' : 'Generate Payroll'}
               </button>
@@ -192,7 +192,7 @@ export default function PayrollCycleDetailPage() {
               <button
                 onClick={handleRegenerate}
                 disabled={actionLoading}
-                className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50"
+                className="rounded-md bg-warning text-warning-foreground hover:bg-warning/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Regenerating...' : 'Regenerate'}
               </button>
@@ -201,7 +201,7 @@ export default function PayrollCycleDetailPage() {
               <button
                 onClick={handleFinalize}
                 disabled={actionLoading}
-                className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                className="rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Finalizing...' : 'Finalize'}
               </button>
@@ -216,18 +216,18 @@ export default function PayrollCycleDetailPage() {
 
       {/* Generation result */}
       {genResult && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <h4 className="text-sm font-semibold text-blue-800">Generation Result</h4>
+        <div className="mb-4 rounded-lg border border-info/20 bg-info-soft p-4">
+          <h4 className="text-sm font-semibold text-info">Generation Result</h4>
           <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-            <div><span className="text-blue-600">Payrolls:</span> {genResult.payrollCount}</div>
-            <div><span className="text-blue-600">Gross:</span> {formatCurrency(genResult.totalGross)}</div>
-            <div><span className="text-blue-600">Deductions:</span> {formatCurrency(genResult.totalDeductions)}</div>
-            <div><span className="text-blue-600">Net:</span> {formatCurrency(genResult.totalNet)}</div>
+            <div><span className="text-info font-medium">Payrolls:</span> {genResult.payrollCount}</div>
+            <div><span className="text-info font-medium">Gross:</span> {formatCurrency(genResult.totalGross)}</div>
+            <div><span className="text-info font-medium">Deductions:</span> {formatCurrency(genResult.totalDeductions)}</div>
+            <div><span className="text-info font-medium">Net:</span> {formatCurrency(genResult.totalNet)}</div>
           </div>
           {genResult.warnings.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-medium text-yellow-800">Warnings:</p>
-              <ul className="mt-1 list-disc pl-4 text-xs text-yellow-700">
+              <p className="text-xs font-medium text-warning">Warnings:</p>
+              <ul className="mt-1 list-disc pl-4 text-xs text-warning/80">
                 {genResult.warnings.map((w, i) => (
                   <li key={i}>{w.employeeCode}: {w.reason}</li>
                 ))}
@@ -239,8 +239,8 @@ export default function PayrollCycleDetailPage() {
 
       {/* Cycle details */}
       <div className="grid gap-6 lg:grid-cols-3 mb-6">
-        <div className="lg:col-span-2 rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Cycle Details</h3>
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Cycle Details</h3>
           <dl>
             <DetailRow label="Period">{formatDate(cycle.periodStart)} — {formatDate(cycle.periodEnd)}</DetailRow>
             <DetailRow label="Employees">{cycle.employeeCount ?? '—'}</DetailRow>
@@ -251,69 +251,69 @@ export default function PayrollCycleDetailPage() {
           </dl>
         </div>
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Generated</h3>
-            <p className="text-sm text-gray-600">{cycle.generatedAt ? formatDate(cycle.generatedAt) : 'Not yet'}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Generated</h3>
+            <p className="text-sm text-foreground">{cycle.generatedAt ? formatDate(cycle.generatedAt) : 'Not yet'}</p>
           </div>
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Finalized</h3>
-            <p className="text-sm text-gray-600">
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Finalized</h3>
+            <p className="text-sm text-foreground">
               {cycle.finalizedAt ? formatDate(cycle.finalizedAt) : 'Not yet'}
             </p>
             {cycle.finalizedBy && (
-              <p className="text-xs text-gray-400">by {employeeName(cycle.finalizedBy)}</p>
+              <p className="text-xs text-muted-foreground">by {employeeName(cycle.finalizedBy)}</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Employee payrolls */}
-      <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Employee Payrolls</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Employee Payrolls</h3>
       {payLoading && <Loading />}
       {payError && <ErrorMessage message={payError} onRetry={refetchPayrolls} />}
       {payrolls && total === 0 && (
         <EmptyState title="No payroll records" description="Generate payroll to create employee records." />
       )}
       {payrolls && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Employee" sortKey="employee" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Working Days</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Unpaid Leave</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Working Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Unpaid Leave</th>
                   <SortableHeader label="Gross" sortKey="gross" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Deductions" sortKey="deductions" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">LOP</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Adjustments</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">LOP</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Adjustments</th>
                   <SortableHeader label="Net Pay" sortKey="net" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500" />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((p) => (
                   <>
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                    <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
                         {employeeName(p.employee)}
                         {p.employee?.employeeCode && (
-                          <span className="ml-1 text-xs text-gray-400">({p.employee.employeeCode})</span>
+                          <span className="ml-1 text-xs text-muted-foreground">({p.employee.employeeCode})</span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-600">{p.effectiveWorkingDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-600">{p.unpaidLeaveDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-green-700">{formatCurrency(p.grossEarnings)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-red-600">{formatCurrency(p.totalDeductions)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-orange-600">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.effectiveWorkingDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.unpaidLeaveDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-success">{formatCurrency(p.grossEarnings)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-destructive">{formatCurrency(p.totalDeductions)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-warning">
                         {parseFloat(p.lossOfPayDeduction) > 0 ? formatCurrency(p.lossOfPayDeduction) : '—'}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-600">{formatCurrency(p.totalAdjustments)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-bold text-gray-900">{formatCurrency(p.netPayable)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{formatCurrency(p.totalAdjustments)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-bold text-foreground">{formatCurrency(p.netPayable)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         <button
                           onClick={() => setExpandedId(expandedId === p.id ? '' : p.id)}
-                          className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                          className="rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs hover:bg-secondary/80"
                         >
                           {expandedId === p.id ? 'Collapse' : 'Details'}
                         </button>
@@ -321,11 +321,11 @@ export default function PayrollCycleDetailPage() {
                     </tr>
                     {expandedId === p.id && (
                       <tr key={`${p.id}-detail`}>
-                        <td colSpan={9} className="bg-gray-50 px-6 py-4">
+                        <td colSpan={9} className="bg-muted/30 px-6 py-4">
                           <div className="grid gap-4 lg:grid-cols-2">
                             {/* Line items */}
                             <div>
-                              <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">Salary Breakdown</h4>
+                              <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Salary Breakdown</h4>
                               {p.lineItems && p.lineItems.length > 0 ? (
                                 <table className="w-full text-xs">
                                   <tbody>
@@ -333,56 +333,56 @@ export default function PayrollCycleDetailPage() {
                                       .filter((li) => li.type === 'EARNING')
                                       .map((li) => (
                                         <tr key={li.id}>
-                                          <td className="py-1 text-gray-600">{li.componentName}</td>
-                                          <td className="py-1 text-right text-green-700">{formatCurrency(li.amount)}</td>
+                                          <td className="py-1 text-muted-foreground">{li.componentName}</td>
+                                          <td className="py-1 text-right text-success">{formatCurrency(li.amount)}</td>
                                         </tr>
                                       ))}
                                     {p.lineItems
                                       .filter((li) => li.type === 'DEDUCTION')
                                       .map((li) => (
                                         <tr key={li.id}>
-                                          <td className="py-1 text-gray-600">{li.componentName}</td>
-                                          <td className="py-1 text-right text-red-600">-{formatCurrency(li.amount)}</td>
+                                          <td className="py-1 text-muted-foreground">{li.componentName}</td>
+                                          <td className="py-1 text-right text-destructive">-{formatCurrency(li.amount)}</td>
                                         </tr>
                                       ))}
                                     {parseFloat(p.lossOfPayDeduction) > 0 && (
                                       <tr>
-                                        <td className="py-1 font-medium text-orange-700">Loss of Pay</td>
-                                        <td className="py-1 text-right text-orange-700">-{formatCurrency(p.lossOfPayDeduction)}</td>
+                                        <td className="py-1 font-medium text-warning">Loss of Pay</td>
+                                        <td className="py-1 text-right text-warning">-{formatCurrency(p.lossOfPayDeduction)}</td>
                                       </tr>
                                     )}
-                                    <tr className="border-t border-gray-300">
-                                      <td className="py-1 font-bold text-gray-900">Net Payable</td>
-                                      <td className="py-1 text-right font-bold text-gray-900">{formatCurrency(p.netPayable)}</td>
+                                    <tr className="border-t border-border">
+                                      <td className="py-1 font-bold text-foreground">Net Payable</td>
+                                      <td className="py-1 text-right font-bold text-foreground">{formatCurrency(p.netPayable)}</td>
                                     </tr>
                                   </tbody>
                                 </table>
                               ) : (
-                                <p className="text-xs text-gray-400">No line items</p>
+                                <p className="text-xs text-muted-foreground/70">No line items</p>
                               )}
-                              <div className="mt-2 text-xs text-gray-500">
+                              <div className="mt-2 text-xs text-muted-foreground">
                                 Working: {p.totalWorkingDays} days | Paid Leave: {p.paidLeaveDays} | Half Days: {p.halfDays} | Holidays: {p.holidayDays}
                               </div>
                             </div>
 
                             {/* Adjustments */}
                             <div>
-                              <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">Adjustments</h4>
+                              <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Adjustments</h4>
                               {p.adjustments && p.adjustments.length > 0 ? (
                                 <div className="space-y-1">
                                   {p.adjustments.map((adj) => (
-                                    <div key={adj.id} className="flex items-center justify-between rounded bg-white p-2 text-xs">
+                                    <div key={adj.id} className="flex items-center justify-between rounded bg-card p-2 text-xs border border-border">
                                       <div>
-                                        <span className={adj.type === 'EARNING' ? 'text-green-700' : 'text-red-600'}>
+                                        <span className={adj.type === 'EARNING' ? 'text-success' : 'text-destructive'}>
                                           {adj.type === 'EARNING' ? '+' : '-'}{formatCurrency(adj.amount)}
                                         </span>
-                                        <span className="ml-1 text-gray-600">{adj.description}</span>
-                                        <span className="ml-1 text-gray-400">({adj.category})</span>
+                                        <span className="ml-1 text-muted-foreground">{adj.description}</span>
+                                        <span className="ml-1 text-muted-foreground/70">({adj.category})</span>
                                       </div>
                                       {canRun && isProcessed && (
                                         <button
                                           onClick={() => handleRemoveAdjustment(adj.id)}
-                                          className="rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-600 hover:bg-red-100"
+                                          className="rounded bg-destructive-soft text-destructive px-1.5 py-0.5 text-xs hover:bg-destructive/20"
                                         >
                                           Remove
                                         </button>
@@ -391,20 +391,20 @@ export default function PayrollCycleDetailPage() {
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-xs text-gray-400">No adjustments</p>
+                                <p className="text-xs text-muted-foreground/70">No adjustments</p>
                               )}
 
                               {/* Add adjustment form */}
                               {canRun && isProcessed && (
                                 <>
                                   {adjPayrollId === p.id ? (
-                                    <form onSubmit={handleAddAdjustment} className="mt-2 space-y-2 rounded border border-blue-100 bg-blue-50 p-2">
+                                    <form onSubmit={handleAddAdjustment} className="mt-2 space-y-2 rounded border border-primary/20 bg-primary-soft p-2">
                                       <div className="grid grid-cols-2 gap-2">
-                                        <select value={adjType} onChange={(e) => setAdjType(e.target.value as PayrollAdjustmentType)} className="rounded border border-gray-300 px-2 py-1 text-xs">
+                                        <select value={adjType} onChange={(e) => setAdjType(e.target.value as PayrollAdjustmentType)} className="rounded border border-input px-2 py-1 text-xs bg-card text-foreground">
                                           <option value="EARNING">Earning</option>
                                           <option value="DEDUCTION">Deduction</option>
                                         </select>
-                                        <select value={adjCategory} onChange={(e) => setAdjCategory(e.target.value as PayrollAdjustmentCategory)} className="rounded border border-gray-300 px-2 py-1 text-xs">
+                                        <select value={adjCategory} onChange={(e) => setAdjCategory(e.target.value as PayrollAdjustmentCategory)} className="rounded border border-input px-2 py-1 text-xs bg-card text-foreground">
                                           <option value="BONUS">Bonus</option>
                                           <option value="REIMBURSEMENT">Reimbursement</option>
                                           <option value="PENALTY">Penalty</option>
@@ -413,14 +413,14 @@ export default function PayrollCycleDetailPage() {
                                           <option value="OTHER">Other</option>
                                         </select>
                                       </div>
-                                      <input required value={adjDesc} onChange={(e) => setAdjDesc(e.target.value)} placeholder="Description *" className="w-full rounded border border-gray-300 px-2 py-1 text-xs" />
-                                      <input type="number" required min={0.01} step="0.01" value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)} placeholder="Amount *" className="w-full rounded border border-gray-300 px-2 py-1 text-xs" />
-                                      {adjError && <p className="text-xs text-red-600">{adjError}</p>}
+                                      <input required value={adjDesc} onChange={(e) => setAdjDesc(e.target.value)} placeholder="Description *" className="w-full rounded border border-input px-2 py-1 text-xs bg-card text-foreground" />
+                                      <input type="number" required min={0.01} step="0.01" value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)} placeholder="Amount *" className="w-full rounded border border-input px-2 py-1 text-xs bg-card text-foreground" />
+                                      {adjError && <p className="text-xs text-destructive">{adjError}</p>}
                                       <div className="flex gap-1">
-                                        <button type="submit" disabled={adjSubmitting} className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50">
+                                        <button type="submit" disabled={adjSubmitting} className="rounded bg-primary text-primary-foreground px-2 py-1 text-xs hover:bg-primary/90 disabled:opacity-50">
                                           {adjSubmitting ? 'Adding...' : 'Add'}
                                         </button>
-                                        <button type="button" onClick={() => { setAdjPayrollId(''); setAdjError(''); }} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200">
+                                        <button type="button" onClick={() => { setAdjPayrollId(''); setAdjError(''); }} className="rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs hover:bg-secondary/80">
                                           Cancel
                                         </button>
                                       </div>
@@ -428,7 +428,7 @@ export default function PayrollCycleDetailPage() {
                                   ) : (
                                     <button
                                       onClick={() => setAdjPayrollId(p.id)}
-                                      className="mt-2 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                                      className="mt-2 rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20"
                                     >
                                       + Add Adjustment
                                     </button>

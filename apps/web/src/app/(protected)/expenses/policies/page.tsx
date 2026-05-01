@@ -133,7 +133,7 @@ export default function ExpensePoliciesPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors bg-card text-foreground';
 
   return (
     <div>
@@ -143,7 +143,7 @@ export default function ExpensePoliciesPage() {
           canManage && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Create Policy
             </button>
@@ -152,36 +152,36 @@ export default function ExpensePoliciesPage() {
       />
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-lg border bg-white p-4 shadow-sm space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">New Expense Policy</h3>
+        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-border bg-card p-4 shadow-soft space-y-3">
+          <h3 className="text-sm font-semibold text-foreground/80">New Expense Policy</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-700">Name *</label>
+              <label className="block text-xs font-medium text-foreground/80">Name *</label>
               <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. Standard Expense Policy" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Max Claim Amount</label>
+              <label className="block text-xs font-medium text-foreground/80">Max Claim Amount</label>
               <input type="number" min={0} step="0.01" value={maxClaim} onChange={(e) => setMaxClaim(e.target.value)} className={inputCls} placeholder="No limit" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Max Item Amount</label>
+              <label className="block text-xs font-medium text-foreground/80">Max Item Amount</label>
               <input type="number" min={0} step="0.01" value={maxItem} onChange={(e) => setMaxItem(e.target.value)} className={inputCls} placeholder="No limit" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Receipt Required Above</label>
+              <label className="block text-xs font-medium text-foreground/80">Receipt Required Above</label>
               <input type="number" min={0} step="0.01" value={receiptAbove} onChange={(e) => setReceiptAbove(e.target.value)} className={inputCls} placeholder="Always optional" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Auto-approve Below</label>
+              <label className="block text-xs font-medium text-foreground/80">Auto-approve Below</label>
               <input type="number" min={0} step="0.01" value={autoBelow} onChange={(e) => setAutoBelow(e.target.value)} className={inputCls} placeholder="Never" />
             </div>
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
               {submitting ? 'Creating...' : 'Create'}
             </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
           </div>
@@ -198,67 +198,67 @@ export default function ExpensePoliciesPage() {
         <EmptyState title="No policies" description="Create expense policies to define spending limits." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Max Claim" sortKey="maxClaim" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Max Item</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Receipt Above</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Auto-approve Below</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Max Item</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Receipt Above</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Auto-approve Below</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                   {canManage && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((p) =>
                   editingId === p.id ? (
-                    <tr key={p.id} className="bg-blue-50">
+                    <tr key={p.id} className="bg-primary-soft">
                       <td className="px-4 py-2">
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded border border-gray-300 px-2 py-1 text-sm w-full" />
+                        <input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded border border-input px-2 py-1 text-sm w-full bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" min={0} step="0.01" value={editMaxClaim} onChange={(e) => setEditMaxClaim(e.target.value)} className="w-28 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                        <input type="number" min={0} step="0.01" value={editMaxClaim} onChange={(e) => setEditMaxClaim(e.target.value)} className="w-28 rounded border border-input px-2 py-1 text-sm text-right bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" min={0} step="0.01" value={editMaxItem} onChange={(e) => setEditMaxItem(e.target.value)} className="w-28 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                        <input type="number" min={0} step="0.01" value={editMaxItem} onChange={(e) => setEditMaxItem(e.target.value)} className="w-28 rounded border border-input px-2 py-1 text-sm text-right bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" min={0} step="0.01" value={editReceiptAbove} onChange={(e) => setEditReceiptAbove(e.target.value)} className="w-28 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                        <input type="number" min={0} step="0.01" value={editReceiptAbove} onChange={(e) => setEditReceiptAbove(e.target.value)} className="w-28 rounded border border-input px-2 py-1 text-sm text-right bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2">
-                        <input type="number" min={0} step="0.01" value={editAutoBelow} onChange={(e) => setEditAutoBelow(e.target.value)} className="w-28 rounded border border-gray-300 px-2 py-1 text-sm text-right" />
+                        <input type="number" min={0} step="0.01" value={editAutoBelow} onChange={(e) => setEditAutoBelow(e.target.value)} className="w-28 rounded border border-input px-2 py-1 text-sm text-right bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2" />
                       <td className="px-4 py-2 flex gap-1">
-                        <button onClick={handleUpdate} className="rounded bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100">Save</button>
-                        <button onClick={() => setEditingId('')} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200">Cancel</button>
+                        <button onClick={handleUpdate} className="rounded bg-success-soft text-success px-2 py-1 text-xs hover:bg-success/20">Save</button>
+                        <button onClick={() => setEditingId('')} className="rounded bg-secondary text-secondary-foreground px-2 py-1 text-xs hover:bg-secondary/80">Cancel</button>
                       </td>
                     </tr>
                   ) : (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700">{p.maxClaimAmount ? formatCurrency(p.maxClaimAmount) : '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700">{p.maxItemAmount ? formatCurrency(p.maxItemAmount) : '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700">{p.receiptRequiredAbove ? formatCurrency(p.receiptRequiredAbove) : '—'}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700">{p.autoApproveBelow ? formatCurrency(p.autoApproveBelow) : '—'}</td>
+                    <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{p.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-foreground">{p.maxClaimAmount ? formatCurrency(p.maxClaimAmount) : '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.maxItemAmount ? formatCurrency(p.maxItemAmount) : '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.receiptRequiredAbove ? formatCurrency(p.receiptRequiredAbove) : '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-muted-foreground">{p.autoApproveBelow ? formatCurrency(p.autoApproveBelow) : '—'}</td>
                       <td className="px-4 py-3">
                         {p.isActive ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Active</span>
+                          <span className="inline-flex items-center rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">Active</span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">Inactive</span>
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-xs font-medium">Inactive</span>
                         )}
                       </td>
                       {canManage && (
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                           <div className="flex gap-1">
-                            <button onClick={() => startEdit(p)} className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100">Edit</button>
+                            <button onClick={() => startEdit(p)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
                             {p.isActive && (
-                              <button onClick={() => handleDeactivate(p.id)} className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100">Deactivate</button>
+                              <button onClick={() => handleDeactivate(p.id)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
                             )}
                           </div>
                         </td>
