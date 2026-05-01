@@ -14,10 +14,11 @@ export class TokenService {
 
   /**
    * Generate a JWT access token (short-lived).
+   * Claims: sub=accountId, userId=membership-row id, organizationId.
    */
-  generateAccessToken(userId: string, organizationId: string): string {
+  generateAccessToken(accountId: string, userId: string, organizationId: string): string {
     return this.jwtService.sign(
-      { sub: userId, organizationId },
+      { sub: accountId, userId, organizationId },
       {
         secret: this.configService.get<string>('app.jwt.accessSecret'),
         expiresIn: this.configService.get<string>('app.jwt.accessExpiresIn'),
@@ -26,32 +27,28 @@ export class TokenService {
   }
 
   /**
-   * Generate a JWT refresh token (long-lived) and store its hash in the DB.
-   * The raw token is returned to the client; only the hash is persisted.
+   * Generate an account-scoped refresh token.
    */
-  async generateRefreshToken(userId: string): Promise<string> {
+  async generateRefreshToken(accountId: string): Promise<string> {
     const expiresIn = this.configService.get<string>('app.jwt.refreshExpiresIn', '7d');
     const expiresAt = this.calculateExpiry(expiresIn);
 
-    // Create the DB record first to get its ID
     const record = await this.prisma.refreshToken.create({
       data: {
-        userId,
-        tokenHash: '', // placeholder, updated below
+        accountId,
+        tokenHash: '',
         expiresAt,
       },
     });
 
-    // Sign JWT with the record ID so we can look it up later
     const token = this.jwtService.sign(
-      { sub: userId, tokenId: record.id },
+      { sub: accountId, tokenId: record.id },
       {
         secret: this.configService.get<string>('app.jwt.refreshSecret'),
         expiresIn,
       },
     );
 
-    // Store hash of the signed token
     const tokenHash = this.hashToken(token);
     await this.prisma.refreshToken.update({
       where: { id: record.id },
@@ -61,26 +58,18 @@ export class TokenService {
     return token;
   }
 
-  /**
-   * Cryptographically verify a refresh token JWT and return its payload.
-   * Used by logout to safely extract the tokenId without trusting unverified data.
-   */
-  verifyRefreshToken(rawToken: string): { userId: string; tokenId: string } | null {
+  verifyRefreshToken(rawToken: string): { accountId: string; tokenId: string } | null {
     try {
       const payload = this.jwtService.verify(rawToken, {
         secret: this.configService.get<string>('app.jwt.refreshSecret'),
       });
       if (!payload.sub || !payload.tokenId) return null;
-      return { userId: payload.sub, tokenId: payload.tokenId };
+      return { accountId: payload.sub, tokenId: payload.tokenId };
     } catch {
       return null;
     }
   }
 
-  /**
-   * Validate a refresh token against the DB record.
-   * Checks: exists, not revoked, not expired, hash matches.
-   */
   async validateRefreshToken(tokenId: string, rawToken: string) {
     const record = await this.prisma.refreshToken.findUnique({
       where: { id: tokenId },
@@ -95,9 +84,6 @@ export class TokenService {
     return record;
   }
 
-  /**
-   * Revoke a specific refresh token.
-   */
   async revokeRefreshToken(tokenId: string): Promise<void> {
     await this.prisma.refreshToken.update({
       where: { id: tokenId },
@@ -106,23 +92,19 @@ export class TokenService {
   }
 
   /**
-   * Atomically revoke a refresh token only if it belongs to the given user
-   * and has not already been revoked. Uses updateMany so a non-matching
-   * row is a silent no-op rather than a thrown error.
+   * Atomically revoke a refresh token only if it belongs to the given account
+   * and has not already been revoked.
    */
-  async revokeOwnedRefreshToken(tokenId: string, userId: string): Promise<void> {
+  async revokeOwnedRefreshToken(tokenId: string, accountId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
-      where: { id: tokenId, userId, revokedAt: null },
+      where: { id: tokenId, accountId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }
 
-  /**
-   * Revoke all refresh tokens for a user (e.g., on password change).
-   */
-  async revokeAllUserTokens(userId: string): Promise<void> {
+  async revokeAllAccountTokens(accountId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
+      where: { accountId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }
