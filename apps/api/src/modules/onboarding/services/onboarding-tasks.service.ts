@@ -249,7 +249,7 @@ export class OnboardingTasksService {
     if (dto.status === OnboardingTaskStatus.COMPLETED) {
       const completer = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { firstName: true, lastName: true },
+        select: { account: { select: { firstName: true, lastName: true } } },
       });
       this.eventEmitter.emit(NotificationEvents.ONBOARDING_TASK_COMPLETED, {
         organizationId,
@@ -260,7 +260,7 @@ export class OnboardingTasksService {
           taskTitle: task.title,
           employeeName,
           completedBy: completer
-            ? `${completer.firstName} ${completer.lastName}`
+            ? `${completer.account.firstName} ${completer.account.lastName}`
             : 'unknown',
         },
       });

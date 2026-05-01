@@ -117,7 +117,10 @@ export class NotificationsService {
       where: { organizationId },
       include: {
         recipientUser: {
-          select: { id: true, email: true, firstName: true, lastName: true },
+          select: {
+            id: true,
+            account: { select: { email: true, firstName: true, lastName: true } },
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
