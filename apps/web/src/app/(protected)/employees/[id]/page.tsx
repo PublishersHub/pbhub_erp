@@ -47,11 +47,11 @@ export default function EmployeeDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             {emp.isActive ? (
-              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                 Active
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+              <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                 Inactive
               </span>
             )}
@@ -63,8 +63,8 @@ export default function EmployeeDetailPage() {
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">
               Basic Information
             </h3>
             <dl>
@@ -80,8 +80,8 @@ export default function EmployeeDetailPage() {
           </div>
 
           {/* Organization Info */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Organization</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Organization</h3>
             <dl>
               <DetailRow label="Department">{emp.department?.name}</DetailRow>
               <DetailRow label="Designation">{emp.designation?.name}</DetailRow>
@@ -89,7 +89,7 @@ export default function EmployeeDetailPage() {
                 {emp.reportingManager ? (
                   <Link
                     href={`/employees/${emp.reportingManager.id}`}
-                    className="text-blue-600 hover:underline"
+                    className="text-primary hover:underline"
                   >
                     {employeeName(emp.reportingManager)}
                   </Link>
@@ -102,8 +102,8 @@ export default function EmployeeDetailPage() {
 
           {/* Employment Detail */}
           {emp.employmentDetail && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">
                 Employment Detail
               </h3>
               <dl>
@@ -138,8 +138,8 @@ export default function EmployeeDetailPage() {
 
           {/* Direct Reports */}
           {emp.directReports && emp.directReports.length > 0 && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">
                 Direct Reports ({emp.directReports.length})
               </h3>
               <div className="space-y-2">
@@ -147,11 +147,11 @@ export default function EmployeeDetailPage() {
                   <Link
                     key={report.id}
                     href={`/employees/${report.id}`}
-                    className="block rounded-md border border-gray-100 px-3 py-2 text-sm text-blue-600 hover:bg-gray-50 hover:underline"
+                    className="block rounded-md border border-border px-3 py-2 text-sm text-primary hover:bg-muted/50 hover:underline transition-colors"
                   >
                     {report.firstName} {report.lastName}
                     {report.employeeCode && (
-                      <span className="ml-2 text-gray-400">({report.employeeCode})</span>
+                      <span className="ml-2 text-muted-foreground/70">({report.employeeCode})</span>
                     )}
                   </Link>
                 ))}
@@ -162,13 +162,13 @@ export default function EmployeeDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {can('employee.update') && (
                 <button
                   onClick={() => router.push(`/employees/${id}/edit`)}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
                 >
                   Edit Employee
                 </button>
@@ -179,26 +179,26 @@ export default function EmployeeDetailPage() {
                   {!showDeactivateConfirm ? (
                     <button
                       onClick={() => setShowDeactivateConfirm(true)}
-                      className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                      className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
                     >
                       Deactivate
                     </button>
                   ) : (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
-                      <p className="text-xs text-red-700">
+                    <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
+                      <p className="text-xs text-destructive">
                         Are you sure you want to deactivate this employee?
                       </p>
                       <div className="flex gap-2">
                         <button
                           disabled={acting}
                           onClick={() => doAction(() => deactivateEmployee(id))}
-                          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                          className="rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
                         >
                           {acting ? 'Deactivating...' : 'Confirm'}
                         </button>
                         <button
                           onClick={() => setShowDeactivateConfirm(false)}
-                          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                          className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1 text-xs font-medium"
                         >
                           Cancel
                         </button>
@@ -215,9 +215,9 @@ export default function EmployeeDetailPage() {
             )}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDate(emp.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDate(emp.createdAt)}</p>
           </div>
         </div>
       </div>

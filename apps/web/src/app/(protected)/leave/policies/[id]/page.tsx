@@ -66,8 +66,8 @@ export default function LeavePolicyDetailPage() {
   }
 
   const inputCls =
-    'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-sm font-medium text-gray-700';
+    'mt-1 block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
+  const labelCls = 'block text-sm font-medium text-foreground/80';
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} onRetry={refetch} />;
@@ -95,8 +95,8 @@ export default function LeavePolicyDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Policy Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Policy Details</h3>
             <dl>
               <DetailRow label="Code">{policy.code}</DetailRow>
               <DetailRow label="Description">{policy.description}</DetailRow>
@@ -116,15 +116,15 @@ export default function LeavePolicyDetailPage() {
           </div>
 
           {/* Assignments */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase text-gray-500">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground">
                 Assignments ({policy.assignments?.length ?? 0})
               </h3>
               {canManage && !showAssign && (
                 <button
                   onClick={() => setShowAssign(true)}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-1.5 text-xs font-medium"
                 >
                   Assign Employee
                 </button>
@@ -132,7 +132,7 @@ export default function LeavePolicyDetailPage() {
             </div>
 
             {showAssign && (
-              <form onSubmit={handleAssign} className="mb-4 space-y-3 rounded-md border border-blue-100 bg-blue-50 p-4">
+              <form onSubmit={handleAssign} className="mb-4 space-y-3 rounded-md border border-primary/20 bg-primary-soft/20 p-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Employee *</label>
@@ -162,10 +162,10 @@ export default function LeavePolicyDetailPage() {
                 </div>
                 {formError && <ErrorMessage message={formError} />}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                  <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-1.5 text-xs font-medium disabled:opacity-50">
                     {submitting ? 'Assigning...' : 'Assign'}
                   </button>
-                  <button type="button" onClick={() => { setShowAssign(false); setFormError(''); }} className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200">
+                  <button type="button" onClick={() => { setShowAssign(false); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1.5 text-xs font-medium">
                     Cancel
                   </button>
                 </div>
@@ -182,30 +182,30 @@ export default function LeavePolicyDetailPage() {
 
             {policy.assignments && policy.assignments.length > 0 && (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Employee</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">From</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">To</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Custom Quota</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Employee</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">From</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">To</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Custom Quota</th>
                       {canManage && (
-                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Actions</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {policy.assignments.map((a) => (
-                      <tr key={a.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-900">{employeeName(a.employee)}</td>
-                        <td className="px-4 py-2 text-gray-600">{formatDate(a.effectiveFrom)}</td>
-                        <td className="px-4 py-2 text-gray-600">{formatDate(a.effectiveTo)}</td>
-                        <td className="px-4 py-2 text-gray-600">{a.customAnnualQuota ?? '—'}</td>
+                      <tr key={a.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-2 text-foreground">{employeeName(a.employee)}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{formatDate(a.effectiveFrom)}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{formatDate(a.effectiveTo)}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{a.customAnnualQuota ?? '—'}</td>
                         {canManage && (
                           <td className="px-4 py-2">
                             <button
                               onClick={() => handleRemoveAssignment(a.id)}
-                              className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                              className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                             >
                               Remove
                             </button>
@@ -221,9 +221,9 @@ export default function LeavePolicyDetailPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDate(policy.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDate(policy.createdAt)}</p>
           </div>
         </div>
       </div>

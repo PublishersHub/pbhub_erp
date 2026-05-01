@@ -49,8 +49,8 @@ export default function NewLeaveRequestPage() {
   }
 
   const inputCls =
-    'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-sm font-medium text-gray-700';
+    'mt-1 block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
+  const labelCls = 'block text-sm font-medium text-foreground/80';
 
   if (balLoading) {
     return (
@@ -67,7 +67,7 @@ export default function NewLeaveRequestPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="max-w-2xl space-y-5 rounded-lg border bg-white p-6 shadow-sm"
+        className="max-w-2xl space-y-5 rounded-lg border border-border bg-card p-6 shadow-soft"
       >
         <div>
           <label className={labelCls}>Leave Type *</label>
@@ -93,23 +93,23 @@ export default function NewLeaveRequestPage() {
         </div>
 
         {selectedBalance && (
-          <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-sm">
+          <div className="rounded-md border border-primary/20 bg-primary-soft/20 p-3 text-sm">
             <div className="grid grid-cols-4 gap-2 text-center">
               <div>
-                <p className="text-xs text-gray-500">Entitled</p>
-                <p className="font-semibold text-gray-900">{selectedBalance.totalEntitled}</p>
+                <p className="text-xs text-muted-foreground">Entitled</p>
+                <p className="font-semibold text-foreground">{selectedBalance.totalEntitled}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Used</p>
-                <p className="font-semibold text-gray-900">{selectedBalance.used}</p>
+                <p className="text-xs text-muted-foreground">Used</p>
+                <p className="font-semibold text-foreground">{selectedBalance.used}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Carried</p>
-                <p className="font-semibold text-gray-900">{selectedBalance.carriedForward}</p>
+                <p className="text-xs text-muted-foreground">Carried</p>
+                <p className="font-semibold text-foreground">{selectedBalance.carriedForward}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Available</p>
-                <p className="font-semibold text-blue-700">{selectedBalance.balance}</p>
+                <p className="text-xs text-muted-foreground">Available</p>
+                <p className="font-semibold text-primary">{selectedBalance.balance}</p>
               </div>
             </div>
           </div>
@@ -144,9 +144,9 @@ export default function NewLeaveRequestPage() {
             id="isHalfDay"
             checked={isHalfDay}
             onChange={(e) => setIsHalfDay(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-input"
           />
-          <label htmlFor="isHalfDay" className="text-sm text-gray-700">
+          <label htmlFor="isHalfDay" className="text-sm text-foreground/80">
             Half-day leave
           </label>
         </div>
@@ -168,14 +168,14 @@ export default function NewLeaveRequestPage() {
           <button
             type="submit"
             disabled={submitting || !balances || balances.length === 0}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {submitting ? 'Submitting...' : 'Submit Request'}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
           >
             Cancel
           </button>

@@ -62,8 +62,8 @@ export default function LeaveRequestDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Details</h3>
             <dl>
               <DetailRow label="Employee">{employeeName(req.employee)}</DetailRow>
               <DetailRow label="Leave Policy">{req.leavePolicy?.name}</DetailRow>
@@ -94,31 +94,31 @@ export default function LeaveRequestDetailPage() {
 
           {/* Day breakdown */}
           {req.days && req.days.length > 0 && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Day Breakdown</h3>
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Day Breakdown</h3>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">
                         Date
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">
                         Type
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">
                         Days
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {req.days.map((d) => (
-                      <tr key={d.id}>
-                        <td className="px-4 py-2 text-gray-700">{formatDate(d.date)}</td>
+                      <tr key={d.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-2 text-foreground/80">{formatDate(d.date)}</td>
                         <td className="px-4 py-2">
                           <StatusBadge status={d.dayType} />
                         </td>
-                        <td className="px-4 py-2 text-gray-600">{d.days}</td>
+                        <td className="px-4 py-2 text-muted-foreground">{d.days}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -129,24 +129,24 @@ export default function LeaveRequestDetailPage() {
 
           {/* Approval history */}
           {req.approvalActions && req.approvalActions.length > 0 && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">
                 Approval History
               </h3>
               <div className="space-y-3">
                 {req.approvalActions.map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-start gap-3 rounded-md border border-gray-100 p-3"
+                    className="flex items-start gap-3 rounded-md border border-border p-3"
                   >
                     <StatusBadge status={a.action} />
                     <div className="flex-1 text-sm">
-                      <p className="text-gray-900">
+                      <p className="text-foreground">
                         <span className="font-medium">{employeeName(a.approverEmployee)}</span>
-                        <span className="ml-1 text-xs text-gray-400">({a.approverRole})</span>
+                        <span className="ml-1 text-xs text-muted-foreground/70">({a.approverRole})</span>
                       </p>
-                      {a.remarks && <p className="mt-1 text-gray-600">{a.remarks}</p>}
-                      <p className="mt-1 text-xs text-gray-400">{formatDate(a.createdAt)}</p>
+                      {a.remarks && <p className="mt-1 text-muted-foreground">{a.remarks}</p>}
+                      <p className="mt-1 text-xs text-muted-foreground/70">{formatDate(a.createdAt)}</p>
                     </div>
                   </div>
                 ))}
@@ -157,8 +157,8 @@ export default function LeaveRequestDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {canApprove && (
                 <>
@@ -169,7 +169,7 @@ export default function LeaveRequestDetailPage() {
                         reviewLeaveRequest(id, { action: 'APPROVED', remarks: undefined }),
                       )
                     }
-                    className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
                   >
                     {acting ? 'Approving...' : 'Approve'}
                   </button>
@@ -177,18 +177,18 @@ export default function LeaveRequestDetailPage() {
                     <button
                       disabled={acting}
                       onClick={() => setShowRejectForm(true)}
-                      className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
                     >
                       Reject
                     </button>
                   ) : (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
+                    <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
                       <textarea
                         placeholder="Rejection remarks (optional)"
                         value={remarks}
                         onChange={(e) => setRemarks(e.target.value)}
                         rows={2}
-                        className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none"
+                        className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-destructive focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
                       />
                       <div className="flex gap-2">
                         <button
@@ -201,7 +201,7 @@ export default function LeaveRequestDetailPage() {
                               }),
                             )
                           }
-                          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                          className="rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
                         >
                           {acting ? 'Rejecting...' : 'Confirm Reject'}
                         </button>
@@ -210,7 +210,7 @@ export default function LeaveRequestDetailPage() {
                             setShowRejectForm(false);
                             setRemarks('');
                           }}
-                          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                          className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1 text-xs font-medium"
                         >
                           Cancel
                         </button>
@@ -226,18 +226,18 @@ export default function LeaveRequestDetailPage() {
                     <button
                       disabled={acting}
                       onClick={() => setShowCancelForm(true)}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      className="w-full rounded-md border border-border bg-card text-foreground hover:bg-muted/50 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
                     >
                       Cancel Request
                     </button>
                   ) : (
-                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                    <div className="rounded-md border border-border bg-secondary/30 p-3 space-y-2">
                       <textarea
                         placeholder="Cancellation reason (optional)"
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                         rows={2}
-                        className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                        className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
                       />
                       <div className="flex gap-2">
                         <button
@@ -249,7 +249,7 @@ export default function LeaveRequestDetailPage() {
                               }),
                             )
                           }
-                          className="rounded-md bg-gray-700 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                          className="rounded-md bg-foreground text-background hover:bg-foreground/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
                         >
                           {acting ? 'Cancelling...' : 'Confirm Cancel'}
                         </button>
@@ -258,7 +258,7 @@ export default function LeaveRequestDetailPage() {
                             setShowCancelForm(false);
                             setCancelReason('');
                           }}
-                          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                          className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1 text-xs font-medium"
                         >
                           Back
                         </button>
@@ -269,7 +269,7 @@ export default function LeaveRequestDetailPage() {
               )}
 
               {req.status !== 'PENDING' && !canApprove && (
-                <p className="text-xs text-gray-400">No actions available.</p>
+                <p className="text-xs text-muted-foreground/70">No actions available.</p>
               )}
             </div>
             {actionError && (

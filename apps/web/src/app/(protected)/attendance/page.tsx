@@ -78,15 +78,15 @@ export default function AttendancePage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Check-in / Check-out card */}
-        <div className="rounded-lg border bg-white p-6 shadow-sm text-center">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Quick Action</h3>
-          <p className="mb-2 text-3xl font-bold text-gray-900">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-soft text-center">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Quick Action</h3>
+          <p className="mb-2 text-3xl font-bold text-foreground">
             {new Date().toLocaleTimeString('en-US', {
               hour: '2-digit',
               minute: '2-digit',
             })}
           </p>
-          <p className="mb-6 text-sm text-gray-500">
+          <p className="mb-6 text-sm text-muted-foreground">
             {new Date().toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -99,7 +99,7 @@ export default function AttendancePage() {
             <button
               onClick={handleCheckIn}
               disabled={submitting}
-              className="w-full rounded-md bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
             >
               {submitting ? 'Checking In...' : 'Check In'}
             </button>
@@ -107,7 +107,7 @@ export default function AttendancePage() {
             <button
               onClick={handleCheckOut}
               disabled={submitting}
-              className="w-full rounded-md bg-red-600 px-6 py-3 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
             >
               {submitting ? 'Checking Out...' : 'Check Out'}
             </button>
@@ -115,7 +115,7 @@ export default function AttendancePage() {
             <button
               onClick={handleCheckIn}
               disabled={submitting}
-              className="w-full rounded-md bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
             >
               {submitting ? 'Checking In...' : 'Check In Again'}
             </button>
@@ -123,63 +123,63 @@ export default function AttendancePage() {
         </div>
 
         {/* Today's summary */}
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Today&apos;s Summary</h3>
+        <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Today&apos;s Summary</h3>
           {summary ? (
             <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">Status</dt>
+                <dt className="text-sm text-muted-foreground">Status</dt>
                 <dd><StatusBadge status={summary.status} /></dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">First Check-in</dt>
-                <dd className="text-sm font-medium text-gray-900">{formatTime(summary.firstCheckIn)}</dd>
+                <dt className="text-sm text-muted-foreground">First Check-in</dt>
+                <dd className="text-sm font-medium text-foreground">{formatTime(summary.firstCheckIn)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">Last Check-out</dt>
-                <dd className="text-sm font-medium text-gray-900">{formatTime(summary.lastCheckOut)}</dd>
+                <dt className="text-sm text-muted-foreground">Last Check-out</dt>
+                <dd className="text-sm font-medium text-foreground">{formatTime(summary.lastCheckOut)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">Worked</dt>
-                <dd className="text-sm font-medium text-gray-900">{formatMinutes(summary.totalWorkedMinutes)}</dd>
+                <dt className="text-sm text-muted-foreground">Worked</dt>
+                <dd className="text-sm font-medium text-foreground">{formatMinutes(summary.totalWorkedMinutes)}</dd>
               </div>
               {summary.overtimeMinutes > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-sm text-gray-500">Overtime</dt>
-                  <dd className="text-sm font-medium text-green-700">{formatMinutes(summary.overtimeMinutes)}</dd>
+                  <dt className="text-sm text-muted-foreground">Overtime</dt>
+                  <dd className="text-sm font-medium text-success">{formatMinutes(summary.overtimeMinutes)}</dd>
                 </div>
               )}
               {summary.lateMinutes > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-sm text-gray-500">Late</dt>
-                  <dd className="text-sm font-medium text-red-600">{formatMinutes(summary.lateMinutes)}</dd>
+                  <dt className="text-sm text-muted-foreground">Late</dt>
+                  <dd className="text-sm font-medium text-destructive">{formatMinutes(summary.lateMinutes)}</dd>
                 </div>
               )}
             </dl>
           ) : (
-            <p className="text-sm text-gray-500">No attendance recorded yet today.</p>
+            <p className="text-sm text-muted-foreground">No attendance recorded yet today.</p>
           )}
         </div>
 
         {/* Today's log timeline */}
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Today&apos;s Logs</h3>
+        <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Today&apos;s Logs</h3>
           {logs.length === 0 ? (
-            <p className="text-sm text-gray-500">No logs yet.</p>
+            <p className="text-sm text-muted-foreground">No logs yet.</p>
           ) : (
             <div className="space-y-3">
               {logs.map((log) => (
                 <div key={log.id} className="flex items-center gap-3">
                   <div
                     className={`h-2.5 w-2.5 rounded-full ${
-                      log.logType === 'CHECK_IN' ? 'bg-green-500' : 'bg-red-500'
+                      log.logType === 'CHECK_IN' ? 'bg-success' : 'bg-destructive'
                     }`}
                   />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {log.logType === 'CHECK_IN' ? 'Check In' : 'Check Out'}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {formatDateTime(log.timestamp)} &middot; {log.source}
                     </p>
                   </div>

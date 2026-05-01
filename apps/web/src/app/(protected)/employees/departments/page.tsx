@@ -111,7 +111,7 @@ export default function DepartmentsPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
 
   return (
     <div>
@@ -122,7 +122,7 @@ export default function DepartmentsPage() {
           can('employee.create') && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Add Department
             </button>
@@ -133,10 +133,10 @@ export default function DepartmentsPage() {
       {showCreate && (
         <form
           onSubmit={handleCreate}
-          className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 shadow-sm"
+          className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 shadow-soft"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700">Name *</label>
+            <label className="block text-xs font-medium text-foreground/80">Name *</label>
             <input
               required
               value={name}
@@ -146,7 +146,7 @@ export default function DepartmentsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Code *</label>
+            <label className="block text-xs font-medium text-foreground/80">Code *</label>
             <input
               required
               maxLength={20}
@@ -157,7 +157,7 @@ export default function DepartmentsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Parent</label>
+            <label className="block text-xs font-medium text-foreground/80">Parent</label>
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
@@ -174,7 +174,7 @@ export default function DepartmentsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {submitting ? 'Creating...' : 'Create'}
           </button>
@@ -186,7 +186,7 @@ export default function DepartmentsPage() {
               setCode('');
               setParentId('');
             }}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
           >
             Cancel
           </button>
@@ -205,10 +205,10 @@ export default function DepartmentsPage() {
         <EmptyState title="No departments found" description="Create your first department." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader
                     label="Name"
@@ -224,54 +224,54 @@ export default function DepartmentsPage() {
                     currentOrder={order}
                     onSort={setSort}
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Parent
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Status
                   </th>
                   {can('employee.update') && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((dept) => (
-                  <tr key={dept.id} className="hover:bg-gray-50">
+                  <tr key={dept.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {editingId === dept.id ? (
                         <input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="rounded border border-gray-300 px-2 py-1 text-sm"
+                          className="rounded border border-input bg-card text-foreground px-2 py-1 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 transition-colors"
                         />
                       ) : (
-                        <span className="font-medium text-gray-900">{dept.name}</span>
+                        <span className="font-medium text-foreground">{dept.name}</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {editingId === dept.id ? (
                         <input
                           value={editCode}
                           onChange={(e) => setEditCode(e.target.value)}
-                          className="rounded border border-gray-300 px-2 py-1 text-sm"
+                          className="rounded border border-input bg-card text-foreground px-2 py-1 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 transition-colors"
                         />
                       ) : (
                         dept.code
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {dept.parent?.name ?? '—'}
                     </td>
                     <td className="px-4 py-3">
                       {dept.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                           Inactive
                         </span>
                       )}
@@ -283,13 +283,13 @@ export default function DepartmentsPage() {
                             <button
                               disabled={submitting}
                               onClick={() => handleUpdate(dept)}
-                              className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+                              className="rounded bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-2 py-1 text-xs font-medium disabled:opacity-50"
                             >
                               Save
                             </button>
                             <button
                               onClick={() => setEditingId('')}
-                              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                              className="rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-2 py-1 text-xs font-medium"
                             >
                               Cancel
                             </button>
@@ -302,14 +302,14 @@ export default function DepartmentsPage() {
                                 setEditName(dept.name);
                                 setEditCode(dept.code);
                               }}
-                              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                              className="rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-2 py-1 text-xs font-medium"
                             >
                               Edit
                             </button>
                             {can('employee.delete') && dept.isActive && (
                               <button
                                 onClick={() => handleDeactivate(dept.id)}
-                                className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                                className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                               >
                                 Deactivate
                               </button>

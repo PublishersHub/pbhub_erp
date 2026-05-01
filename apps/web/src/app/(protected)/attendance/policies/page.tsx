@@ -129,7 +129,7 @@ export default function AttendancePoliciesPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
 
   return (
     <div>
@@ -139,7 +139,7 @@ export default function AttendancePoliciesPage() {
           canManage && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Create Policy
             </button>
@@ -148,15 +148,15 @@ export default function AttendancePoliciesPage() {
       />
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-lg border bg-white p-4 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold text-gray-700">New Attendance Policy</h3>
+        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-border bg-card p-4 shadow-soft space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">New Attendance Policy</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Name *</label>
+              <label className="block text-xs font-medium text-foreground/80">Name *</label>
               <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. Standard Office Hours" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Type *</label>
+              <label className="block text-xs font-medium text-foreground/80">Type *</label>
               <select value={policyType} onChange={(e) => setPolicyType(e.target.value as AttendancePolicyType)} className={inputCls}>
                 <option value="FIXED">Fixed</option>
                 <option value="FLEXIBLE">Flexible</option>
@@ -167,11 +167,11 @@ export default function AttendancePoliciesPage() {
           {policyType === 'FIXED' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Start Time</label>
+                <label className="block text-xs font-medium text-foreground/80">Start Time</label>
                 <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">End Time</label>
+                <label className="block text-xs font-medium text-foreground/80">End Time</label>
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
               </div>
             </div>
@@ -180,15 +180,15 @@ export default function AttendancePoliciesPage() {
           {policyType === 'FLEXIBLE' && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Min Hours/Day</label>
+                <label className="block text-xs font-medium text-foreground/80">Min Hours/Day</label>
                 <input type="number" min={0} step="0.5" value={minHours} onChange={(e) => setMinHours(e.target.value)} className={inputCls} placeholder="8" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">Core Start</label>
+                <label className="block text-xs font-medium text-foreground/80">Core Start</label>
                 <input type="time" value={coreStart} onChange={(e) => setCoreStart(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">Core End</label>
+                <label className="block text-xs font-medium text-foreground/80">Core End</label>
                 <input type="time" value={coreEnd} onChange={(e) => setCoreEnd(e.target.value)} className={inputCls} />
               </div>
             </div>
@@ -196,31 +196,31 @@ export default function AttendancePoliciesPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Grace (Late mins)</label>
+              <label className="block text-xs font-medium text-foreground/80">Grace (Late mins)</label>
               <input type="number" min={0} value={graceLate} onChange={(e) => setGraceLate(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Grace (Early mins)</label>
+              <label className="block text-xs font-medium text-foreground/80">Grace (Early mins)</label>
               <input type="number" min={0} value={graceEarly} onChange={(e) => setGraceEarly(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Half-day Threshold (mins)</label>
+              <label className="block text-xs font-medium text-foreground/80">Half-day Threshold (mins)</label>
               <input type="number" min={0} value={halfDayThreshold} onChange={(e) => setHalfDayThreshold(e.target.value)} className={inputCls} placeholder="240" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Working Days</label>
+            <label className="block text-xs font-medium text-foreground/80 mb-1">Working Days</label>
             <div className="flex gap-2">
               {DAYS.map((label, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => toggleDay(i)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium motion-press transition-colors ${
                     workingDays.includes(i)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   }`}
                 >
                   {label}
@@ -231,10 +231,10 @@ export default function AttendancePoliciesPage() {
 
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
               {submitting ? 'Creating...' : 'Create'}
             </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
           </div>
@@ -251,27 +251,27 @@ export default function AttendancePoliciesPage() {
         <EmptyState title="No policies" description="Create an attendance policy to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Type" sortKey="type" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Schedule</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Grace</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Working Days</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Schedule</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Grace</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Working Days</th>
                   <SortableHeader label="Assignments" sortKey="assignments" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                   {canManage && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Actions</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-blue-700">
+                  <tr key={p.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-primary">
                       <Link href={`/attendance/policies/${p.id}`} className="hover:underline">
                         {p.name}
                       </Link>
@@ -279,27 +279,27 @@ export default function AttendancePoliciesPage() {
                     <td className="px-4 py-3">
                       <StatusBadge status={p.policyType} />
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
                       {p.policyType === 'FIXED' ? (
                         <span>{p.startTime ?? '—'} - {p.endTime ?? '—'}</span>
                       ) : (
                         <span>Min {p.minHoursPerDay ?? '—'}h{p.coreStartTime ? ` / Core ${p.coreStartTime}–${p.coreEndTime}` : ''}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
                       Late: {p.graceMinutesLate}m / Early: {p.graceMinutesEarly}m
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
                       {p.workingDays.map((d) => DAYS[d]).join(', ')}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
                       {p._count?.assignments ?? 0}
                     </td>
                     <td className="px-4 py-3">
                       {p.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Active</span>
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">Active</span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">Inactive</span>
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">Inactive</span>
                       )}
                     </td>
                     {canManage && (
@@ -307,7 +307,7 @@ export default function AttendancePoliciesPage() {
                         {p.isActive && (
                           <button
                             onClick={() => handleDeactivate(p.id)}
-                            className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                            className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                           >
                             Deactivate
                           </button>

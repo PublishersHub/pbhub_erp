@@ -98,7 +98,7 @@ export default function HolidaysPage() {
   }, [currentYear]);
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
 
   return (
     <div>
@@ -108,7 +108,7 @@ export default function HolidaysPage() {
           canManage && !showCreate ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Add Holiday
             </button>
@@ -123,7 +123,7 @@ export default function HolidaysPage() {
         <select
           value={yearFilter}
           onChange={(e) => setParams({ year: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
         >
           <option value="">All Years</option>
           {years.map((y) => (
@@ -137,10 +137,10 @@ export default function HolidaysPage() {
       {showCreate && (
         <form
           onSubmit={handleCreate}
-          className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4 shadow-sm"
+          className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 shadow-soft"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700">Name *</label>
+            <label className="block text-xs font-medium text-foreground/80">Name *</label>
             <input
               required
               value={name}
@@ -150,7 +150,7 @@ export default function HolidaysPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Date *</label>
+            <label className="block text-xs font-medium text-foreground/80">Date *</label>
             <input
               type="date"
               required
@@ -159,19 +159,19 @@ export default function HolidaysPage() {
               className={inputCls}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground/80">
             <input
               type="checkbox"
               checked={isOptional}
               onChange={(e) => setIsOptional(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-input"
             />
             Optional
           </label>
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {submitting ? 'Creating...' : 'Create'}
           </button>
@@ -183,7 +183,7 @@ export default function HolidaysPage() {
               setDate('');
               setIsOptional(false);
             }}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
           >
             Cancel
           </button>
@@ -202,10 +202,10 @@ export default function HolidaysPage() {
         <EmptyState title="No holidays found" description="Add holidays for your organization." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader
                     label="Name"
@@ -221,46 +221,46 @@ export default function HolidaysPage() {
                     currentOrder={order}
                     onSort={setSort}
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Status
                   </th>
                   {canManage && (
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((h) => (
-                  <tr key={h.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                  <tr key={h.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
                       {h.name}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(h.date)}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {h.isOptional ? (
-                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+                        <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning">
                           Optional
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                        <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
                           Mandatory
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {h.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                           Inactive
                         </span>
                       )}
@@ -270,7 +270,7 @@ export default function HolidaysPage() {
                         {h.isActive && (
                           <button
                             onClick={() => handleDeactivate(h.id)}
-                            className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                            className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                           >
                             Deactivate
                           </button>

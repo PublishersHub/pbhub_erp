@@ -81,12 +81,12 @@ export default function AttendanceReportsPage() {
 
   const todayCards = todayReport
     ? [
-        { label: 'Present', value: todayReport.present, color: 'text-green-700 bg-green-50' },
-        { label: 'Absent', value: todayReport.absent, color: 'text-red-700 bg-red-50' },
-        { label: 'Late', value: todayReport.late, color: 'text-yellow-700 bg-yellow-50' },
-        { label: 'Half Day', value: todayReport.halfDay, color: 'text-orange-700 bg-orange-50' },
-        { label: 'On Leave', value: todayReport.onLeave, color: 'text-purple-700 bg-purple-50' },
-        { label: 'Holiday', value: todayReport.holiday, color: 'text-blue-700 bg-blue-50' },
+        { label: 'Present', value: todayReport.present, color: 'text-success bg-success-soft' },
+        { label: 'Absent', value: todayReport.absent, color: 'text-destructive bg-destructive-soft' },
+        { label: 'Late', value: todayReport.late, color: 'text-warning bg-warning-soft' },
+        { label: 'Half Day', value: todayReport.halfDay, color: 'text-warning bg-warning-soft' },
+        { label: 'On Leave', value: todayReport.onLeave, color: 'text-info bg-info-soft' },
+        { label: 'Holiday', value: todayReport.holiday, color: 'text-primary bg-primary-soft' },
       ]
     : [];
 
@@ -96,13 +96,13 @@ export default function AttendanceReportsPage() {
 
       {/* Today's Report */}
       <div className="mb-8">
-        <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Today&apos;s Overview</h3>
+        <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Today&apos;s Overview</h3>
         {todayLoading && <Loading />}
         {todayError && <ErrorMessage message={todayError} />}
         {todayReport && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {todayCards.map((c) => (
-              <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
+              <div key={c.label} className={`rounded-lg border border-border p-4 ${c.color}`}>
                 <p className="text-2xl font-bold">{c.value}</p>
                 <p className="text-xs font-medium">{c.label}</p>
               </div>
@@ -114,12 +114,12 @@ export default function AttendanceReportsPage() {
       {/* Monthly Report */}
       <div>
         <div className="mb-3 flex items-center gap-3">
-          <h3 className="text-sm font-semibold uppercase text-gray-500">Monthly Report</h3>
+          <h3 className="text-sm font-semibold uppercase text-muted-foreground">Monthly Report</h3>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input bg-card text-foreground px-3 py-1.5 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
           />
         </div>
         {monthlyLoading && <Loading />}
@@ -128,34 +128,34 @@ export default function AttendanceReportsPage() {
           <EmptyState title="No data" description="No attendance data for the selected month." />
         )}
         {monthlyData && total > 0 && (
-          <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/60">
                   <tr>
                     <SortableHeader label="Employee" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                     <SortableHeader label="Present" sortKey="present" currentSort={sort} currentOrder={order} onSort={setSort} />
                     <SortableHeader label="Absent" sortKey="absent" currentSort={sort} currentOrder={order} onSort={setSort} />
                     <SortableHeader label="Late" sortKey="late" currentSort={sort} currentOrder={order} onSort={setSort} />
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Half Days</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">On Leave</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Half Days</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">On Leave</th>
                     <SortableHeader label="Worked" sortKey="worked" currentSort={sort} currentOrder={order} onSort={setSort} />
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Overtime</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Overtime</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-border">
                   {items.map((emp) => (
-                    <tr key={emp.employeeId} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+                    <tr key={emp.employeeId} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
                         {employeeName(emp.employee)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-green-700">{emp.presentDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-red-600">{emp.absentDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-yellow-700">{emp.lateDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{emp.halfDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-purple-700">{emp.onLeaveDays}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{formatMinutes(emp.totalWorkedMinutes)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-success">{emp.presentDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-destructive">{emp.absentDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-warning">{emp.lateDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{emp.halfDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-info">{emp.onLeaveDays}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">{formatMinutes(emp.totalWorkedMinutes)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                         {emp.totalOvertimeMinutes > 0 ? formatMinutes(emp.totalOvertimeMinutes) : '—'}
                       </td>
                     </tr>

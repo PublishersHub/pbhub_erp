@@ -104,7 +104,7 @@ export default function LeaveBalancesPage() {
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
 
   const years = useMemo(() => {
     const arr: number[] = [];
@@ -121,7 +121,7 @@ export default function LeaveBalancesPage() {
           <select
             value={viewMode}
             onChange={(e) => { setViewMode(e.target.value as 'my' | 'employee'); setEmployeeId(''); }}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
           >
             <option value="my">My Balances</option>
             <option value="employee">By Employee</option>
@@ -131,7 +131,7 @@ export default function LeaveBalancesPage() {
           <select
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
           >
             <option value="">Select employee...</option>
             {(employees ?? []).map((emp) => (
@@ -144,7 +144,7 @@ export default function LeaveBalancesPage() {
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value, 10))}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
         >
           {years.map((y) => (
             <option key={y} value={y}>
@@ -160,21 +160,21 @@ export default function LeaveBalancesPage() {
           <button
             disabled={initLoading}
             onClick={handleInitialize}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-md border border-border bg-card text-foreground hover:bg-muted/50 motion-press transition-colors px-3 py-2 text-sm font-medium disabled:opacity-50"
           >
             {initLoading ? 'Initializing...' : `Initialize Balances (${year})`}
           </button>
           {!showAdjust ? (
             <button
               onClick={() => setShowAdjust(true)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-border bg-card text-foreground hover:bg-muted/50 motion-press transition-colors px-3 py-2 text-sm font-medium"
             >
               Adjust Balance
             </button>
           ) : (
-            <form onSubmit={handleAdjust} className="flex flex-wrap items-end gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
+            <form onSubmit={handleAdjust} className="flex flex-wrap items-end gap-2 rounded-md border border-border bg-secondary/30 p-3">
               <div>
-                <label className="block text-xs text-gray-600">Policy *</label>
+                <label className="block text-xs text-muted-foreground">Policy *</label>
                 <select required value={adjPolicyId} onChange={(e) => setAdjPolicyId(e.target.value)} className={inputCls}>
                   <option value="">Select...</option>
                   {(policies ?? []).map((p) => (
@@ -183,19 +183,19 @@ export default function LeaveBalancesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-600">Adjustment *</label>
+                <label className="block text-xs text-muted-foreground">Adjustment *</label>
                 <input required type="number" step="0.5" value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)} className={inputCls} placeholder="+2 or -1" />
               </div>
-              <button type="submit" disabled={adjSubmitting} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+              <button type="submit" disabled={adjSubmitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-2 text-sm font-medium disabled:opacity-50">
                 {adjSubmitting ? 'Saving...' : 'Apply'}
               </button>
-              <button type="button" onClick={() => { setShowAdjust(false); setAdjPolicyId(''); setAdjAmount(''); }} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+              <button type="button" onClick={() => { setShowAdjust(false); setAdjPolicyId(''); setAdjAmount(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-2 text-sm font-medium">
                 Cancel
               </button>
-              {adjError && <span className="text-xs text-red-600">{adjError}</span>}
+              {adjError && <span className="text-xs text-destructive">{adjError}</span>}
             </form>
           )}
-          {initError && <span className="text-xs text-red-600">{initError}</span>}
+          {initError && <span className="text-xs text-destructive">{initError}</span>}
         </div>
       )}
 
@@ -214,32 +214,32 @@ export default function LeaveBalancesPage() {
       {balances && balances.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {balances.map((b) => (
-            <div key={b.id} className="rounded-lg border bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-900">
+            <div key={b.id} className="rounded-lg border border-border bg-card p-5 shadow-soft">
+              <h3 className="text-sm font-semibold text-foreground">
                 {b.leavePolicy?.name ?? '—'}
               </h3>
-              <p className="mb-3 text-xs text-gray-400">{b.leavePolicy?.code}</p>
+              <p className="mb-3 text-xs text-muted-foreground/70">{b.leavePolicy?.code}</p>
               <div className="grid grid-cols-2 gap-y-2 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500">Entitled</p>
-                  <p className="font-medium text-gray-900">{b.totalEntitled}</p>
+                  <p className="text-xs text-muted-foreground">Entitled</p>
+                  <p className="font-medium text-foreground">{b.totalEntitled}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Used</p>
-                  <p className="font-medium text-gray-900">{b.used}</p>
+                  <p className="text-xs text-muted-foreground">Used</p>
+                  <p className="font-medium text-foreground">{b.used}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Carried Forward</p>
-                  <p className="font-medium text-gray-900">{b.carriedForward}</p>
+                  <p className="text-xs text-muted-foreground">Carried Forward</p>
+                  <p className="font-medium text-foreground">{b.carriedForward}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Adjustments</p>
-                  <p className="font-medium text-gray-900">{b.adjustments}</p>
+                  <p className="text-xs text-muted-foreground">Adjustments</p>
+                  <p className="font-medium text-foreground">{b.adjustments}</p>
                 </div>
               </div>
-              <div className="mt-3 rounded-md bg-blue-50 px-3 py-2 text-center">
-                <p className="text-xs text-gray-500">Available</p>
-                <p className="text-lg font-bold text-blue-700">{b.balance} days</p>
+              <div className="mt-3 rounded-md bg-primary-soft px-3 py-2 text-center">
+                <p className="text-xs text-muted-foreground">Available</p>
+                <p className="text-lg font-bold text-primary">{b.balance} days</p>
               </div>
             </div>
           ))}

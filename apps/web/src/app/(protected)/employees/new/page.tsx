@@ -81,8 +81,8 @@ export default function CreateEmployeePage() {
   }
 
   const inputCls =
-    'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-sm font-medium text-gray-700';
+    'mt-1 block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
+  const labelCls = 'block text-sm font-medium text-foreground/80';
 
   if (refsLoading) {
     return (
@@ -99,9 +99,9 @@ export default function CreateEmployeePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="max-w-2xl space-y-5 rounded-lg border bg-white p-6 shadow-sm"
+        className="max-w-2xl space-y-5 rounded-lg border border-border bg-card p-6 shadow-soft"
       >
-        <h3 className="text-sm font-semibold uppercase text-gray-500">Basic Information</h3>
+        <h3 className="text-sm font-semibold uppercase text-foreground">Basic Information</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -185,7 +185,7 @@ export default function CreateEmployeePage() {
           />
         </div>
 
-        <h3 className="text-sm font-semibold uppercase text-gray-500 pt-2">Organization</h3>
+        <h3 className="text-sm font-semibold uppercase text-foreground pt-2">Organization</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -243,15 +243,15 @@ export default function CreateEmployeePage() {
             id="includeEmployment"
             checked={includeEmployment}
             onChange={(e) => setIncludeEmployment(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-input"
           />
-          <label htmlFor="includeEmployment" className="text-sm font-semibold uppercase text-gray-500">
+          <label htmlFor="includeEmployment" className="text-sm font-semibold uppercase text-foreground">
             Include Employment Detail
           </label>
         </div>
 
         {includeEmployment && (
-          <div className="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-4">
+          <div className="space-y-4 rounded-md border border-border bg-secondary/30 p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Employment Type *</label>
@@ -323,14 +323,14 @@ export default function CreateEmployeePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {submitting ? 'Creating...' : 'Add Employee'}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
           >
             Cancel
           </button>
