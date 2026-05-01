@@ -407,7 +407,280 @@ async function main() {
   });
   console.log(`Super Admin: ${account.email} (password: admin123)`);
 
-  // 6. System default notification templates (organizationId = null)
+  // ─── Dev data ────────────────────────────────────────────────────────────────
+
+  // 6. Departments
+  const deptDefs = [
+    { name: 'Engineering', code: 'ENG' },
+    { name: 'Product', code: 'PROD' },
+    { name: 'Human Resources', code: 'HR' },
+    { name: 'Finance', code: 'FIN' },
+    { name: 'Operations', code: 'OPS' },
+  ];
+  const deptMap = new Map<string, string>(); // code → id
+  for (const d of deptDefs) {
+    const dept = await prisma.department.upsert({
+      where: { organizationId_code: { organizationId: org.id, code: d.code } },
+      update: { name: d.name },
+      create: { organizationId: org.id, name: d.name, code: d.code, isActive: true },
+    });
+    deptMap.set(d.code, dept.id);
+  }
+  console.log(`Departments: ${deptMap.size} seeded`);
+
+  // 7. Designations
+  const desgDefs = [
+    { name: 'Junior Engineer', level: 1 },
+    { name: 'Software Engineer', level: 2 },
+    { name: 'Senior Software Engineer', level: 3 },
+    { name: 'Engineering Manager', level: 4 },
+    { name: 'Product Manager', level: 3 },
+    { name: 'HR Specialist', level: 2 },
+    { name: 'HR Manager', level: 4 },
+    { name: 'Finance Specialist', level: 2 },
+  ];
+  const desgMap = new Map<string, string>(); // name → id
+  for (const d of desgDefs) {
+    const desg = await prisma.designation.upsert({
+      where: { organizationId_name: { organizationId: org.id, name: d.name } },
+      update: { level: d.level },
+      create: { organizationId: org.id, name: d.name, level: d.level, isActive: true },
+    });
+    desgMap.set(d.name, desg.id);
+  }
+  console.log(`Designations: ${desgMap.size} seeded`);
+
+  // 8. Employees (Account → User → Employee → EmploymentDetail → UserRole)
+  const empPassword = await bcrypt.hash('password123', 12);
+
+  // Phase 1: employees with no reporting manager
+  const phase1 = [
+    {
+      code: 'EMP001', firstName: 'Sara', lastName: 'Khan',
+      email: 'sara.khan@pbhub.com', dept: 'ENG', desg: 'Engineering Manager',
+      joiningDate: new Date('2024-08-01'), role: 'manager',
+    },
+    {
+      code: 'EMP005', firstName: 'Fatima', lastName: 'Hussain',
+      email: 'fatima.hussain@pbhub.com', dept: 'PROD', desg: 'Product Manager',
+      joiningDate: new Date('2024-10-01'), role: 'manager',
+    },
+    {
+      code: 'EMP006', firstName: 'Bilal', lastName: 'Sheikh',
+      email: 'bilal.sheikh@pbhub.com', dept: 'HR', desg: 'HR Manager',
+      joiningDate: new Date('2024-09-01'), role: 'hr_admin',
+    },
+    {
+      code: 'EMP008', firstName: 'Usman', lastName: 'Tariq',
+      email: 'usman.tariq@pbhub.com', dept: 'FIN', desg: 'Finance Specialist',
+      joiningDate: new Date('2024-12-01'), role: 'finance_admin',
+    },
+  ];
+
+  // Phase 2: employees with a reporting manager (managerCode resolves after phase 1)
+  const phase2 = [
+    {
+      code: 'EMP002', firstName: 'Ali', lastName: 'Ahmed',
+      email: 'ali.ahmed@pbhub.com', dept: 'ENG', desg: 'Senior Software Engineer',
+      joiningDate: new Date('2024-11-15'), role: 'employee', managerCode: 'EMP001',
+    },
+    {
+      code: 'EMP003', firstName: 'Ayesha', lastName: 'Malik',
+      email: 'ayesha.malik@pbhub.com', dept: 'ENG', desg: 'Software Engineer',
+      joiningDate: new Date('2025-03-01'), role: 'employee', managerCode: 'EMP001',
+    },
+    {
+      code: 'EMP004', firstName: 'Hamza', lastName: 'Iqbal',
+      email: 'hamza.iqbal@pbhub.com', dept: 'ENG', desg: 'Junior Engineer',
+      joiningDate: new Date('2025-09-01'), role: 'employee', managerCode: 'EMP002',
+    },
+    {
+      code: 'EMP007', firstName: 'Zainab', lastName: 'Raza',
+      email: 'zainab.raza@pbhub.com', dept: 'HR', desg: 'HR Specialist',
+      joiningDate: new Date('2025-04-15'), role: 'employee', managerCode: 'EMP006',
+    },
+  ];
+
+  // Helper: seed one employee record
+  const empCodeToId = new Map<string, string>(); // empCode → Employee.id
+
+  async function seedEmployee(def: {
+    code: string; firstName: string; lastName: string; email: string;
+    dept: string; desg: string; joiningDate: Date; role: string; managerCode?: string;
+  }) {
+    // Account
+    const acct = await prisma.account.upsert({
+      where: { email: def.email },
+      update: {},
+      create: {
+        email: def.email, passwordHash: empPassword,
+        firstName: def.firstName, lastName: def.lastName, isActive: true,
+      },
+    });
+    // User (membership)
+    const membership = await prisma.user.upsert({
+      where: { accountId_organizationId: { accountId: acct.id, organizationId: org.id } },
+      update: {},
+      create: { accountId: acct.id, organizationId: org.id, isActive: true },
+    });
+    // Employee
+    const reportingManagerId = def.managerCode ? (empCodeToId.get(def.managerCode) ?? null) : null;
+    const emp = await prisma.employee.upsert({
+      where: { organizationId_employeeCode: { organizationId: org.id, employeeCode: def.code } },
+      update: {
+        userId: membership.id,
+        departmentId: deptMap.get(def.dept)!,
+        designationId: desgMap.get(def.desg)!,
+        reportingManagerId,
+      },
+      create: {
+        organizationId: org.id,
+        userId: membership.id,
+        employeeCode: def.code,
+        firstName: def.firstName,
+        lastName: def.lastName,
+        departmentId: deptMap.get(def.dept)!,
+        designationId: desgMap.get(def.desg)!,
+        reportingManagerId,
+        isActive: true,
+      },
+    });
+    empCodeToId.set(def.code, emp.id);
+    // EmploymentDetail (upsert on unique employeeId)
+    await prisma.employeeEmploymentDetail.upsert({
+      where: { employeeId: emp.id },
+      update: {},
+      create: {
+        employeeId: emp.id,
+        employmentType: 'FULL_TIME',
+        joiningDate: def.joiningDate,
+        employmentStatus: 'ACTIVE',
+      },
+    });
+    // UserRole
+    const roleId = roleMap.get(def.role)!;
+    await prisma.userRole.upsert({
+      where: { userId_roleId_organizationId: { userId: membership.id, roleId, organizationId: org.id } },
+      update: {},
+      create: { userId: membership.id, roleId, organizationId: org.id },
+    });
+  }
+
+  for (const def of phase1) await seedEmployee(def);
+  for (const def of phase2) await seedEmployee({ ...def });
+  console.log(`Employees: ${empCodeToId.size} seeded`);
+
+  // 9. Leave policies
+  const leavePolicyDefs = [
+    { name: 'Annual Leave', code: 'ANNUAL', annualQuota: 24, maxConsecutive: 14, allowHalfDay: true, isPaid: true },
+    { name: 'Sick Leave', code: 'SICK', annualQuota: 12, maxConsecutive: 7, allowHalfDay: true, isPaid: true },
+    { name: 'Casual Leave', code: 'CASUAL', annualQuota: 8, maxConsecutive: 3, allowHalfDay: true, isPaid: true },
+    { name: 'Unpaid Leave', code: 'UNPAID', annualQuota: 30, maxConsecutive: 10, allowHalfDay: false, isPaid: false },
+  ];
+  for (const lp of leavePolicyDefs) {
+    await prisma.leavePolicy.upsert({
+      where: { organizationId_code: { organizationId: org.id, code: lp.code } },
+      update: { name: lp.name, annualQuotaDefault: lp.annualQuota, maxConsecutiveDays: lp.maxConsecutive, allowHalfDay: lp.allowHalfDay, isPaid: lp.isPaid },
+      create: {
+        organizationId: org.id, name: lp.name, code: lp.code,
+        annualQuotaDefault: lp.annualQuota, maxConsecutiveDays: lp.maxConsecutive,
+        allowHalfDay: lp.allowHalfDay, isPaid: lp.isPaid, isActive: true,
+      },
+    });
+  }
+  console.log(`Leave policies: ${leavePolicyDefs.length} seeded`);
+
+  // 10. Holidays (2026)
+  const holidayDefs = [
+    { name: "New Year's Day", date: new Date('2026-01-01'), isOptional: false },
+    { name: 'Pakistan Day', date: new Date('2026-03-23'), isOptional: false },
+    { name: 'Labour Day', date: new Date('2026-05-01'), isOptional: false },
+    { name: 'Independence Day', date: new Date('2026-08-14'), isOptional: false },
+    { name: 'Iqbal Day', date: new Date('2026-11-09'), isOptional: true },
+    { name: 'Christmas Day', date: new Date('2026-12-25'), isOptional: false },
+    { name: 'Eid ul-Fitr (Day 1)', date: new Date('2026-04-21'), isOptional: false },
+    { name: 'Eid ul-Adha (Day 1)', date: new Date('2026-06-27'), isOptional: false },
+  ];
+  for (const h of holidayDefs) {
+    await prisma.holiday.upsert({
+      where: { organizationId_date: { organizationId: org.id, date: h.date } },
+      update: { name: h.name, isOptional: h.isOptional },
+      create: { organizationId: org.id, name: h.name, date: h.date, isOptional: h.isOptional, isActive: true },
+    });
+  }
+  console.log(`Holidays: ${holidayDefs.length} seeded`);
+
+  // 11. Default attendance policy
+  await prisma.attendancePolicy.upsert({
+    where: { organizationId_name: { organizationId: org.id, name: 'Standard 9-to-6' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      name: 'Standard 9-to-6',
+      policyType: 'FIXED',
+      startTime: '09:00',
+      endTime: '18:00',
+      minHoursPerDay: 8.0,
+      graceMinutesLate: 15,
+      graceMinutesEarly: 0,
+      halfDayThresholdMinutes: 240,
+      workingDays: [1, 2, 3, 4, 5],
+      isActive: true,
+    },
+  });
+  console.log('Attendance policy: Standard 9-to-6 seeded');
+
+  // 12. Salary components
+  const salaryComponentDefs = [
+    { name: 'Basic Salary', code: 'BASIC', type: 'EARNING' as const, isTaxable: true, isDefault: true, sortOrder: 1 },
+    { name: 'House Rent Allowance', code: 'HRA', type: 'EARNING' as const, isTaxable: false, isDefault: true, sortOrder: 2 },
+    { name: 'Conveyance Allowance', code: 'CONV', type: 'EARNING' as const, isTaxable: false, isDefault: true, sortOrder: 3 },
+    { name: 'Medical Allowance', code: 'MED', type: 'EARNING' as const, isTaxable: false, isDefault: true, sortOrder: 4 },
+    { name: 'Provident Fund', code: 'PF', type: 'DEDUCTION' as const, isTaxable: false, isDefault: true, sortOrder: 10 },
+    { name: 'Income Tax', code: 'TAX', type: 'DEDUCTION' as const, isTaxable: true, isDefault: true, sortOrder: 11 },
+  ];
+  for (const sc of salaryComponentDefs) {
+    await prisma.salaryComponent.upsert({
+      where: { organizationId_code: { organizationId: org.id, code: sc.code } },
+      update: { name: sc.name, type: sc.type, isTaxable: sc.isTaxable, sortOrder: sc.sortOrder },
+      create: { organizationId: org.id, ...sc, isActive: true },
+    });
+  }
+  console.log(`Salary components: ${salaryComponentDefs.length} seeded`);
+
+  // 13. Onboarding template
+  const existingTemplate = await prisma.onboardingTemplate.findFirst({
+    where: { organizationId: org.id, name: 'Standard Onboarding' },
+  });
+  if (!existingTemplate) {
+    await prisma.onboardingTemplate.create({
+      data: {
+        organizationId: org.id,
+        name: 'Standard Onboarding',
+        description: 'Default onboarding flow for new hires',
+        isDefault: true,
+        isActive: true,
+        tasks: {
+          create: [
+            { sortOrder: 0, title: 'Sign offer letter', assigneeRole: 'NEW_HIRE', offsetDays: 0, isRequired: true, allowDocument: true },
+            { sortOrder: 1, title: 'Submit ID documents', assigneeRole: 'NEW_HIRE', offsetDays: 1, isRequired: true, allowDocument: true },
+            { sortOrder: 2, title: 'Setup work laptop', assigneeRole: 'IT', offsetDays: 1, isRequired: true, allowDocument: false },
+            { sortOrder: 3, title: 'Welcome call with manager', assigneeRole: 'MANAGER', offsetDays: 1, isRequired: true, allowDocument: false },
+            { sortOrder: 4, title: 'Complete HR orientation', assigneeRole: 'HR', offsetDays: 3, isRequired: true, allowDocument: false },
+            { sortOrder: 5, title: 'Set up email and Slack', assigneeRole: 'IT', offsetDays: 1, isRequired: true, allowDocument: false },
+            { sortOrder: 6, title: 'First-week project briefing', assigneeRole: 'MANAGER', offsetDays: 5, isRequired: false, allowDocument: false },
+          ],
+        },
+      },
+    });
+    console.log('Onboarding template: Standard Onboarding seeded (7 tasks)');
+  } else {
+    console.log('Onboarding template: Standard Onboarding already exists, skipped');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // 14. System default notification templates (organizationId = null)
   // Using findFirst + create/update to avoid null-compound-unique issues
   for (const tpl of NOTIFICATION_TEMPLATES) {
     const existing = await prisma.notificationTemplate.findFirst({
@@ -432,7 +705,7 @@ async function main() {
   }
   console.log(`Notification templates: ${NOTIFICATION_TEMPLATES.length} system defaults seeded`);
 
-  console.log('Seed complete.');
+  console.log('\nSeed complete.');
 }
 
 main()
