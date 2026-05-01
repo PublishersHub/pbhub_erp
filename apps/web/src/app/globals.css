@@ -1,3 +1,193 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =====================================================================
+ * Design tokens
+ *
+ * All colors are HSL channel triplets so Tailwind can apply alpha
+ * modifiers (e.g. `bg-primary/80`) via `hsl(var(--primary) / <alpha>)`.
+ * Light mode lives on :root; dark mode lives on .dark (toggled on
+ * the <html> element by ThemeProvider).
+ * ===================================================================== */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 262 83% 96%;
+
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+
+    --accent: 262 83% 96%;
+    --accent-foreground: 262 83% 30%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 86% 97%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 142 76% 95%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 240 10% 4%;
+    --warning-soft: 48 96% 89%;
+
+    --info: 200 98% 39%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 204 94% 94%;
+
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.5rem;
+
+    --shadow-color: 240 10% 50%;
+  }
+
+  .dark {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 262 83% 65%;
+    --primary-foreground: 240 10% 4%;
+    --primary-soft: 262 30% 18%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 262 30% 18%;
+    --accent-foreground: 262 80% 80%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --destructive-soft: 0 60% 18%;
+
+    --success: 142 70% 50%;
+    --success-foreground: 0 0% 98%;
+    --success-soft: 142 50% 16%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 10% 4%;
+    --warning-soft: 38 60% 18%;
+
+    --info: 200 90% 55%;
+    --info-foreground: 0 0% 98%;
+    --info-soft: 200 60% 18%;
+
+    --border: 240 4% 20%;
+    --input: 240 4% 20%;
+    --ring: 262 83% 65%;
+
+    --shadow-color: 240 10% 0%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Smoother scrollbar in dark mode */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}
+
+/* =====================================================================
+ * Motion utilities — subtle, productivity-friendly
+ * ===================================================================== */
+
+@layer utilities {
+  .motion-lift {
+    @apply transition-all duration-200 ease-out;
+  }
+  .motion-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px -8px hsl(var(--shadow-color) / 0.25);
+  }
+
+  .motion-press {
+    @apply transition-transform duration-100 ease-out active:scale-[0.98];
+  }
+
+  .motion-fade-in {
+    animation: fade-in 200ms ease-out both;
+  }
+
+  .motion-slide-up {
+    animation: slide-up 300ms ease-out both;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Soft elevated card — used for KPI tiles, dashboards */
+  .surface-elevated {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 1) 0%,
+      hsl(var(--card) / 0.6) 100%
+    );
+    box-shadow:
+      0 1px 2px 0 hsl(var(--shadow-color) / 0.06),
+      0 4px 12px -4px hsl(var(--shadow-color) / 0.10);
+  }
+
+  /* Glass treatment for the app shell sidebar/header */
+  .surface-glass {
+    background: hsl(var(--background) / 0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+  }
+}
