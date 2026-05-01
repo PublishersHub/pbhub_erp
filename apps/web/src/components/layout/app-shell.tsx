@@ -7,6 +7,7 @@ import { useAsync } from '@/lib/hooks';
 import { getUnreadCount } from '@/lib/notification-api';
 import { type ReactNode } from 'react';
 import { OrgSwitcher } from './org-switcher';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface NavItem {
   href: string;
@@ -105,11 +106,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const unreadCount = unreadData?.count ?? 0;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="flex w-56 flex-col border-r bg-white">
-        <div className="border-b px-5 py-4">
-          <h1 className="text-lg font-bold text-gray-900">PbHub HRMS</h1>
+      <aside className="flex w-56 flex-col border-r border-border bg-card">
+        <div className="border-b border-border px-5 py-4">
+          <h1 className="text-lg font-bold text-foreground">
+            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">PbHub</span> HRMS
+          </h1>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
@@ -119,31 +122,31 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-foreground/80 hover:bg-secondary'
                   }`}
                 >
                   {item.label}
                   {item.href === '/notifications' && unreadCount > 0 && (
-                    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </Link>
                 {item.children && isActive && (
-                  <div className="ml-3 mt-1 space-y-0.5 border-l border-gray-200 pl-3">
+                  <div className="ml-3 mt-1 space-y-0.5 border-l border-border pl-3">
                     {item.children.map((child) => {
                       const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
                       return (
                         <Link
                           key={child.href}
                           href={child.href}
-                          className={`block rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                          className={`block rounded-md px-2 py-1.5 text-xs font-medium transition-colors duration-150 ${
                             childActive
-                              ? 'text-blue-700'
-                              : 'text-gray-500 hover:text-gray-700'
+                              ? 'text-primary'
+                              : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           {child.label}
@@ -161,13 +164,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Main area */}
       <div className="flex flex-1 flex-col">
         {/* Header */}
-        <header className="flex items-center justify-end border-b bg-white px-6 py-3">
+        <header className="flex items-center justify-end border-b border-border bg-card px-6 py-3">
           <div className="flex items-center gap-3">
             <OrgSwitcher />
+            <ThemeToggle />
             {/* Notification bell */}
             <Link
               href="/notifications"
-              className="relative rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="relative rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors duration-150"
               aria-label="Notifications"
             >
               <svg
@@ -185,21 +189,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </Link>
 
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-foreground">
                 {user?.account?.firstName} {user?.account?.lastName}
               </p>
-              <p className="text-xs text-gray-500">{user?.account?.email}</p>
+              <p className="text-xs text-muted-foreground">{user?.account?.email}</p>
             </div>
             <button
               onClick={logout}
-              className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+              className="rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors duration-150 motion-press"
             >
               Logout
             </button>

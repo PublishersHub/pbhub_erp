@@ -43,7 +43,7 @@ export function OrgSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors duration-150 motion-press"
       >
         <span>{active?.organizationName ?? 'Select organization'}</span>
         <svg
@@ -52,13 +52,13 @@ export function OrgSwitcher() {
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="h-4 w-4 text-gray-400"
+          className="h-4 w-4 text-muted-foreground"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-64 rounded-md border bg-white py-1 shadow-lg">
+        <div className="absolute right-0 z-10 mt-1 w-64 rounded-md border border-border bg-popover py-1 shadow-elevated text-popover-foreground">
           {user.memberships.map((m) => {
             const isActive = m.organizationId === user.activeOrganizationId;
             return (
@@ -67,16 +67,16 @@ export function OrgSwitcher() {
                 type="button"
                 disabled={submittingId !== null}
                 onClick={() => handlePick(m.organizationId)}
-                className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50 ${
-                  isActive ? 'bg-blue-50' : ''
+                className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-secondary disabled:opacity-50 transition-colors duration-150 motion-press ${
+                  isActive ? 'bg-accent' : ''
                 }`}
               >
-                <span className={`font-medium ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>
+                <span className={`font-medium ${isActive ? 'text-accent-foreground' : 'text-foreground'}`}>
                   {m.organizationName}
                 </span>
-                <span className="text-xs text-gray-500">/{m.organizationSlug}</span>
+                <span className="text-xs text-muted-foreground">/{m.organizationSlug}</span>
                 {submittingId === m.organizationId && (
-                  <span className="text-xs text-blue-600">Switching…</span>
+                  <span className="text-xs text-primary">Switching…</span>
                 )}
               </button>
             );

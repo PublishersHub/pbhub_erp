@@ -82,7 +82,7 @@ export default function EmployeesListPage() {
           can('employee.create') ? (
             <Link
               href="/employees/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="motion-press rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Add Employee
             </Link>
@@ -105,12 +105,12 @@ export default function EmployeesListPage() {
             setSearchInput(e.target.value);
             setParams({ page: null });
           }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         />
         <select
           value={departmentId}
           onChange={(e) => setParams({ departmentId: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         >
           <option value="">All Departments</option>
           {(departments ?? []).map((d: Department) => (
@@ -122,7 +122,7 @@ export default function EmployeesListPage() {
         <select
           value={designationId}
           onChange={(e) => setParams({ designationId: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         >
           <option value="">All Designations</option>
           {(designations ?? []).map((d: Designation) => (
@@ -134,7 +134,7 @@ export default function EmployeesListPage() {
         <select
           value={isActive}
           onChange={(e) => setParams({ isActive: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         >
           <option value="">All Status</option>
           <option value="true">Active</option>
@@ -151,10 +151,10 @@ export default function EmployeesListPage() {
         />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader
                     label="Code"
@@ -184,44 +184,44 @@ export default function EmployeesListPage() {
                     currentOrder={order}
                     onSort={setSort}
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Manager
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-gray-50">
+                  <tr key={emp.id} className="transition-colors hover:bg-muted/50">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link
                         href={`/employees/${emp.id}`}
-                        className="font-medium text-blue-600 hover:underline"
+                        className="font-medium text-primary hover:underline"
                       >
                         {emp.employeeCode}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
                       {emp.firstName} {emp.lastName}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {emp.department?.name ?? '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {emp.designation?.name ?? '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {employeeName(emp.reportingManager)}
                     </td>
                     <td className="px-4 py-3">
                       {emp.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                           Inactive
                         </span>
                       )}

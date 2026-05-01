@@ -18,34 +18,34 @@ function KpiCard({ label, value, href }: { label: string; value: number; href: s
   return (
     <Link
       href={href}
-      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+      className="surface-elevated motion-lift cursor-pointer rounded-lg border border-border p-5 transition-colors hover:border-primary/40"
     >
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-3xl font-semibold text-foreground">{value}</p>
     </Link>
   );
 }
 
-function PipelineBar({ label, count, max, colorClass }: { label: string; count: number; max: number; colorClass: string }) {
+function PipelineBar({ label, count, max }: { label: string; count: number; max: number }) {
   const width = max > 0 ? Math.max(2, (count / max) * 100) : 2;
   return (
     <div className="flex items-center gap-3 py-1">
-      <span className="w-32 shrink-0 text-right text-sm text-gray-600">{label.replace(/_/g, ' ')}</span>
-      <div className="flex-1">
-        <div className={`h-6 rounded ${colorClass}`} style={{ width: `${width}%` }} />
+      <span className="w-32 shrink-0 text-right text-sm text-muted-foreground">{label.replace(/_/g, ' ')}</span>
+      <div className="flex-1 rounded bg-secondary">
+        <div className="h-6 rounded bg-primary transition-all duration-500" style={{ width: `${width}%` }} />
       </div>
-      <span className="w-8 text-sm font-medium text-gray-700">{count}</span>
+      <span className="w-8 text-sm font-medium text-foreground/80">{count}</span>
     </div>
   );
 }
 
 function SectionCard({ title, children, viewAllHref }: { title: string; children: React.ReactNode; viewAllHref?: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
         {viewAllHref && (
-          <Link href={viewAllHref} className="text-sm text-blue-600 hover:text-blue-800">
+          <Link href={viewAllHref} className="text-sm text-primary hover:text-primary/80">
             View all
           </Link>
         )}
@@ -57,14 +57,14 @@ function SectionCard({ title, children, viewAllHref }: { title: string; children
 
 // ─── Pipeline config ─────────────────────────
 
-const PIPELINE_STATUSES: { status: ApplicationStatus; colorClass: string }[] = [
-  { status: 'APPLIED', colorClass: 'bg-blue-500' },
-  { status: 'IN_PROGRESS', colorClass: 'bg-cyan-500' },
-  { status: 'OFFER_EXTENDED', colorClass: 'bg-indigo-500' },
-  { status: 'ON_HOLD', colorClass: 'bg-orange-400' },
-  { status: 'HIRED', colorClass: 'bg-green-500' },
-  { status: 'REJECTED', colorClass: 'bg-red-500' },
-  { status: 'WITHDRAWN', colorClass: 'bg-gray-400' },
+const PIPELINE_STATUSES: { status: ApplicationStatus }[] = [
+  { status: 'APPLIED' },
+  { status: 'IN_PROGRESS' },
+  { status: 'OFFER_EXTENDED' },
+  { status: 'ON_HOLD' },
+  { status: 'HIRED' },
+  { status: 'REJECTED' },
+  { status: 'WITHDRAWN' },
 ];
 
 // ─── Main component ─────────────────────────
@@ -77,15 +77,14 @@ export default function DashboardPage() {
   if (error) return <ErrorMessage message={error} onRetry={refetch} />;
   if (!data) return null;
 
-  const pipelineCounts = PIPELINE_STATUSES.map(({ status, colorClass }) => ({
+  const pipelineCounts = PIPELINE_STATUSES.map(({ status }) => ({
     status,
-    colorClass,
     count: data.pipeline[status] ?? 0,
   }));
   const maxPipelineCount = Math.max(...pipelineCounts.map((p) => p.count), 1);
 
   return (
-    <div>
+    <div className="motion-fade-in">
       <PageHeader
         title="Dashboard"
         description={`Welcome back, ${user?.account?.firstName ?? 'User'}`}
@@ -112,7 +111,6 @@ export default function DashboardPage() {
                 label={p.status}
                 count={p.count}
                 max={maxPipelineCount}
-                colorClass={p.colorClass}
               />
             ))}
           </div>
@@ -125,21 +123,21 @@ export default function DashboardPage() {
           {data.recentApplications.length === 0 ? (
             <EmptyState title="No applications" description="New applications will show up here." />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {data.recentApplications.map((app) => (
                 <Link
                   key={app.id}
                   href={`/applications/${app.id}`}
-                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-gray-50"
+                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-muted"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {employeeName(app.candidate)}
                     </p>
-                    <p className="text-xs text-gray-500">{app.jobRequisition?.title ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground">{app.jobRequisition?.title ?? '—'}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{formatDate(app.appliedAt)}</span>
+                    <span className="text-xs text-muted-foreground/70">{formatDate(app.appliedAt)}</span>
                     <StatusBadge status={app.status} />
                   </div>
                 </Link>
@@ -152,21 +150,21 @@ export default function DashboardPage() {
           {data.upcomingInterviews.length === 0 ? (
             <EmptyState title="No upcoming interviews" description="Scheduled interviews will appear here." />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {data.upcomingInterviews.map((iv) => (
                 <Link
                   key={iv.id}
                   href={`/applications/${iv.applicationId}`}
-                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-gray-50"
+                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-muted"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {employeeName(iv.application.candidate)}
                     </p>
-                    <p className="text-xs text-gray-500">{iv.type.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-muted-foreground">{iv.type.replace(/_/g, ' ')}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{formatDateTime(iv.scheduledAt)}</span>
+                    <span className="text-xs text-muted-foreground/70">{formatDateTime(iv.scheduledAt)}</span>
                     <StatusBadge status={iv.status} />
                   </div>
                 </Link>
@@ -182,19 +180,19 @@ export default function DashboardPage() {
           {data.recentOffers.length === 0 ? (
             <EmptyState title="No offers yet" description="Offers will appear here once created." />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {data.recentOffers.map((o) => (
                 <Link
                   key={o.id}
                   href={`/applications/${o.applicationId}`}
-                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-gray-50"
+                  className="-mx-2 flex items-center justify-between rounded px-2 py-3 hover:bg-muted"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{o.offerNumber}</p>
-                    <p className="text-xs text-gray-500">{employeeName(o.application.candidate)}</p>
+                    <p className="text-sm font-medium text-foreground">{o.offerNumber}</p>
+                    <p className="text-xs text-muted-foreground">{employeeName(o.application.candidate)}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">{formatCurrency(o.baseSalary)}</span>
+                    <span className="text-sm text-muted-foreground">{formatCurrency(o.baseSalary)}</span>
                     <StatusBadge status={o.status} />
                   </div>
                 </Link>

@@ -80,7 +80,7 @@ export default function LeaveRequestsPage() {
           can('leave.read_own') ? (
             <Link
               href="/leave/requests/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="motion-press rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               New Request
             </Link>
@@ -102,7 +102,7 @@ export default function LeaveRequestsPage() {
             setView(v);
             setParams({ view: v === 'my' ? null : v, page: null });
           }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         >
           <option value="my">My Requests</option>
           {canApprove && <option value="pending">Pending Approvals</option>}
@@ -112,7 +112,7 @@ export default function LeaveRequestsPage() {
           <select
             value={status}
             onChange={(e) => setParams({ status: e.target.value || null, page: null })}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
           >
             <option value="">All Statuses</option>
             {STATUSES.map((s) => (
@@ -137,10 +137,10 @@ export default function LeaveRequestsPage() {
         />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   {view !== 'my' && (
                     <SortableHeader
@@ -165,7 +165,7 @@ export default function LeaveRequestsPage() {
                     currentOrder={order}
                     onSort={setSort}
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     End
                   </th>
                   <SortableHeader
@@ -184,32 +184,32 @@ export default function LeaveRequestsPage() {
                   />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((req: LeaveRequest) => (
-                  <tr key={req.id} className="hover:bg-gray-50">
+                  <tr key={req.id} className="transition-colors hover:bg-muted/50">
                     {view !== 'my' && (
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
                         {employeeName(req.employee)}
                       </td>
                     )}
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link
                         href={`/leave/requests/${req.id}`}
-                        className="font-medium text-blue-600 hover:underline"
+                        className="font-medium text-primary hover:underline"
                       >
                         {req.leavePolicy?.name ?? '—'}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(req.startDate)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(req.endDate)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
                       {req.totalDays}
                       {req.isHalfDay && (
-                        <span className="ml-1 text-xs text-gray-400">(half)</span>
+                        <span className="ml-1 text-xs text-muted-foreground/70">(half)</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
