@@ -70,7 +70,7 @@ export default function ApplicationsListPage() {
           can('recruitment.application.manage') ? (
             <Link
               href="/recruitment/applications/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
             >
               Create Application
             </Link>
@@ -87,7 +87,7 @@ export default function ApplicationsListPage() {
         <select
           value={status}
           onChange={(e) => setParams({ status: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
         >
           <option value="">All Statuses</option>
           {STATUSES.map((s) => (
@@ -102,37 +102,37 @@ export default function ApplicationsListPage() {
         <EmptyState title="No applications found" description="Create an application to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Candidate" sortKey="candidate" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Requisition</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Stage</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Requisition</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Stage</th>
                   <SortableHeader label="Source" sortKey="source" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Applied" sortKey="appliedAt" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((app) => (
-                  <tr key={app.id} className="hover:bg-gray-50">
+                  <tr key={app.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/recruitment/applications/${app.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/recruitment/applications/${app.id}`} className="font-medium text-primary hover:underline">
                         {app.candidate
                           ? `${app.candidate.firstName} ${app.candidate.lastName}`
                           : app.candidateId}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {app.jobRequisition?.title || app.jobRequisitionId}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {app.currentStage?.name || '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{app.source.replace(/_/g, ' ')}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(app.appliedAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{app.source.replace(/_/g, ' ')}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(app.appliedAt)}</td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
                   </tr>
                 ))}

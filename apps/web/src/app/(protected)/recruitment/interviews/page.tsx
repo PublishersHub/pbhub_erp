@@ -51,7 +51,7 @@ export default function InterviewsListPage() {
           applicationId && can('recruitment.interview.manage') ? (
             <Link
               href={`/recruitment/interviews/new?applicationId=${applicationId}`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
             >
               Schedule Interview
             </Link>
@@ -72,35 +72,35 @@ export default function InterviewsListPage() {
         <EmptyState title="No interviews scheduled" description="Schedule the first interview for this application." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Type" sortKey="type" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Scheduled" sortKey="scheduledAt" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Mode</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Panelists</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Feedback</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Mode</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Panelists</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Feedback</th>
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((interview) => (
-                  <tr key={interview.id} className="hover:bg-gray-50">
+                  <tr key={interview.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/recruitment/interviews/${interview.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/recruitment/interviews/${interview.id}`} className="font-medium text-primary hover:underline">
                         {interview.type.replace(/_/g, ' ')}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDateTime(interview.scheduledAt)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{interview.mode.replace(/_/g, ' ')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDateTime(interview.scheduledAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{interview.mode.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {interview.interviewers
                         ?.map((p) => (p.employee ? employeeName(p.employee) : p.employeeId))
                         .join(', ') || '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {interview.feedback?.length || 0}/{interview.interviewers?.length || 0}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={interview.status} /></td>

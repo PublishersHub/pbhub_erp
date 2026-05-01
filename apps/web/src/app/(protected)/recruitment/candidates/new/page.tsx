@@ -75,14 +75,14 @@ export default function CreateCandidatePage() {
     }
   }
 
-  const inputCls = 'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-sm font-medium text-gray-700';
+  const inputCls = 'mt-1 block w-full rounded-md border border-input bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
+  const labelCls = 'block text-sm font-medium text-foreground';
 
   return (
     <div>
       <PageHeader title="Add Candidate" backHref="/recruitment/candidates" />
 
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-lg border bg-white p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-lg border border-border bg-card p-6 shadow-soft">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>First Name *</label>
@@ -118,7 +118,7 @@ export default function CreateCandidatePage() {
             <div>
               <label className={labelCls}>Referred By</label>
               {empLoading ? (
-                <p className="mt-1 text-sm text-gray-400">Loading employees...</p>
+                <p className="mt-1 text-sm text-muted-foreground/70">Loading employees...</p>
               ) : employees && employees.length > 0 ? (
                 <select value={referrerEmployeeId} onChange={(e) => setReferrerEmployeeId(e.target.value)} className={inputCls}>
                   <option value="">Select...</option>
@@ -190,14 +190,14 @@ export default function CreateCandidatePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
           >
             {submitting ? 'Creating...' : 'Add Candidate'}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
           >
             Cancel
           </button>

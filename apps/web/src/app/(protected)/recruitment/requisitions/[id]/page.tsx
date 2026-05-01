@@ -68,8 +68,8 @@ export default function RequisitionDetailPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Details</h3>
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Details</h3>
           <dl>
             <DetailRow label="Requisition #">{req.requisitionNumber}</DetailRow>
             <DetailRow label="Employment Type">{req.employmentType.replace(/_/g, ' ')}</DetailRow>
@@ -91,28 +91,28 @@ export default function RequisitionDetailPage() {
 
           {req.description && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-gray-700">Description</h4>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{req.description}</p>
+              <h4 className="text-sm font-medium text-foreground">Description</h4>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{req.description}</p>
             </div>
           )}
 
           {req.requirements && (
             <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-700">Requirements</h4>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{req.requirements}</p>
+              <h4 className="text-sm font-medium text-foreground">Requirements</h4>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{req.requirements}</p>
             </div>
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {canSubmit && (
                 <button
                   disabled={acting}
                   onClick={() => doAction(() => submitRequisition(id))}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
                 >
                   {acting ? 'Submitting...' : 'Submit for Approval'}
                 </button>
@@ -122,7 +122,7 @@ export default function RequisitionDetailPage() {
                   <button
                     disabled={acting}
                     onClick={() => doAction(() => reviewRequisition(id, { decision: 'APPROVED' }))}
-                    className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 motion-press disabled:opacity-50"
                   >
                     {acting ? 'Approving...' : 'Approve'}
                   </button>
@@ -130,18 +130,18 @@ export default function RequisitionDetailPage() {
                     <button
                       disabled={acting}
                       onClick={() => setShowRejectForm(true)}
-                      className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                     >
                       Reject
                     </button>
                   ) : (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
+                    <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
                       <textarea
                         placeholder="Rejection reason (optional)"
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
                         rows={2}
-                        className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none"
+                        className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                       />
                       <div className="flex gap-2">
                         <button
@@ -154,13 +154,13 @@ export default function RequisitionDetailPage() {
                               }),
                             )
                           }
-                          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                          className="rounded-md bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                         >
                           {acting ? 'Rejecting...' : 'Confirm Reject'}
                         </button>
                         <button
                           onClick={() => { setShowRejectForm(false); setRejectReason(''); }}
-                          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                          className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
                         >
                           Cancel
                         </button>
@@ -175,18 +175,18 @@ export default function RequisitionDetailPage() {
                     <button
                       disabled={acting}
                       onClick={() => setShowCloseForm(true)}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 motion-press disabled:opacity-50"
                     >
                       Close Requisition
                     </button>
                   ) : (
-                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                    <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
                       <textarea
                         placeholder="Close reason (optional)"
                         value={closeReason}
                         onChange={(e) => setCloseReason(e.target.value)}
                         rows={2}
-                        className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                        className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                       />
                       <div className="flex gap-2">
                         <button
@@ -196,13 +196,13 @@ export default function RequisitionDetailPage() {
                               closeRequisition(id, { reason: closeReason.trim() || undefined }),
                             )
                           }
-                          className="rounded-md bg-gray-700 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                          className="rounded-md bg-foreground/90 px-3 py-1 text-xs font-medium text-background hover:bg-foreground motion-press disabled:opacity-50"
                         >
                           {acting ? 'Closing...' : 'Confirm Close'}
                         </button>
                         <button
                           onClick={() => { setShowCloseForm(false); setCloseReason(''); }}
-                          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                          className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
                         >
                           Cancel
                         </button>
@@ -213,7 +213,7 @@ export default function RequisitionDetailPage() {
               )}
               <button
                 onClick={() => router.push(`/recruitment/applications?requisitionId=${id}`)}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 motion-press"
               >
                 View Applications
               </button>
@@ -221,11 +221,11 @@ export default function RequisitionDetailPage() {
             {actionError && <div className="mt-3"><ErrorMessage message={actionError} /></div>}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDate(req.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDate(req.createdAt)}</p>
             {req.createdBy && (
-              <p className="text-sm text-gray-500">by {employeeName(req.createdBy)}</p>
+              <p className="text-sm text-muted-foreground/70">by {employeeName(req.createdBy)}</p>
             )}
           </div>
         </div>

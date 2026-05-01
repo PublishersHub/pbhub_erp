@@ -75,8 +75,8 @@ export default function ScheduleInterviewPage() {
     }
   }
 
-  const inputCls = 'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-  const labelCls = 'block text-sm font-medium text-gray-700';
+  const inputCls = 'mt-1 block w-full rounded-md border border-input bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
+  const labelCls = 'block text-sm font-medium text-foreground';
 
   if (empLoading) {
     return (
@@ -91,7 +91,7 @@ export default function ScheduleInterviewPage() {
     <div>
       <PageHeader title="Schedule Interview" backHref={presetAppId ? `/recruitment/applications/${presetAppId}` : '/recruitment/applications'} />
 
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-lg border bg-white p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-lg border border-border bg-card p-6 shadow-soft">
         <div>
           <label className={labelCls}>Application ID *</label>
           <input required value={applicationId} onChange={(e) => setApplicationId(e.target.value)} className={inputCls} readOnly={!!presetAppId} />
@@ -141,23 +141,23 @@ export default function ScheduleInterviewPage() {
         <div>
           <label className={labelCls}>Panelists * <span className="font-normal text-gray-400">(select at least 1)</span></label>
           {employees && employees.length > 0 ? (
-            <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 p-2 space-y-1">
+            <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-border p-2 space-y-1">
               {employees.map((emp) => {
                 const isSelected = selectedPanelists.includes(emp.id);
                 return (
-                  <label key={emp.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                  <label key={emp.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm cursor-pointer ${isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => togglePanelist(emp.id)}
-                      className="rounded border-gray-300"
+                      className="rounded border-input"
                     />
                     <span>{emp.firstName} {emp.lastName}</span>
                     {isSelected && (
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); setPrimaryPanelistId(primaryPanelistId === emp.id ? '' : emp.id); }}
-                        className={`ml-auto text-xs px-2 py-0.5 rounded ${primaryPanelistId === emp.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`ml-auto text-xs px-2 py-0.5 rounded motion-press ${primaryPanelistId === emp.id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                       >
                         {primaryPanelistId === emp.id ? 'Primary' : 'Set primary'}
                       </button>
@@ -167,7 +167,7 @@ export default function ScheduleInterviewPage() {
               })}
             </div>
           ) : (
-            <p className="mt-1 text-sm text-gray-400">No employees found</p>
+            <p className="mt-1 text-sm text-muted-foreground/70">No employees found</p>
           )}
         </div>
 
@@ -182,14 +182,14 @@ export default function ScheduleInterviewPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
           >
             {submitting ? 'Scheduling...' : 'Schedule Interview'}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
           >
             Cancel
           </button>

@@ -58,7 +58,7 @@ export default function RequisitionsListPage() {
           can('recruitment.requisition.create') ? (
             <Link
               href="/recruitment/requisitions/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
             >
               Create Requisition
             </Link>
@@ -73,7 +73,7 @@ export default function RequisitionsListPage() {
         <select
           value={status}
           onChange={(e) => setParams({ status: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
         >
           <option value="">All Statuses</option>
           {STATUSES.map((s) => (
@@ -88,12 +88,12 @@ export default function RequisitionsListPage() {
         <EmptyState title="No requisitions found" description="Create your first requisition to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Req #</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Req #</th>
                   <SortableHeader label="Title" sortKey="title" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Hiring Manager" sortKey="hiringManager" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Type</th>
@@ -101,18 +101,18 @@ export default function RequisitionsListPage() {
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50">
+                  <tr key={req.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/recruitment/requisitions/${req.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/recruitment/requisitions/${req.id}`} className="font-medium text-primary hover:underline">
                         {req.requisitionNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{req.title}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{employeeName(req.hiringManager)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{req.employmentType.replace(/_/g, ' ')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{req.positionsFilled}/{req.numberOfOpenings}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{req.title}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{employeeName(req.hiringManager)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{req.employmentType.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{req.positionsFilled}/{req.numberOfOpenings}</td>
                     <td className="px-4 py-3"><StatusBadge status={req.status} /></td>
                   </tr>
                 ))}

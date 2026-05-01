@@ -67,7 +67,7 @@ export default function CandidateDetailPage() {
         backHref="/recruitment/candidates"
         actions={
           candidate.isBlacklisted ? (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+            <span className="inline-flex items-center rounded-full bg-destructive-soft px-3 py-1 text-sm font-medium text-destructive">
               Blacklisted
             </span>
           ) : undefined
@@ -75,8 +75,8 @@ export default function CandidateDetailPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Profile</h3>
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Profile</h3>
           <dl>
             <DetailRow label="Email">{candidate.email}</DetailRow>
             <DetailRow label="Phone">{candidate.phone}</DetailRow>
@@ -95,7 +95,7 @@ export default function CandidateDetailPage() {
 
           {(candidate.linkedinUrl || candidate.portfolioUrl || candidate.resumeUrl) && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Links & Documents</h4>
+              <h4 className="text-sm font-medium text-foreground mb-2">Links & Documents</h4>
               <div className="space-y-2">
                 {candidate.resumeUrl && (
                   <FileLinkCard
@@ -116,29 +116,29 @@ export default function CandidateDetailPage() {
 
           {candidate.notes && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-gray-700">Notes</h4>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{candidate.notes}</p>
+              <h4 className="text-sm font-medium text-foreground">Notes</h4>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{candidate.notes}</p>
             </div>
           )}
 
           {candidate.blacklistReason && (
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-red-600">Blacklist Reason</h4>
-              <p className="mt-1 text-sm text-gray-600">{candidate.blacklistReason}</p>
+              <h4 className="text-sm font-medium text-destructive">Blacklist Reason</h4>
+              <p className="mt-1 text-sm text-muted-foreground">{candidate.blacklistReason}</p>
             </div>
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {can('recruitment.candidate.manage') && (
                 candidate.isBlacklisted ? (
                   <button
                     disabled={acting}
                     onClick={handleUnblacklist}
-                    className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 motion-press disabled:opacity-50"
                   >
                     {acting ? 'Removing...' : 'Remove from Blacklist'}
                   </button>
@@ -146,30 +146,30 @@ export default function CandidateDetailPage() {
                   <button
                     disabled={acting}
                     onClick={() => setShowBlacklistForm(true)}
-                    className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                   >
                     Blacklist Candidate
                   </button>
                 ) : (
-                  <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
+                  <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
                     <textarea
                       placeholder="Blacklist reason (optional)"
                       value={blacklistReason}
                       onChange={(e) => setBlacklistReason(e.target.value)}
                       rows={2}
-                      className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none"
+                      className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                     />
                     <div className="flex gap-2">
                       <button
                         disabled={acting}
                         onClick={handleBlacklist}
-                        className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        className="rounded-md bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                       >
                         {acting ? 'Blacklisting...' : 'Confirm Blacklist'}
                       </button>
                       <button
                         onClick={() => { setShowBlacklistForm(false); setBlacklistReason(''); }}
-                        className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                        className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
                       >
                         Cancel
                       </button>
@@ -179,14 +179,14 @@ export default function CandidateDetailPage() {
               )}
               <Link
                 href={`/recruitment/applications?candidateId=${id}`}
-                className="block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="block w-full rounded-md border border-border px-4 py-2 text-center text-sm font-medium text-foreground hover:bg-muted/50 motion-press"
               >
                 View Applications
               </Link>
               {can('recruitment.application.manage') && (
                 <Link
                   href={`/recruitment/applications/new?candidateId=${id}`}
-                  className="block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-center text-sm font-medium text-foreground hover:bg-muted/50 motion-press"
                 >
                   Create Application
                 </Link>
@@ -195,38 +195,38 @@ export default function CandidateDetailPage() {
             {actionError && <div className="mt-3"><ErrorMessage message={actionError} /></div>}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Added</h3>
-            <p className="text-sm text-gray-600">{formatDate(candidate.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Added</h3>
+            <p className="text-sm text-muted-foreground">{formatDate(candidate.createdAt)}</p>
           </div>
         </div>
       </div>
 
       {candidate.applications && candidate.applications.length > 0 && (
-        <div className="mt-6 rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Applications</h3>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="mt-6 rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Applications</h3>
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/60">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Requisition</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Stage</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Applied</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Requisition</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Stage</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Applied</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {candidate.applications.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50">
+                <tr key={app.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-4 py-3 text-sm">
-                    <Link href={`/recruitment/applications/${app.id}`} className="font-medium text-blue-600 hover:underline">
+                    <Link href={`/recruitment/applications/${app.id}`} className="font-medium text-primary hover:underline">
                       {app.jobRequisition?.title || app.jobRequisitionId}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {app.currentStage?.name || '—'}
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(app.appliedAt)}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(app.appliedAt)}</td>
                 </tr>
               ))}
             </tbody>

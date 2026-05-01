@@ -57,7 +57,7 @@ export default function CandidatesListPage() {
           can('recruitment.candidate.manage') ? (
             <Link
               href="/recruitment/candidates/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
             >
               Add Candidate
             </Link>
@@ -71,7 +71,7 @@ export default function CandidatesListPage() {
           placeholder="Search by name or email..."
           value={search}
           onChange={(e) => updateSearch(e.target.value)}
-          className="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full max-w-sm rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
         />
       </FilterBar>
 
@@ -81,42 +81,42 @@ export default function CandidatesListPage() {
         <EmptyState title="No candidates found" description="Add your first candidate to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Email" sortKey="email" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Phone</th>
                   <SortableHeader label="Source" sortKey="source" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Current Role</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Current Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
+                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/recruitment/candidates/${c.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/recruitment/candidates/${c.id}`} className="font-medium text-primary hover:underline">
                         {c.firstName} {c.lastName}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{c.email}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{c.phone || '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{c.source.replace(/_/g, ' ')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{c.email}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{c.phone || '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{c.source.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {c.currentTitle && c.currentCompany
                         ? `${c.currentTitle} @ ${c.currentCompany}`
                         : c.currentTitle || c.currentCompany || '—'}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {c.isBlacklisted ? (
-                        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                        <span className="inline-flex items-center rounded-full bg-destructive-soft px-2.5 py-0.5 text-xs font-medium text-destructive">
                           Blacklisted
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           Active
                         </span>
                       )}

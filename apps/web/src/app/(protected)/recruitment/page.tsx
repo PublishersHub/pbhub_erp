@@ -30,10 +30,10 @@ export default function RecruitmentPage() {
           <Link
             key={s.href}
             href={s.href}
-            className="rounded-lg border bg-white p-5 shadow-sm transition hover:shadow-md"
+            className="rounded-lg border border-border bg-card p-5 shadow-soft transition hover:shadow-elevated"
           >
-            <h3 className="font-semibold text-gray-900">{s.title}</h3>
-            <p className="mt-1 text-sm text-gray-500">{s.description}</p>
+            <h3 className="font-semibold text-foreground">{s.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>
           </Link>
         ))}
       </div>

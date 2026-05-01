@@ -123,30 +123,30 @@ export default function OfferDetailPage() {
 
       {/* Hire success banner */}
       {hireResult && (
-        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
-          <h3 className="text-sm font-semibold text-green-800">Candidate Hired Successfully</h3>
-          <p className="mt-1 text-sm text-green-700">
+        <div className="mb-6 rounded-lg border border-success/20 bg-success-soft p-4">
+          <h3 className="text-sm font-semibold text-success">Candidate Hired Successfully</h3>
+          <p className="mt-1 text-sm text-success-foreground/80">
             {hireResult.firstName} {hireResult.lastName} has been hired as employee {hireResult.employeeCode}.
           </p>
           <div className="mt-3">
             {onboardingLoading && (
-              <p className="text-xs text-green-600">Checking onboarding status...</p>
+              <p className="text-xs text-success-foreground/60">Checking onboarding status...</p>
             )}
             {!onboardingLoading && onboardingInstance && (
               <Link
                 href={`/onboarding/${onboardingInstance.id}`}
-                className="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                className="inline-flex items-center rounded-md bg-success px-3 py-1.5 text-xs font-medium text-success-foreground hover:bg-success/90 motion-press"
               >
                 Open Onboarding
               </Link>
             )}
             {!onboardingLoading && !onboardingInstance && (
               <>
-                <p className="text-xs text-green-600">No onboarding instance was started automatically.</p>
+                <p className="text-xs text-success-foreground/60">No onboarding instance was started automatically.</p>
                 {can('onboarding.instance.manage') && (
                   <Link
                     href={`/onboarding/new?employeeId=${hireResult.employeeId}`}
-                    className="mt-2 inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                    className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press"
                   >
                     Start Onboarding
                   </Link>
@@ -158,8 +158,8 @@ export default function OfferDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-lg border bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Offer Details</h3>
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-6 shadow-soft">
+          <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Offer Details</h3>
           <dl>
             <DetailRow label="Offer #">{offer.offerNumber}</DetailRow>
             <DetailRow label="Version">v{offer.version}</DetailRow>
@@ -206,15 +206,15 @@ export default function OfferDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {/* Extend */}
               {canExtend && (
                 <button
                   disabled={acting}
                   onClick={() => doAction(() => extendOffer(id))}
-                  className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
                 >
                   {acting ? 'Extending...' : 'Extend Offer'}
                 </button>
@@ -226,30 +226,30 @@ export default function OfferDetailPage() {
                   <button
                     disabled={acting}
                     onClick={() => doAction(() => respondOffer(id, { decision: 'ACCEPTED' }))}
-                    className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 motion-press disabled:opacity-50"
                   >
                     {acting ? 'Recording...' : 'Record Acceptance'}
                   </button>
                   <button
                     onClick={() => { setShowRespondForm(true); setShowRescindForm(false); setShowHireForm(false); }}
-                    className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                    className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 motion-press"
                   >
                     Record Decline
                   </button>
                 </>
               )}
               {showRespondForm && (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
-                  <textarea placeholder="Decline reason (optional)" value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none" />
+                <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
+                  <textarea placeholder="Decline reason (optional)" value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
                   <div className="flex gap-2">
                     <button
                       disabled={acting}
                       onClick={() => doAction(() => respondOffer(id, { decision: 'DECLINED', declineReason: declineReason.trim() || undefined }))}
-                      className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-md bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Declining...' : 'Confirm Decline'}
                     </button>
-                    <button onClick={() => setShowRespondForm(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowRespondForm(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Cancel
                     </button>
                   </div>
@@ -260,42 +260,42 @@ export default function OfferDetailPage() {
               {canHire && !showHireForm && (
                 <button
                   onClick={() => { setShowHireForm(true); setShowRescindForm(false); setJoiningDate(offer.proposedJoiningDate?.split('T')[0] || ''); }}
-                  className="w-full rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+                  className="w-full rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 motion-press"
                 >
                   Hire Candidate
                 </button>
               )}
               {showHireForm && (
-                <div className="rounded-md border border-green-200 bg-green-50 p-3 space-y-2">
-                  <label className="block text-xs font-medium text-green-800">Employee Code *</label>
+                <div className="rounded-md border border-success/20 bg-success-soft p-3 space-y-2">
+                  <label className="block text-xs font-medium text-success">Employee Code *</label>
                   <input
                     required value={employeeCode}
                     onChange={(e) => setEmployeeCode(e.target.value)}
                     placeholder="e.g. EMP-2026-0042"
-                    className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
-                  <label className="block text-xs font-medium text-green-800">Joining Date *</label>
+                  <label className="block text-xs font-medium text-success">Joining Date *</label>
                   <input
                     required type="date" value={joiningDate}
                     onChange={(e) => setJoiningDate(e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
-                  <label className="block text-xs font-medium text-green-800">Work Email</label>
+                  <label className="block text-xs font-medium text-success">Work Email</label>
                   <input
                     type="email" value={workEmail}
                     onChange={(e) => setWorkEmail(e.target.value)}
                     placeholder="Defaults to candidate email"
-                    className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-green-500 focus:outline-none"
+                    className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
                   <div className="flex gap-2">
                     <button
                       disabled={acting || !employeeCode.trim() || !joiningDate}
                       onClick={handleHire}
-                      className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                      className="rounded-md bg-success px-3 py-1 text-xs font-medium text-success-foreground hover:bg-success/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Hiring...' : 'Confirm Hire'}
                     </button>
-                    <button onClick={() => setShowHireForm(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowHireForm(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Cancel
                     </button>
                   </div>
@@ -306,22 +306,22 @@ export default function OfferDetailPage() {
               {canRescind && !showRescindForm ? (
                 <button
                   onClick={() => { setShowRescindForm(true); setShowRespondForm(false); setShowHireForm(false); }}
-                  className="w-full rounded-md border border-orange-300 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50"
+                  className="w-full rounded-md border border-warning px-4 py-2 text-sm font-medium text-warning hover:bg-warning-soft/30 motion-press"
                 >
                   Rescind Offer
                 </button>
               ) : canRescind && showRescindForm ? (
-                <div className="rounded-md border border-orange-200 bg-orange-50 p-3 space-y-2">
-                  <textarea placeholder="Rescind reason (optional)" value={rescindReason} onChange={(e) => setRescindReason(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-orange-500 focus:outline-none" />
+                <div className="rounded-md border border-warning/20 bg-warning-soft p-3 space-y-2">
+                  <textarea placeholder="Rescind reason (optional)" value={rescindReason} onChange={(e) => setRescindReason(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
                   <div className="flex gap-2">
                     <button
                       disabled={acting}
                       onClick={() => doAction(() => rescindOffer(id, { reason: rescindReason.trim() || undefined }))}
-                      className="rounded-md bg-orange-600 px-3 py-1 text-xs font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                      className="rounded-md bg-warning px-3 py-1 text-xs font-medium text-warning-foreground hover:bg-warning/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Rescinding...' : 'Confirm Rescind'}
                     </button>
-                    <button onClick={() => setShowRescindForm(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowRescindForm(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Cancel
                     </button>
                   </div>
@@ -331,9 +331,9 @@ export default function OfferDetailPage() {
             {actionError && <div className="mt-3"><ErrorMessage message={actionError} /></div>}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDateTime(offer.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDateTime(offer.createdAt)}</p>
           </div>
         </div>
       </div>

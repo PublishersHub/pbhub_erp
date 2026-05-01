@@ -53,7 +53,7 @@ export default function OffersListPage() {
           applicationId && can('recruitment.offer.manage') ? (
             <Link
               href={`/recruitment/offers/new?applicationId=${applicationId}`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
             >
               Create Offer
             </Link>
@@ -74,31 +74,31 @@ export default function OffersListPage() {
         <EmptyState title="No offers found" description="Create the first offer for this application." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Offer #" sortKey="offerNumber" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Version</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Version</th>
                   <SortableHeader label="Salary" sortKey="salary" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Joining Date" sortKey="joiningDate" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Expires" sortKey="expiresAt" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((offer) => (
-                  <tr key={offer.id} className="hover:bg-gray-50">
+                  <tr key={offer.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/recruitment/offers/${offer.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/recruitment/offers/${offer.id}`} className="font-medium text-primary hover:underline">
                         {offer.offerNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">v{offer.version}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatCurrency(offer.baseSalary)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(offer.proposedJoiningDate)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(offer.expiresAt)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">v{offer.version}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatCurrency(offer.baseSalary)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(offer.proposedJoiningDate)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(offer.expiresAt)}</td>
                     <td className="px-4 py-3"><StatusBadge status={offer.status} /></td>
                   </tr>
                 ))}

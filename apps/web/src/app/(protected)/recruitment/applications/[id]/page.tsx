@@ -101,8 +101,8 @@ export default function ApplicationDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Application Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Application Details</h3>
             <dl>
               <DetailRow label="Candidate">
                 {app.candidate ? (
@@ -125,7 +125,7 @@ export default function ApplicationDetailPage() {
               <DetailRow label="Posting">{app.jobPosting?.title || '—'}</DetailRow>
               <DetailRow label="Current Stage">
                 {app.currentStage ? (
-                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                  <span className="inline-flex items-center rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-medium text-info">
                     {app.currentStage.name}
                   </span>
                 ) : '—'}
@@ -158,8 +158,8 @@ export default function ApplicationDetailPage() {
 
             {app.coverLetter && (
               <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-700">Cover Letter</h4>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">{app.coverLetter}</p>
+                <h4 className="text-sm font-medium text-foreground">Cover Letter</h4>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{app.coverLetter}</p>
               </div>
             )}
 
@@ -176,17 +176,17 @@ export default function ApplicationDetailPage() {
 
           {/* Stage History */}
           {app.stageHistory && app.stageHistory.length > 0 && (
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Stage History</h3>
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+              <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Stage History</h3>
               <div className="space-y-3">
                 {app.stageHistory.map((h) => (
-                  <div key={h.id} className="flex items-start gap-3 rounded-md border border-gray-100 p-3">
+                  <div key={h.id} className="flex items-start gap-3 rounded-md border border-border p-3">
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-foreground">
                         {h.fromStage ? `${h.fromStage.name} → ` : ''}{h.toStage?.name || '—'}
                       </div>
-                      {h.notes && <p className="mt-1 text-sm text-gray-500">{h.notes}</p>}
-                      <p className="mt-1 text-xs text-gray-400">
+                      {h.notes && <p className="mt-1 text-sm text-muted-foreground/70">{h.notes}</p>}
+                      <p className="mt-1 text-xs text-muted-foreground/70">
                         {formatDate(h.createdAt)}
                         {h.movedBy ? ` by ${employeeName(h.movedBy)}` : ''}
                       </p>
@@ -198,39 +198,39 @@ export default function ApplicationDetailPage() {
           )}
 
           {/* Interviews */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold uppercase text-gray-500">Interviews</h3>
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Interviews</h3>
               {isActive && can('recruitment.interview.manage') && (
                 <Link
                   href={`/recruitment/interviews/new?applicationId=${id}`}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press"
                 >
                   Schedule Interview
                 </Link>
               )}
             </div>
             {interviews && interviews.length > 0 ? (
-              <div className="overflow-hidden rounded-md border">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-md border border-border">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Type</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Scheduled</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Mode</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Type</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Scheduled</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Mode</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {interviews.map((iv) => (
-                      <tr key={iv.id} className="hover:bg-gray-50">
+                      <tr key={iv.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-3 py-2 text-sm">
-                          <Link href={`/recruitment/interviews/${iv.id}`} className="font-medium text-blue-600 hover:underline">
+                          <Link href={`/recruitment/interviews/${iv.id}`} className="font-medium text-primary hover:underline">
                             {iv.type.replace(/_/g, ' ')}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{formatDateTime(iv.scheduledAt)}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{iv.mode.replace(/_/g, ' ')}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{formatDateTime(iv.scheduledAt)}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{iv.mode.replace(/_/g, ' ')}</td>
                         <td className="px-3 py-2"><StatusBadge status={iv.status} /></td>
                       </tr>
                     ))}
@@ -238,44 +238,44 @@ export default function ApplicationDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No interviews scheduled yet.</p>
+              <p className="text-sm text-muted-foreground">No interviews scheduled yet.</p>
             )}
           </div>
 
           {/* Offers */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold uppercase text-gray-500">Offers</h3>
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Offers</h3>
               {isActive && can('recruitment.offer.manage') && (
                 <Link
                   href={`/recruitment/offers/new?applicationId=${id}`}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press"
                 >
                   Create Offer
                 </Link>
               )}
             </div>
             {offers && offers.length > 0 ? (
-              <div className="overflow-hidden rounded-md border">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-md border border-border">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/60">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Offer #</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Salary</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Joining</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Offer #</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Salary</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Joining</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {offers.map((offer) => (
-                      <tr key={offer.id} className="hover:bg-gray-50">
+                      <tr key={offer.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-3 py-2 text-sm">
-                          <Link href={`/recruitment/offers/${offer.id}`} className="font-medium text-blue-600 hover:underline">
+                          <Link href={`/recruitment/offers/${offer.id}`} className="font-medium text-primary hover:underline">
                             {offer.offerNumber}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{formatCurrency(offer.baseSalary)}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{formatDate(offer.proposedJoiningDate)}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{formatCurrency(offer.baseSalary)}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(offer.proposedJoiningDate)}</td>
                         <td className="px-3 py-2"><StatusBadge status={offer.status} /></td>
                       </tr>
                     ))}
@@ -283,7 +283,7 @@ export default function ApplicationDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No offers created yet.</p>
+              <p className="text-sm text-muted-foreground">No offers created yet.</p>
             )}
           </div>
         </div>
@@ -291,8 +291,8 @@ export default function ApplicationDetailPage() {
         {/* Sidebar actions */}
         <div className="space-y-4">
           {isActive && can('recruitment.application.manage') && (
-            <div className="rounded-lg border bg-white p-5 shadow-sm">
-              <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+            <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+              <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
               <div className="space-y-2">
                 {/* Move stage */}
                 {availableStages.length > 0 && (
@@ -306,12 +306,12 @@ export default function ApplicationDetailPage() {
                             onClick={() => setMovingStageId(movingStageId === stage.id ? null : stage.id)}
                             className={`w-full rounded-md border px-3 py-1.5 text-left text-sm font-medium disabled:opacity-50 ${
                               movingStageId === stage.id
-                                ? 'border-blue-400 bg-blue-50 text-blue-700'
+                                ? 'border-primary bg-primary/10 text-primary'
                                 : stage.isHired
-                                ? 'border-green-300 text-green-700 hover:bg-green-50'
+                                ? 'border-success text-success hover:bg-success-soft/30'
                                 : stage.isRejected
-                                ? 'border-red-300 text-red-700 hover:bg-red-50'
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                ? 'border-destructive text-destructive hover:bg-destructive-soft/30'
+                                : 'border-border text-foreground hover:bg-muted/50'
                             }`}
                           >
                             {stage.name}
@@ -323,7 +323,7 @@ export default function ApplicationDetailPage() {
                                 value={stageNotes}
                                 onChange={(e) => setStageNotes(e.target.value)}
                                 rows={2}
-                                className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                                className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                               />
                               <button
                                 disabled={acting}
@@ -335,7 +335,7 @@ export default function ApplicationDetailPage() {
                                     }),
                                   )
                                 }
-                                className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
                               >
                                 {acting ? 'Moving...' : 'Confirm Move'}
                               </button>
@@ -352,17 +352,17 @@ export default function ApplicationDetailPage() {
                   <button
                     disabled={acting}
                     onClick={() => { setShowRejectForm(true); setShowWithdrawForm(false); }}
-                    className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                   >
                     Reject
                   </button>
                 ) : (
-                  <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
-                    <label className="block text-xs font-medium text-red-700">Rejection Reason *</label>
+                  <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
+                    <label className="block text-xs font-medium text-destructive">Rejection Reason *</label>
                     <select
                       value={rejectReason}
                       onChange={(e) => setRejectReason(e.target.value as ApplicationRejectionReason | '')}
-                      className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-red-500 focus:outline-none"
+                      className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     >
                       <option value="">Select reason...</option>
                       {REJECTION_REASONS.map((r) => (
@@ -374,7 +374,7 @@ export default function ApplicationDetailPage() {
                       value={rejectNotes}
                       onChange={(e) => setRejectNotes(e.target.value)}
                       rows={2}
-                      className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none"
+                      className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                     />
                     <div className="flex gap-2">
                       <button
@@ -387,13 +387,13 @@ export default function ApplicationDetailPage() {
                             }),
                           )
                         }
-                        className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        className="rounded-md bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                       >
                         {acting ? 'Rejecting...' : 'Confirm Reject'}
                       </button>
                       <button
                         onClick={() => { setShowRejectForm(false); setRejectReason(''); setRejectNotes(''); }}
-                        className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                        className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
                       >
                         Cancel
                       </button>
@@ -406,19 +406,19 @@ export default function ApplicationDetailPage() {
                   <button
                     disabled={acting}
                     onClick={() => { setShowWithdrawForm(true); setShowRejectForm(false); }}
-                    className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 motion-press disabled:opacity-50"
                   >
                     Withdraw
                   </button>
                 ) : (
-                  <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
-                    <label className="block text-xs font-medium text-gray-700">Withdrawal Reason</label>
+                  <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                    <label className="block text-xs font-medium text-foreground">Withdrawal Reason</label>
                     <textarea
                       placeholder="Reason (optional)"
                       value={withdrawReason}
                       onChange={(e) => setWithdrawReason(e.target.value)}
                       rows={2}
-                      className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                      className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none"
                     />
                     <div className="flex gap-2">
                       <button
@@ -428,13 +428,13 @@ export default function ApplicationDetailPage() {
                             withdrawApplication(id, { reason: withdrawReason.trim() || undefined }),
                           )
                         }
-                        className="rounded-md bg-gray-700 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                        className="rounded-md bg-foreground/90 px-3 py-1 text-xs font-medium text-background hover:bg-foreground motion-press disabled:opacity-50"
                       >
                         {acting ? 'Withdrawing...' : 'Confirm Withdraw'}
                       </button>
                       <button
                         onClick={() => { setShowWithdrawForm(false); setWithdrawReason(''); }}
-                        className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                        className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press"
                       >
                         Cancel
                       </button>
@@ -446,9 +446,9 @@ export default function ApplicationDetailPage() {
             </div>
           )}
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDate(app.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDate(app.createdAt)}</p>
           </div>
         </div>
       </div>

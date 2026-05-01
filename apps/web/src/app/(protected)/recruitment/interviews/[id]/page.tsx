@@ -84,8 +84,8 @@ export default function InterviewDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Details */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Details</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Details</h3>
             <dl>
               <DetailRow label="Type">{interview.type.replace(/_/g, ' ')}</DetailRow>
               <DetailRow label="Mode">{interview.mode.replace(/_/g, ' ')}</DetailRow>
@@ -94,7 +94,7 @@ export default function InterviewDetailPage() {
               <DetailRow label="Location">{interview.location}</DetailRow>
               <DetailRow label="Meeting URL">
                 {interview.meetingUrl ? (
-                  <a href={interview.meetingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  <a href={interview.meetingUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     Join Meeting
                   </a>
                 ) : null}
@@ -111,102 +111,102 @@ export default function InterviewDetailPage() {
           </div>
 
           {/* Panelists */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Panelists</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Panelists</h3>
             {interview.interviewers && interview.interviewers.length > 0 ? (
               <div className="space-y-2">
                 {interview.interviewers.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2 rounded-md border border-gray-100 p-3">
-                    <span className="text-sm font-medium text-gray-900">
+                  <div key={p.id} className="flex items-center gap-2 rounded-md border border-border p-3">
+                    <span className="text-sm font-medium text-foreground">
                       {p.employee ? employeeName(p.employee) : p.employeeId}
                     </span>
                     {p.isPrimary && (
-                      <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">Primary</span>
+                      <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">Primary</span>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No panelists assigned</p>
+              <p className="text-sm text-muted-foreground">No panelists assigned</p>
             )}
           </div>
 
           {/* Feedback */}
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Feedback</h3>
+          <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Feedback</h3>
             {interview.feedback && interview.feedback.length > 0 ? (
               <div className="space-y-4">
                 {interview.feedback.map((fb) => (
-                  <div key={fb.id} className="rounded-md border border-gray-100 p-4">
+                  <div key={fb.id} className="rounded-md border border-border p-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-foreground">
                         {fb.panelist ? employeeName(fb.panelist) : fb.panelistEmployeeId}
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">Rating: {fb.rating}/5</span>
+                        <span className="text-sm text-muted-foreground">Rating: {fb.rating}/5</span>
                         <StatusBadge status={fb.recommendation} />
                       </div>
                     </div>
                     {fb.strengths && (
                       <div className="mt-2">
-                        <span className="text-xs font-medium text-green-700">Strengths: </span>
-                        <span className="text-xs text-gray-600">{fb.strengths}</span>
+                        <span className="text-xs font-medium text-success">Strengths: </span>
+                        <span className="text-xs text-muted-foreground">{fb.strengths}</span>
                       </div>
                     )}
                     {fb.weaknesses && (
                       <div className="mt-1">
-                        <span className="text-xs font-medium text-red-600">Weaknesses: </span>
-                        <span className="text-xs text-gray-600">{fb.weaknesses}</span>
+                        <span className="text-xs font-medium text-destructive">Weaknesses: </span>
+                        <span className="text-xs text-muted-foreground">{fb.weaknesses}</span>
                       </div>
                     )}
                     {fb.comments && (
-                      <p className="mt-2 text-xs text-gray-500">{fb.comments}</p>
+                      <p className="mt-2 text-xs text-muted-foreground/70">{fb.comments}</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No feedback submitted yet</p>
+              <p className="text-sm text-muted-foreground">No feedback submitted yet</p>
             )}
           </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold uppercase text-gray-500">Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
             <div className="space-y-2">
               {/* Submit Feedback */}
               {!showFeedback && isActive && canManage && (
                 <button
                   onClick={() => { setShowFeedback(true); setShowReschedule(false); setShowCancel(false); }}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press"
                 >
                   Submit Feedback
                 </button>
               )}
               {showFeedback && (
-                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-2">
-                  <label className="block text-xs font-medium text-blue-700">Rating * (1-5)</label>
+                <div className="rounded-md border border-primary/20 bg-primary/10 p-3 space-y-2">
+                  <label className="block text-xs font-medium text-primary">Rating * (1-5)</label>
                   <input
                     type="number" min={1} max={5} value={fbRating}
                     onChange={(e) => setFbRating(parseInt(e.target.value) || 3)}
-                    className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                    className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
-                  <label className="block text-xs font-medium text-blue-700">Recommendation *</label>
+                  <label className="block text-xs font-medium text-primary">Recommendation *</label>
                   <select
                     value={fbRecommendation}
                     onChange={(e) => setFbRecommendation(e.target.value as InterviewRecommendation)}
-                    className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                    className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                   >
                     <option value="">Select...</option>
                     {RECOMMENDATIONS.map((r) => (
                       <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
                     ))}
                   </select>
-                  <textarea placeholder="Strengths" value={fbStrengths} onChange={(e) => setFbStrengths(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none" />
-                  <textarea placeholder="Weaknesses" value={fbWeaknesses} onChange={(e) => setFbWeaknesses(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none" />
-                  <textarea placeholder="Comments" value={fbComments} onChange={(e) => setFbComments(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none" />
+                  <textarea placeholder="Strengths" value={fbStrengths} onChange={(e) => setFbStrengths(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
+                  <textarea placeholder="Weaknesses" value={fbWeaknesses} onChange={(e) => setFbWeaknesses(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
+                  <textarea placeholder="Comments" value={fbComments} onChange={(e) => setFbComments(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
                   <div className="flex gap-2">
                     <button
                       disabled={acting || !fbRecommendation}
@@ -217,11 +217,11 @@ export default function InterviewDetailPage() {
                         ...(fbWeaknesses.trim() && { weaknesses: fbWeaknesses.trim() }),
                         ...(fbComments.trim() && { comments: fbComments.trim() }),
                       }))}
-                      className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Submitting...' : 'Submit'}
                     </button>
-                    <button onClick={() => setShowFeedback(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowFeedback(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Cancel
                     </button>
                   </div>
@@ -232,16 +232,16 @@ export default function InterviewDetailPage() {
               {isActive && canManage && !showReschedule ? (
                 <button
                   onClick={() => { setShowReschedule(true); setShowCancel(false); setShowFeedback(false); }}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 motion-press"
                 >
                   Reschedule
                 </button>
               ) : isActive && canManage && showReschedule ? (
-                <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
-                  <label className="block text-xs font-medium text-gray-700">New Date & Time *</label>
-                  <input type="datetime-local" required value={newScheduledAt} onChange={(e) => setNewScheduledAt(e.target.value)} className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none" />
-                  <label className="block text-xs font-medium text-gray-700">Duration (min)</label>
-                  <input type="number" min={15} value={newDuration} onChange={(e) => setNewDuration(parseInt(e.target.value) || 60)} className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none" />
+                <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                  <label className="block text-xs font-medium text-foreground">New Date & Time *</label>
+                  <input type="datetime-local" required value={newScheduledAt} onChange={(e) => setNewScheduledAt(e.target.value)} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none" />
+                  <label className="block text-xs font-medium text-foreground">Duration (min)</label>
+                  <input type="number" min={15} value={newDuration} onChange={(e) => setNewDuration(parseInt(e.target.value) || 60)} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1.5 text-xs focus:border-primary focus:outline-none" />
                   <div className="flex gap-2">
                     <button
                       disabled={acting || !newScheduledAt}
@@ -249,11 +249,11 @@ export default function InterviewDetailPage() {
                         scheduledAt: new Date(newScheduledAt).toISOString(),
                         durationMinutes: newDuration,
                       }))}
-                      className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Rescheduling...' : 'Confirm'}
                     </button>
-                    <button onClick={() => setShowReschedule(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowReschedule(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Cancel
                     </button>
                   </div>
@@ -264,22 +264,22 @@ export default function InterviewDetailPage() {
               {isActive && canManage && !showCancel ? (
                 <button
                   onClick={() => { setShowCancel(true); setShowReschedule(false); setShowFeedback(false); }}
-                  className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 motion-press"
                 >
                   Cancel Interview
                 </button>
               ) : isActive && canManage && showCancel ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
-                  <textarea placeholder="Cancel reason (optional)" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={2} className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-red-500 focus:outline-none" />
+                <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
+                  <textarea placeholder="Cancel reason (optional)" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={2} className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:outline-none" />
                   <div className="flex gap-2">
                     <button
                       disabled={acting}
                       onClick={() => doAction(() => cancelInterview(id, { reason: cancelReason.trim() || undefined }))}
-                      className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-md bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-50"
                     >
                       {acting ? 'Cancelling...' : 'Confirm Cancel'}
                     </button>
-                    <button onClick={() => setShowCancel(false)} className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
+                    <button onClick={() => setShowCancel(false)} className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 motion-press">
                       Back
                     </button>
                   </div>
@@ -289,9 +289,9 @@ export default function InterviewDetailPage() {
             {actionError && <div className="mt-3"><ErrorMessage message={actionError} /></div>}
           </div>
 
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <h3 className="mb-1 text-sm font-semibold uppercase text-gray-500">Created</h3>
-            <p className="text-sm text-gray-600">{formatDateTime(interview.createdAt)}</p>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-soft">
+            <h3 className="mb-1 text-sm font-semibold uppercase text-muted-foreground">Created</h3>
+            <p className="text-sm text-muted-foreground">{formatDateTime(interview.createdAt)}</p>
           </div>
         </div>
       </div>
