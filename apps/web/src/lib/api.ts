@@ -4,6 +4,8 @@ import {
   setToken,
   getRefreshToken,
   setRefreshToken,
+  getActiveOrgId,
+  setActiveOrgId,
   clearTokens,
 } from './auth';
 
@@ -13,55 +15,83 @@ export interface ApiError extends Error {
   status: number;
 }
 
-export interface AuthUser {
+export interface AccountProfile {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+}
+
+export interface Membership {
+  userId: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  roles: string[];
+}
+
+export interface ActiveUser {
+  id: string;
   organizationId: string;
   roles: string[];
   permissions: string[];
 }
 
+export interface AuthUser {
+  account: AccountProfile;
+  activeOrganizationId: string | null;
+  user: ActiveUser | null;
+  memberships: Membership[];
+}
+
 export interface LoginPayload {
-  organizationSlug: string;
   email: string;
   password: string;
 }
 
 export interface LoginResponse {
-  accessToken: string;
+  accessToken?: string;
   refreshToken: string;
-  user: AuthUser;
+  account: AccountProfile;
+  memberships: Membership[];
+  activeOrganizationId?: string;
+  user?: ActiveUser;
+}
+
+export interface SelectOrganizationResponse {
+  accessToken: string;
+  activeOrganizationId: string;
+  memberships: Membership[];
+  user: ActiveUser;
 }
 
 // ─── Silent refresh ──────────────────────────
 
 let refreshPromise: Promise<boolean> | null = null;
 
-/**
- * Attempt to refresh the access token using the stored refresh token.
- * Deduplicates concurrent calls — only one refresh request is in-flight at a time.
- * Returns true if the token was refreshed, false otherwise.
- */
 async function tryRefreshToken(): Promise<boolean> {
   const rt = getRefreshToken();
   if (!rt) return false;
 
-  // Deduplicate: if a refresh is already in flight, wait for it
   if (refreshPromise) return refreshPromise;
+
+  const orgId = getActiveOrgId();
 
   refreshPromise = (async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt }),
+        body: JSON.stringify({
+          refreshToken: rt,
+          ...(orgId ? { organizationId: orgId } : {}),
+        }),
       });
       if (!res.ok) return false;
-      const data: LoginResponse = await res.json();
+      const data = (await res.json()) as SelectOrganizationResponse & { refreshToken: string };
       setToken(data.accessToken);
       setRefreshToken(data.refreshToken);
+      setActiveOrgId(data.activeOrganizationId);
       return true;
     } catch {
       return false;
@@ -85,7 +115,7 @@ function forceLogout(): never {
 
 interface RequestOptions {
   headers?: Record<string, string>;
-  skipAuth?: boolean; // used for login/refresh to avoid attaching token
+  skipAuth?: boolean;
 }
 
 async function request<T>(
@@ -109,7 +139,6 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // On 401, attempt silent refresh then retry once
   if (res.status === 401 && !options?.skipAuth) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
@@ -123,19 +152,16 @@ async function request<T>(
         body: body ? JSON.stringify(body) : undefined,
       });
     }
-    // If still 401 after refresh attempt, force logout
     if (res.status === 401) {
       forceLogout();
     }
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => null);
+    const errBody = await res.json().catch(() => null);
     let message: string;
-
-    if (body?.message) {
-      // NestJS validation returns { message: string[] } for 400
-      message = Array.isArray(body.message) ? body.message.join('. ') : body.message;
+    if (errBody?.message) {
+      message = Array.isArray(errBody.message) ? errBody.message.join('. ') : errBody.message;
     } else if (res.status === 403) {
       message = 'You do not have permission to access this resource';
     } else if (res.status === 404) {
@@ -143,7 +169,6 @@ async function request<T>(
     } else {
       message = `Request failed (${res.status})`;
     }
-
     const err = new Error(message);
     (err as ApiError).status = res.status;
     throw err;
@@ -179,6 +204,24 @@ export function del<T>(url: string, options?: RequestOptions) {
 
 export function login(payload: LoginPayload) {
   return post<LoginResponse>('/api/auth/login', payload, { skipAuth: true });
+}
+
+export function selectOrganization(organizationId: string, refreshToken: string) {
+  return post<SelectOrganizationResponse>(
+    '/api/auth/select-organization',
+    { organizationId, refreshToken },
+    { skipAuth: true },
+  );
+}
+
+export function switchOrganization(organizationId: string) {
+  return post<SelectOrganizationResponse>(
+    `/api/auth/switch-organization/${organizationId}`,
+  );
+}
+
+export function logout(refreshToken: string) {
+  return post<{ message: string }>('/api/auth/logout', { refreshToken });
 }
 
 export function fetchMe() {
