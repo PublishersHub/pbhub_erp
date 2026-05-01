@@ -5,7 +5,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../users/services/users.service';
 
 interface JwtAccessPayload {
-  sub: string;
+  sub: string;            // accountId
+  userId: string;         // membership id
   organizationId: string;
 }
 
@@ -23,17 +24,21 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
   }
 
   /**
-   * Called after JWT signature is verified.
-   * Loads the full user with roles and permissions from the DB
-   * so that downstream guards/handlers have complete context.
+   * Loads the account + the per-org membership + active permissions on every
+   * request. Rejects if either the account or the membership is inactive,
+   * or if the org doesn't match.
    */
   async validate(payload: JwtAccessPayload) {
-    const user = await this.usersService.findByIdWithPermissions(payload.sub);
+    const profile = await this.usersService.findActiveAuthContext(
+      payload.sub,
+      payload.userId,
+      payload.organizationId,
+    );
 
-    if (!user) {
-      throw new UnauthorizedException('User not found or inactive');
+    if (!profile) {
+      throw new UnauthorizedException('Session no longer valid');
     }
 
-    return user;
+    return profile;
   }
 }
