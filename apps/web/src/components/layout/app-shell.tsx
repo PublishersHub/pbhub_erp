@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
 import { getUnreadCount } from '@/lib/notification-api';
 import { type ReactNode } from 'react';
+import { OrgSwitcher } from './org-switcher';
 
 interface NavItem {
   href: string;
@@ -162,6 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Header */}
         <header className="flex items-center justify-end border-b bg-white px-6 py-3">
           <div className="flex items-center gap-3">
+            <OrgSwitcher />
             {/* Notification bell */}
             <Link
               href="/notifications"
