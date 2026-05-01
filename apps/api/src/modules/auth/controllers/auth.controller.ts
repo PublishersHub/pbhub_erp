@@ -1,9 +1,25 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { SelectOrganizationDto } from '../dto/select-organization.dto';
 import { Public } from '../../../common/decorators/public.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { JwtRefreshGuard } from '../guards/jwt-refresh.guard';
@@ -20,45 +36,75 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Login with organization slug, email and password' })
+  @ApiOperation({ summary: 'Log in with email + password. No organization required.' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('select-organization')
+  @Public()
+  @UseGuards(JwtRefreshGuard)
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Pick an org after multi-org login. Returns an access token.' })
+  @ApiBody({ type: SelectOrganizationDto })
+  async selectOrganization(
+    @CurrentUser() ctx: { accountId: string; tokenId: string; refreshToken: string },
+    @Body() dto: SelectOrganizationDto,
+  ) {
+    return this.authService.selectOrganization(
+      ctx.accountId,
+      ctx.tokenId,
+      ctx.refreshToken,
+      dto.organizationId,
+    );
+  }
+
+  @Post('switch-organization/:orgId')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mid-session org switch. Reuses the existing refresh token.' })
+  async switchOrganization(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('orgId', new ParseUUIDPipe()) orgId: string,
+  ) {
+    return this.authService.switchOrganization(user.accountId, orgId);
   }
 
   @Post('refresh')
   @Public()
   @UseGuards(JwtRefreshGuard)
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Refresh access token using a valid refresh token' })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Rotate refresh token + mint new access token.' })
   @ApiBody({ type: RefreshTokenDto })
-  async refresh(@CurrentUser() user: { userId: string; tokenId: string; refreshToken: string }) {
-    return this.authService.refresh(user.userId, user.tokenId, user.refreshToken);
+  async refresh(
+    @CurrentUser() ctx: { accountId: string; tokenId: string; refreshToken: string },
+    @Body() dto: RefreshTokenDto,
+  ) {
+    return this.authService.refresh(
+      ctx.accountId,
+      ctx.tokenId,
+      ctx.refreshToken,
+      dto.organizationId,
+    );
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout — verifies and revokes the given refresh token' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke the supplied refresh token.' })
   @ApiBody({ type: RefreshTokenDto })
   async logout(@Body() dto: RefreshTokenDto, @CurrentUser() user: AuthenticatedUser) {
-    await this.authService.logout(dto.refreshToken, user.userId);
+    await this.authService.logout(dto.refreshToken, user.accountId);
     return { message: 'Logged out' };
   }
 
   @Get('me')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current authenticated user profile' })
+  @ApiOperation({ summary: 'Return the active account + membership context.' })
   async me(@CurrentUser() user: AuthenticatedUser) {
-    return {
-      id: user.userId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      organizationId: user.organizationId,
-      roles: user.roles,
-      permissions: user.permissions,
-    };
+    return this.authService.me(user);
   }
 }
