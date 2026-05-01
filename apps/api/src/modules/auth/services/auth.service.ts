@@ -1,7 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../../users/services/users.service';
-import { OrganizationsService } from '../../organizations/services/organizations.service';
 import { TokenService } from './token.service';
 import { LoginDto } from '../dto/login.dto';
 
@@ -9,113 +12,214 @@ import { LoginDto } from '../dto/login.dto';
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly organizationsService: OrganizationsService,
     private readonly tokenService: TokenService,
   ) {}
 
   /**
-   * Validate credentials and return tokens + user profile.
-   * Tenant-aware: resolves org from slug before user lookup.
+   * Validate (email, password) against Account. Returns account + memberships
+   * + tokens. If the account has exactly one active membership the response
+   * also includes an org-scoped access token; otherwise the frontend must
+   * call /auth/select-organization next.
    */
   async login(dto: LoginDto) {
-    // 1. Resolve organization by slug
-    const org = await this.organizationsService.findBySlug(dto.organizationSlug);
-    if (!org || !org.isActive) {
-      throw new UnauthorizedException('Invalid organization');
-    }
-
-    // 2. Find user scoped to the resolved organization
-    const user = await this.usersService.findByOrgAndEmail(org.id, dto.email);
-    if (!user) {
+    const account = await this.usersService.findActiveAccountByEmail(dto.email);
+    if (!account) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // 3. Verify password
-    const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const passwordValid = await bcrypt.compare(dto.password, account.passwordHash);
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // 4. Load full profile with roles/permissions
-    const profile = await this.usersService.findByIdWithPermissions(user.id);
-    if (!profile) {
-      throw new UnauthorizedException('User account is not active');
+    const memberships = await this.usersService.findActiveMembershipsForAccount(
+      account.id,
+    );
+    if (memberships.length === 0) {
+      throw new ForbiddenException('Account has no active organization access');
     }
 
-    // 5. Generate tokens
-    const accessToken = this.tokenService.generateAccessToken(user.id, user.organizationId);
-    const refreshToken = await this.tokenService.generateRefreshToken(user.id);
+    await this.usersService.updateAccountLastLogin(account.id);
 
-    // 6. Update last login
-    await this.usersService.updateLastLogin(user.id);
+    const refreshToken = await this.tokenService.generateRefreshToken(account.id);
+
+    const accountProfile = {
+      id: account.id,
+      email: account.email,
+      firstName: account.firstName,
+      lastName: account.lastName,
+    };
+
+    if (memberships.length === 1) {
+      const m = memberships[0];
+      const issued = await this.issueAccessTokenForOrg(account.id, m.organizationId);
+      return {
+        refreshToken,
+        account: accountProfile,
+        ...issued,
+      };
+    }
 
     return {
-      accessToken,
       refreshToken,
-      user: {
-        id: profile.userId,
-        email: profile.email,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        organizationId: profile.organizationId,
-        roles: profile.roles,
-        permissions: profile.permissions,
-      },
+      account: accountProfile,
+      memberships,
     };
   }
 
   /**
-   * Rotate refresh token: validate old, revoke it, issue new pair.
+   * Issue an access token for a chosen org using a valid refresh token.
+   * Used right after login when the account has 2+ memberships.
    */
-  async refresh(userId: string, tokenId: string, rawToken: string) {
-    const record = await this.tokenService.validateRefreshToken(tokenId, rawToken);
-    if (!record) {
+  async selectOrganization(
+    accountId: string,
+    tokenId: string,
+    rawRefreshToken: string,
+    organizationId: string,
+  ) {
+    const record = await this.tokenService.validateRefreshToken(
+      tokenId,
+      rawRefreshToken,
+    );
+    if (!record || record.accountId !== accountId) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    return this.issueAccessTokenForOrg(accountId, organizationId);
+  }
+
+  /**
+   * Mid-session org switch — the caller is already authenticated via the
+   * access token (the controller-level guard validates that). We just need
+   * to confirm the membership and mint a new access token. Refresh token
+   * is unchanged.
+   */
+  async switchOrganization(accountId: string, organizationId: string) {
+    return this.issueAccessTokenForOrg(accountId, organizationId);
+  }
+
+  /**
+   * Rotate refresh token + mint new access token. Optional `organizationId`
+   * lets the client say which org the new access token should be scoped to;
+   * defaults to whatever org is implied by the existing membership lookup.
+   */
+  async refresh(
+    accountId: string,
+    tokenId: string,
+    rawRefreshToken: string,
+    organizationId: string | undefined,
+  ) {
+    const record = await this.tokenService.validateRefreshToken(
+      tokenId,
+      rawRefreshToken,
+    );
+    if (!record || record.accountId !== accountId) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // Revoke the old refresh token
-    await this.tokenService.revokeRefreshToken(tokenId);
-
-    // Load user profile
-    const profile = await this.usersService.findByIdWithPermissions(userId);
-    if (!profile) {
-      throw new UnauthorizedException('User account is not active');
+    if (!organizationId) {
+      const memberships = await this.usersService.findActiveMembershipsForAccount(
+        accountId,
+      );
+      if (memberships.length === 0) {
+        throw new ForbiddenException('Account has no active organization access');
+      }
+      organizationId = memberships[0].organizationId;
     }
 
-    // Issue new pair
-    const accessToken = this.tokenService.generateAccessToken(
-      profile.userId,
-      profile.organizationId,
+    await this.tokenService.revokeRefreshToken(tokenId);
+    const newRefresh = await this.tokenService.generateRefreshToken(accountId);
+
+    const issued = await this.issueAccessTokenForOrg(accountId, organizationId);
+    return { ...issued, refreshToken: newRefresh };
+  }
+
+  async logout(refreshToken: string, accountId: string): Promise<void> {
+    const decoded = this.tokenService.verifyRefreshToken(refreshToken);
+    if (!decoded) return;
+    if (decoded.accountId !== accountId) return;
+    await this.tokenService.revokeOwnedRefreshToken(decoded.tokenId, accountId);
+  }
+
+  /**
+   * Build the /auth/me payload from the already-resolved authenticated user
+   * plus a fresh memberships list for the picker / nav switcher.
+   */
+  async me(authenticatedUser: {
+    accountId: string;
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    organizationId: string;
+    roles: string[];
+    permissions: string[];
+  }) {
+    const memberships = await this.usersService.findActiveMembershipsForAccount(
+      authenticatedUser.accountId,
     );
-    const refreshToken = await this.tokenService.generateRefreshToken(profile.userId);
+    return {
+      account: {
+        id: authenticatedUser.accountId,
+        email: authenticatedUser.email,
+        firstName: authenticatedUser.firstName,
+        lastName: authenticatedUser.lastName,
+      },
+      activeOrganizationId: authenticatedUser.organizationId,
+      user: {
+        id: authenticatedUser.userId,
+        organizationId: authenticatedUser.organizationId,
+        roles: authenticatedUser.roles,
+        permissions: authenticatedUser.permissions,
+      },
+      memberships,
+    };
+  }
+
+  /**
+   * Internal helper — confirms the membership is active in `organizationId`
+   * and produces an access token plus the user-scoped fields the response
+   * shape needs.
+   */
+  private async issueAccessTokenForOrg(accountId: string, organizationId: string) {
+    const userId = await this.usersService.findActiveMembershipUserId(
+      accountId,
+      organizationId,
+    );
+    if (!userId) {
+      throw new ForbiddenException(
+        'You do not have an active membership in that organization',
+      );
+    }
+
+    const profile = await this.usersService.findActiveAuthContext(
+      accountId,
+      userId,
+      organizationId,
+    );
+    if (!profile) {
+      throw new ForbiddenException('Membership is no longer active');
+    }
+
+    const accessToken = this.tokenService.generateAccessToken(
+      accountId,
+      userId,
+      organizationId,
+    );
+
+    const memberships = await this.usersService.findActiveMembershipsForAccount(
+      accountId,
+    );
 
     return {
       accessToken,
-      refreshToken,
+      activeOrganizationId: organizationId,
+      memberships,
       user: {
         id: profile.userId,
-        email: profile.email,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
         organizationId: profile.organizationId,
         roles: profile.roles,
         permissions: profile.permissions,
       },
     };
-  }
-
-  /**
-   * Verify the refresh token JWT, then revoke it.
-   * Validates ownership at both JWT-payload level AND DB-record level.
-   */
-  async logout(refreshToken: string, userId: string): Promise<void> {
-    const decoded = this.tokenService.verifyRefreshToken(refreshToken);
-    if (!decoded) return;
-
-    // Fast-path: JWT payload must match the authenticated caller
-    if (decoded.userId !== userId) return;
-
-    // DB-level ownership check + revocation in one atomic operation
-    await this.tokenService.revokeOwnedRefreshToken(decoded.tokenId, userId);
   }
 }

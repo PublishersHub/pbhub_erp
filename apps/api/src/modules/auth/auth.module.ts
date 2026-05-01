@@ -7,14 +7,12 @@ import { AuthController } from './controllers/auth.controller';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { UsersModule } from '../users/users.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({}), // Signing options are passed per-call in TokenService
+    JwtModule.register({}),
     UsersModule,
-    OrganizationsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, TokenService, JwtAccessStrategy, JwtRefreshStrategy],
