@@ -43,8 +43,8 @@ export default function MyOnboardingPage() {
         actions={<StatusBadge status={inst.status} />}
       />
 
-      <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Details</h3>
+      <div className="mb-6 rounded-lg border border-border bg-card p-6 shadow-soft">
+        <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Details</h3>
         <dl>
           <DetailRow label="Template">{inst.templateName}</DetailRow>
           <DetailRow label="Joining Date">{formatDate(inst.joiningDate)}</DetailRow>
@@ -54,10 +54,10 @@ export default function MyOnboardingPage() {
         </dl>
       </div>
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold uppercase text-gray-500">Tasks</h3>
+      <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+        <h3 className="mb-4 text-sm font-semibold uppercase text-muted-foreground">Tasks</h3>
         {tasks.length === 0 ? (
-          <p className="text-sm text-gray-500">No tasks assigned yet.</p>
+          <p className="text-sm text-muted-foreground">No tasks assigned yet.</p>
         ) : (
           <div className="space-y-3">
             {tasks.sort((a, b) => a.sortOrder - b.sortOrder).map((task) => (
@@ -65,34 +65,34 @@ export default function MyOnboardingPage() {
                 key={task.id}
                 className={`rounded-md border p-4 ${
                   task.isOverdue && task.status !== 'COMPLETED'
-                    ? 'border-red-200 bg-red-50'
-                    : 'border-gray-100'
+                    ? 'border-l-2 border-l-destructive border-destructive/30 bg-destructive-soft'
+                    : 'border-border'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900">{task.title}</p>
+                      <p className="text-sm font-medium text-foreground">{task.title}</p>
                       {task.isRequired && (
-                        <span className="text-xs text-red-500">Required</span>
+                        <span className="rounded bg-primary-soft px-1.5 py-0.5 text-xs font-medium text-primary">Required</span>
                       )}
                       {task.isOverdue && task.status !== 'COMPLETED' && (
-                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">Overdue</span>
+                        <span className="rounded bg-destructive-soft px-1.5 py-0.5 text-xs font-medium text-destructive">Overdue</span>
                       )}
                     </div>
                     {task.description && (
-                      <p className="mt-1 text-xs text-gray-500">{task.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{task.description}</p>
                     )}
-                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                       <span>Due: {formatDate(task.dueDate)}</span>
                       <span>Assigned to: {task.assigneeRole.replace(/_/g, ' ')}</span>
                       {task.assigneeEmployee && <span>({employeeName(task.assigneeEmployee)})</span>}
                     </div>
                     {task.blockedReason && (
-                      <p className="mt-1 text-xs text-orange-600">Blocked: {task.blockedReason}</p>
+                      <p className="mt-1 text-xs text-warning">Blocked: {task.blockedReason}</p>
                     )}
                     {task.notes && (
-                      <p className="mt-1 text-xs text-gray-400">Notes: {task.notes}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Notes: {task.notes}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function MyOnboardingPage() {
                   </div>
                 </div>
                 {task.allowDocument && (
-                  <div className="mt-2 border-t border-gray-100 pt-2">
+                  <div className="mt-2 border-t border-border pt-2">
                     <DocumentUpload
                       taskId={task.id}
                       documents={task.documents ?? []}

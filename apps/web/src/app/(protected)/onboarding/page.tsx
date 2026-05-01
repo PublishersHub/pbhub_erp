@@ -54,7 +54,7 @@ export default function OnboardingInstancesPage() {
           can('onboarding.instance.manage') ? (
             <Link
               href="/onboarding/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Start Onboarding
             </Link>
@@ -69,7 +69,7 @@ export default function OnboardingInstancesPage() {
         <select
           value={status}
           onChange={(e) => setParams({ status: e.target.value || null, page: null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
         >
           <option value="">All Statuses</option>
           {STATUSES.map((s) => (
@@ -84,29 +84,29 @@ export default function OnboardingInstancesPage() {
         <EmptyState title="No onboarding instances" description="Onboarding instances will appear here when employees are hired." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Employee" sortKey="employee" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Template</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Template</th>
                   <SortableHeader label="Joining Date" sortKey="joiningDate" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Tasks</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Tasks</th>
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((inst) => (
-                  <tr key={inst.id} className="hover:bg-gray-50">
+                  <tr key={inst.id} className="hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link href={`/onboarding/${inst.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/onboarding/${inst.id}`} className="font-medium text-primary hover:underline">
                         {employeeName(inst.employee)}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{inst.templateName}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(inst.joiningDate)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{inst._count?.tasks ?? inst.tasks?.length ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{inst.templateName}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(inst.joiningDate)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{inst._count?.tasks ?? inst.tasks?.length ?? '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={inst.status} /></td>
                   </tr>
                 ))}

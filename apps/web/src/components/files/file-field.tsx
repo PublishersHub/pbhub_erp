@@ -33,7 +33,7 @@ export function FileField({
   if (hasFile && !editing) {
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-1">
           {label}
         </label>
         <FileLinkCard fileUrl={fileUrl} fileName={fileName} />
@@ -41,7 +41,7 @@ export function FileField({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-medium text-blue-600 hover:text-blue-800"
+            className="text-xs font-medium text-primary hover:text-primary/80"
           >
             Replace
           </button>
@@ -51,7 +51,7 @@ export function FileField({
               onUrlChange('');
               onNameChange('');
             }}
-            className="text-xs font-medium text-red-500 hover:text-red-700"
+            className="text-xs font-medium text-destructive hover:text-destructive/80"
           >
             Remove
           </button>
@@ -61,14 +61,14 @@ export function FileField({
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50';
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-foreground mb-1">
         {label}
       </label>
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 space-y-2">
+      <div className="rounded-lg border-2 border-dashed border-input bg-muted/50 p-3 space-y-2 hover:border-primary hover:bg-primary-soft transition-colors">
         <input
           type="url"
           placeholder="File URL (https://...)"

@@ -61,7 +61,7 @@ export default function MyTasksPage() {
               if (key) setSort(key);
               else setParams({ sort: null, order: null, page: null });
             }}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -72,7 +72,7 @@ export default function MyTasksPage() {
               onClick={() =>
                 setParams({ order: order === 'asc' ? 'desc' : 'asc', page: null })
               }
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              className="rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground hover:bg-muted"
             >
               {order === 'asc' ? '↑ Ascending' : '↓ Descending'}
             </button>
@@ -88,27 +88,27 @@ export default function MyTasksPage() {
             {items.map((task) => (
               <div
                 key={task.id}
-                className={`rounded-lg border bg-white p-4 shadow-sm ${
+                className={`rounded-lg border p-4 shadow-soft ${
                   task.isOverdue && task.status !== 'COMPLETED'
-                    ? 'border-red-200'
-                    : 'border-gray-200'
+                    ? 'border-l-2 border-l-destructive border-destructive/30 bg-destructive-soft'
+                    : 'border-border bg-card'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900">{task.title}</p>
+                      <p className="text-sm font-medium text-foreground">{task.title}</p>
                       {task.isRequired && (
-                        <span className="text-xs text-red-500">Required</span>
+                        <span className="rounded bg-primary-soft px-1.5 py-0.5 text-xs font-medium text-primary">Required</span>
                       )}
                       {task.isOverdue && task.status !== 'COMPLETED' && (
-                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">Overdue</span>
+                        <span className="rounded bg-destructive-soft px-1.5 py-0.5 text-xs font-medium text-destructive">Overdue</span>
                       )}
                     </div>
                     {task.description && (
-                      <p className="mt-1 text-xs text-gray-500">{task.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{task.description}</p>
                     )}
-                    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span>Due: {formatDate(task.dueDate)}</span>
                       <span>Role: {task.assigneeRole.replace(/_/g, ' ')}</span>
                       {task.onboardingInstance?.employee && (
@@ -116,7 +116,7 @@ export default function MyTasksPage() {
                           New hire:{' '}
                           <Link
                             href={`/onboarding/${task.onboardingInstanceId}`}
-                            className="text-blue-600 hover:underline"
+                            className="text-primary hover:underline"
                           >
                             {employeeName(task.onboardingInstance.employee)}
                           </Link>
@@ -124,7 +124,7 @@ export default function MyTasksPage() {
                       )}
                     </div>
                     {task.blockedReason && (
-                      <p className="mt-1 text-xs text-orange-600">Blocked: {task.blockedReason}</p>
+                      <p className="mt-1 text-xs text-warning">Blocked: {task.blockedReason}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function MyTasksPage() {
             ))}
           </div>
           {totalPages > 1 && (
-            <div className="mt-4 rounded-lg border bg-white shadow-sm">
+            <div className="mt-4 rounded-lg border border-border bg-card shadow-soft">
               <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
             </div>
           )}

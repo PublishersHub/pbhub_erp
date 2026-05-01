@@ -35,7 +35,7 @@ export function TaskStatusForm({ taskId, currentStatus, onUpdated }: TaskStatusF
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+        className="text-xs text-primary hover:text-primary/80 font-medium"
       >
         Update
       </button>
@@ -65,11 +65,11 @@ export function TaskStatusForm({ taskId, currentStatus, onUpdated }: TaskStatusF
   }
 
   return (
-    <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-2">
+    <div className="rounded-md border border-info-soft bg-info-soft/50 p-3 space-y-2">
       <select
         value={status}
         onChange={(e) => setStatus(e.target.value as OnboardingTaskStatus)}
-        className="block w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+        className="block w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
       >
         {STATUS_OPTIONS.filter((o) => o.value !== currentStatus).map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -81,7 +81,7 @@ export function TaskStatusForm({ taskId, currentStatus, onUpdated }: TaskStatusF
           value={blockedReason}
           onChange={(e) => setBlockedReason(e.target.value)}
           rows={2}
-          className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+          className="block w-full rounded-md border border-input bg-card px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
         />
       )}
       <textarea
@@ -89,19 +89,19 @@ export function TaskStatusForm({ taskId, currentStatus, onUpdated }: TaskStatusF
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={1}
-        className="block w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+        className="block w-full rounded-md border border-input bg-card px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
       />
       <div className="flex gap-2">
         <button
           disabled={acting}
           onClick={handleSubmit}
-          className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {acting ? 'Saving...' : 'Save'}
         </button>
         <button
           onClick={() => { setOpen(false); setError(''); }}
-          className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+          className="rounded-md bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
         >
           Cancel
         </button>

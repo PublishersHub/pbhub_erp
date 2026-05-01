@@ -37,27 +37,27 @@ export default function CreateTemplatePage() {
     <div>
       <PageHeader title="Create Template" backHref="/onboarding/templates" />
 
-      <div className="mx-auto max-w-lg rounded-lg border bg-white p-6 shadow-sm">
+      <div className="mx-auto max-w-lg rounded-lg border border-border bg-card p-6 shadow-soft">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Standard Onboarding"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="block w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Describe the onboarding program"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="block w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </div>
 
@@ -67,9 +67,9 @@ export default function CreateTemplatePage() {
               id="isDefault"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
             />
-            <label htmlFor="isDefault" className="text-sm text-gray-700">Set as default template</label>
+            <label htmlFor="isDefault" className="text-sm text-foreground">Set as default template</label>
           </div>
 
           {error && <ErrorMessage message={error} />}
@@ -78,14 +78,14 @@ export default function CreateTemplatePage() {
             <button
               type="submit"
               disabled={submitting || !name.trim()}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {submitting ? 'Creating...' : 'Create Template'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-input bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               Cancel
             </button>

@@ -10,23 +10,23 @@ function getExtBadge(
   const raw = match[1].toUpperCase();
   switch (raw) {
     case 'PDF':
-      return { ext: 'PDF', color: 'bg-red-100 text-red-700' };
+      return { ext: 'PDF', color: 'bg-destructive-soft text-destructive' };
     case 'DOC':
     case 'DOCX':
-      return { ext: 'DOC', color: 'bg-blue-100 text-blue-700' };
+      return { ext: 'DOC', color: 'bg-primary-soft text-primary' };
     case 'PNG':
     case 'JPG':
     case 'JPEG':
     case 'GIF':
     case 'WEBP':
     case 'SVG':
-      return { ext: 'IMG', color: 'bg-purple-100 text-purple-700' };
+      return { ext: 'IMG', color: 'bg-info-soft text-info' };
     case 'XLS':
     case 'XLSX':
     case 'CSV':
-      return { ext: 'XLS', color: 'bg-green-100 text-green-700' };
+      return { ext: 'XLS', color: 'bg-success-soft text-success' };
     default:
-      return { ext: 'FILE', color: 'bg-gray-100 text-gray-600' };
+      return { ext: 'FILE', color: 'bg-secondary text-secondary-foreground' };
   }
 }
 
@@ -50,7 +50,7 @@ export function FileLinkCard({
     fileName || fileUrl.split('/').pop()?.split('?')[0] || 'Document';
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5 hover:bg-muted/50 transition-colors">
       {badge && (
         <span
           className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.color}`}
@@ -60,7 +60,7 @@ export function FileLinkCard({
       )}
       <div className="min-w-0 flex-1">
         {label && (
-          <p className="text-[10px] font-medium uppercase text-gray-400">
+          <p className="text-[10px] font-medium uppercase text-muted-foreground/70">
             {label}
           </p>
         )}
@@ -68,7 +68,7 @@ export function FileLinkCard({
           href={fileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block truncate text-sm font-medium text-blue-600 hover:underline"
+          className="block truncate text-sm font-medium text-primary hover:underline"
           title={displayName}
         >
           {displayName}
@@ -79,7 +79,7 @@ export function FileLinkCard({
           type="button"
           onClick={onRemove}
           disabled={removing}
-          className="shrink-0 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+          className="shrink-0 text-xs text-destructive hover:text-destructive/80 disabled:opacity-50"
         >
           Remove
         </button>

@@ -42,7 +42,7 @@ export default function TemplatesListPage() {
           can('onboarding.template.manage') ? (
             <Link
               href="/onboarding/templates/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Create Template
             </Link>
@@ -56,42 +56,42 @@ export default function TemplatesListPage() {
         <EmptyState title="No templates" description="Create your first onboarding template to get started." />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/60">
                 <tr>
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Tasks</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Default</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Description</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Tasks</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Default</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {items.map((tpl) => (
-                  <tr key={tpl.id} className="hover:bg-gray-50">
+                  <tr key={tpl.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 text-sm">
-                      <Link href={`/onboarding/templates/${tpl.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/onboarding/templates/${tpl.id}`} className="font-medium text-primary hover:underline">
                         {tpl.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{tpl.description || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{tpl._count?.tasks ?? tpl.tasks?.length ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{tpl.description || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{tpl._count?.tasks ?? tpl.tasks?.length ?? '—'}</td>
                     <td className="px-4 py-3 text-sm">
                       {tpl.isDefault ? (
-                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                        <span className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
                           Default
                         </span>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {tpl.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                        <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                           Inactive
                         </span>
                       )}

@@ -78,16 +78,16 @@ export function FileList({
   }
 
   const inputCls =
-    'block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+    'block w-full rounded-md border border-input bg-card px-2.5 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50';
 
   return (
     <div>
       {documents.length === 0 && !showForm && (
-        <p className="text-sm text-gray-500">{emptyMessage}</p>
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       )}
 
       {documents.length > 0 && (
-        <div className="space-y-2">
+        <div className="divide-y divide-border">
           {documents.map((doc) => (
             <FileLinkCard
               key={doc.id}
@@ -108,14 +108,14 @@ export function FileList({
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+          className="mt-2 text-sm font-medium text-primary hover:text-primary/80"
         >
           + Add Document
         </button>
       )}
 
       {showForm && (
-        <div className="mt-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 space-y-2">
+        <div className="mt-2 rounded-lg border-2 border-dashed border-input bg-muted/50 p-3 space-y-2 hover:border-primary hover:bg-primary-soft transition-colors">
           <input
             type="url"
             placeholder="File URL (https://...)"
@@ -134,7 +134,7 @@ export function FileList({
               type="button"
               disabled={acting}
               onClick={handleAdd}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {acting ? 'Adding...' : 'Add'}
             </button>
@@ -146,7 +146,7 @@ export function FileList({
                 setFileUrl('');
                 setFileName('');
               }}
-              className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200"
+              className="rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
             >
               Cancel
             </button>
