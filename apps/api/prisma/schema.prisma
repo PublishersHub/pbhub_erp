@@ -102,33 +102,54 @@ model Organization {
 }
 
 // ============================================
-// Users — authentication identity only.
-// Separate from employees (HR/business identity).
+// Accounts — global identity (one human, one row).
+// Memberships in organizations are represented by User rows.
+// ============================================
+
+model Account {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  users         User[]
+  refreshTokens RefreshToken[]
+
+  @@map("accounts")
+}
+
+// ============================================
+// User — membership of an account in an organization.
+// Identity (email/password/name) lives on Account.
+// All FKs in the rest of the schema that say userId still
+// point here — they now mean "this person within this org".
 // ============================================
 
 model User {
-  id             String    @id @default(uuid())
-  organizationId String    @map("organization_id")
-  email          String
-  passwordHash   String    @map("password_hash")
-  firstName      String    @map("first_name")
-  lastName       String    @map("last_name")
-  isActive       Boolean   @default(true) @map("is_active")
-  lastLoginAt    DateTime? @map("last_login_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  accountId      String   @map("account_id")
+  organizationId String   @map("organization_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization      Organization       @relation(fields: [organizationId], references: [id])
-  userRoles         UserRole[]
-  refreshTokens     RefreshToken[]
-  employee          Employee?
-  uploadedDocuments EmployeeDocument[]
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id])
 
-  // Notifications
+  userRoles               UserRole[]
+  employee                Employee?
+  uploadedDocuments       EmployeeDocument[]
   notificationPreferences NotificationPreference[]
   notifications           Notification[]
 
-  @@unique([organizationId, email])
+  @@unique([accountId, organizationId])
+  @@index([accountId])
+  @@index([organizationId])
   @@map("users")
 }
 
@@ -208,20 +229,21 @@ model UserRole {
 }
 
 // ============================================
-// Refresh Tokens
+// Refresh Tokens — account-scoped (no org claim).
+// One refresh token represents "this human is logged in."
 // ============================================
 
 model RefreshToken {
   id        String    @id @default(uuid())
-  userId    String    @map("user_id")
+  accountId String    @map("account_id")
   tokenHash String    @map("token_hash")
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([accountId])
   @@map("refresh_tokens")
 }
 
