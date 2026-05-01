@@ -9,19 +9,32 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { getToken, setToken, setRefreshToken, clearTokens } from '@/lib/auth';
+import {
+  getToken,
+  setToken,
+  setRefreshToken,
+  getRefreshToken,
+  setActiveOrgId,
+  clearTokens,
+} from '@/lib/auth';
 import {
   login as apiLogin,
+  selectOrganization as apiSelectOrganization,
+  switchOrganization as apiSwitchOrganization,
   fetchMe,
   type LoginPayload,
   type AuthUser,
+  type Membership,
 } from '@/lib/api';
 
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
+  pendingMemberships: Membership[] | null;
+  login: (payload: LoginPayload) => Promise<'authenticated' | 'needs_org_selection'>;
+  selectOrganization: (organizationId: string) => Promise<void>;
+  switchOrganization: (organizationId: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -30,9 +43,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [pendingMemberships, setPendingMemberships] = useState<Membership[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate user from API on mount if token exists
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -46,12 +59,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (payload: LoginPayload) => {
+    async (payload: LoginPayload): Promise<'authenticated' | 'needs_org_selection'> => {
       const res = await apiLogin(payload);
-      setToken(res.accessToken);
       setRefreshToken(res.refreshToken);
-      setUser(res.user);
+
+      if (res.accessToken && res.activeOrganizationId && res.user) {
+        setToken(res.accessToken);
+        setActiveOrgId(res.activeOrganizationId);
+        setUser({
+          account: res.account,
+          activeOrganizationId: res.activeOrganizationId,
+          user: res.user,
+          memberships: res.memberships,
+        });
+        setPendingMemberships(null);
+        router.push('/dashboard');
+        return 'authenticated';
+      }
+
+      setUser({
+        account: res.account,
+        activeOrganizationId: null,
+        user: null,
+        memberships: res.memberships,
+      });
+      setPendingMemberships(res.memberships);
+      return 'needs_org_selection';
+    },
+    [router],
+  );
+
+  const selectOrganization = useCallback(
+    async (organizationId: string) => {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        router.push('/login');
+        return;
+      }
+      const res = await apiSelectOrganization(organizationId, refreshToken);
+      setToken(res.accessToken);
+      setActiveOrgId(res.activeOrganizationId);
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              activeOrganizationId: res.activeOrganizationId,
+              user: res.user,
+              memberships: res.memberships,
+            }
+          : prev,
+      );
+      setPendingMemberships(null);
       router.push('/dashboard');
+    },
+    [router],
+  );
+
+  const switchOrganization = useCallback(
+    async (organizationId: string) => {
+      const res = await apiSwitchOrganization(organizationId);
+      setToken(res.accessToken);
+      setActiveOrgId(res.activeOrganizationId);
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              activeOrganizationId: res.activeOrganizationId,
+              user: res.user,
+              memberships: res.memberships,
+            }
+          : prev,
+      );
+      router.refresh();
     },
     [router],
   );
@@ -59,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearTokens();
     setUser(null);
+    setPendingMemberships(null);
     router.push('/login');
   }, [router]);
 
@@ -66,9 +146,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!user.activeOrganizationId,
         isLoading,
+        pendingMemberships,
         login,
+        selectOrganization,
+        switchOrganization,
         logout,
       }}
     >
