@@ -19,7 +19,7 @@ export function FilterBar({
       {hasActiveFilters && onClear && (
         <button
           onClick={onClear}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+          className="rounded-md border border-input px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 motion-press"
         >
           Clear filters
         </button>

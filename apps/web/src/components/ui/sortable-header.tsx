@@ -21,19 +21,19 @@ export function SortableHeader({
 
   return (
     <th
-      className={`cursor-pointer select-none px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 hover:text-gray-700 ${className}`}
+      className={`cursor-pointer select-none px-4 py-3 text-left text-xs font-medium uppercase transition-colors duration-150 ${active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'} ${className}`}
       onClick={() => onSort(sortKey)}
     >
       <div className="flex items-center gap-1">
         {label}
         <span className="inline-flex flex-col leading-none">
           <span
-            className={`text-[8px] ${active && currentOrder === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
+            className={`text-[8px] transition-colors duration-150 ${active && currentOrder === 'asc' ? 'text-primary' : 'text-muted-foreground/60'}`}
           >
             ▲
           </span>
           <span
-            className={`text-[8px] ${active && currentOrder === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
+            className={`text-[8px] transition-colors duration-150 ${active && currentOrder === 'desc' ? 'text-primary' : 'text-muted-foreground/60'}`}
           >
             ▼
           </span>

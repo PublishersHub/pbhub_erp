@@ -7,12 +7,12 @@ interface ErrorMessageProps {
 
 export function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-      <p className="text-sm text-red-700">{message}</p>
+    <div className="rounded-md border border-destructive/20 bg-destructive-soft px-4 py-4">
+      <p className="text-sm text-destructive/90">{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-2 text-sm font-medium text-red-700 underline hover:text-red-800"
+          className="mt-2 text-sm font-medium text-destructive underline-offset-4 hover:underline hover:text-destructive/80 motion-press"
         >
           Try again
         </button>

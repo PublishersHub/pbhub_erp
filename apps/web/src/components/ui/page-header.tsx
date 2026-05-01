@@ -17,13 +17,13 @@ export function PageHeader({ title, description, backHref, actions }: PageHeader
         {backHref && (
           <Link
             href={backHref}
-            className="mb-1 inline-block text-sm text-gray-500 hover:text-gray-700"
+            className="mb-1 inline-block text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
           >
             &larr; Back
           </Link>
         )}
-        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
+        <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
