@@ -7,35 +7,76 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Find a user by email within a specific organization.
-   * Uses the (organizationId, email) unique composite for exact lookup,
-   * then checks isActive in application logic.
+   * Find an account by email (case-insensitive). Returns null if missing
+   * or inactive.
    */
-  async findByOrgAndEmail(organizationId: string, email: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { organizationId_email: { organizationId, email } },
+  async findActiveAccountByEmail(email: string) {
+    const account = await this.prisma.account.findUnique({
+      where: { email: email.toLowerCase().trim() },
     });
-    if (!user || !user.isActive) return null;
-    return user;
+    if (!account || !account.isActive) return null;
+    return account;
   }
 
   /**
-   * Load a user with all roles and permissions.
-   * Called on every authenticated request by the JWT strategy
-   * to provide full authorization context.
+   * List all active memberships for an account, restricted to active orgs.
+   * Returns the data the frontend needs to render the picker.
    */
-  async findByIdWithPermissions(userId: string): Promise<AuthenticatedUser | null> {
-    const user = await this.prisma.user.findFirst({
-      where: { id: userId, isActive: true },
+  async findActiveMembershipsForAccount(accountId: string) {
+    const memberships = await this.prisma.user.findMany({
+      where: {
+        accountId,
+        isActive: true,
+        organization: { isActive: true },
+      },
       include: {
+        organization: { select: { id: true, name: true, slug: true } },
+        userRoles: {
+          include: { role: { select: { slug: true, isActive: true } } },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return memberships.map((m) => ({
+      userId: m.id,
+      organizationId: m.organizationId,
+      organizationName: m.organization.name,
+      organizationSlug: m.organization.slug,
+      roles: m.userRoles
+        .filter((ur) => ur.role.isActive)
+        .map((ur) => ur.role.slug),
+    }));
+  }
+
+  /**
+   * Verify (account, membership, org) is consistent and active, and return
+   * the full AuthenticatedUser context. Called on every authenticated request.
+   */
+  async findActiveAuthContext(
+    accountId: string,
+    userId: string,
+    organizationId: string,
+  ): Promise<AuthenticatedUser | null> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        accountId,
+        organizationId,
+        isActive: true,
+        account: { isActive: true },
+        organization: { isActive: true },
+      },
+      include: {
+        account: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
         userRoles: {
           include: {
             role: {
               include: {
                 rolePermissions: {
-                  include: {
-                    permission: true,
-                  },
+                  include: { permission: true },
                 },
               },
             },
@@ -46,35 +87,52 @@ export class UsersService {
 
     if (!user) return null;
 
-    // Filter to active roles only, then extract slugs and permissions
     const activeUserRoles = user.userRoles.filter((ur) => ur.role.isActive);
-
     const roles = activeUserRoles.map((ur) => ur.role.slug);
-
-    // Deduplicate permissions across all assigned roles
     const permissions = [
       ...new Set(
-        activeUserRoles.flatMap((ur) => ur.role.rolePermissions.map((rp) => rp.permission.code)),
+        activeUserRoles.flatMap((ur) =>
+          ur.role.rolePermissions.map((rp) => rp.permission.code),
+        ),
       ),
     ];
 
     return {
+      accountId: user.account.id,
       userId: user.id,
-      email: user.email,
+      email: user.account.email,
       organizationId: user.organizationId,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: user.account.firstName,
+      lastName: user.account.lastName,
       roles,
       permissions,
     };
   }
 
   /**
-   * Update last login timestamp.
+   * Confirm an account has an active membership in a specific org.
+   * Returns the membership row id, or null.
    */
-  async updateLastLogin(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
+  async findActiveMembershipUserId(
+    accountId: string,
+    organizationId: string,
+  ): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        accountId,
+        organizationId,
+        isActive: true,
+        account: { isActive: true },
+        organization: { isActive: true },
+      },
+      select: { id: true },
+    });
+    return user?.id ?? null;
+  }
+
+  async updateAccountLastLogin(accountId: string): Promise<void> {
+    await this.prisma.account.update({
+      where: { id: accountId },
       data: { lastLoginAt: new Date() },
     });
   }
