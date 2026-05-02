@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
-import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -75,7 +75,7 @@ export default function CandidatesListPage() {
         />
       </FilterBar>
 
-      {loading && <Loading />}
+      {loading && <SkeletonTable rows={6} cols={7} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No candidates found" description="Add your first candidate to get started." />
@@ -92,11 +92,12 @@ export default function CandidatesListPage() {
                   <SortableHeader label="Source" sortKey="source" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Current Role</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((c) => (
-                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={c.id} className="group hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link href={`/recruitment/candidates/${c.id}`} className="font-medium text-primary hover:underline">
                         {c.firstName} {c.lastName}
@@ -120,6 +121,16 @@ export default function CandidatesListPage() {
                           Active
                         </span>
                       )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <Link
+                          href={`/recruitment/candidates/${c.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground hover:bg-secondary/80 motion-press transition-colors"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

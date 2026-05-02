@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -13,6 +13,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { useAsync, usePermission, useTableParams, sortLocal, paginateLocal } from '@/lib/hooks';
 import { listApplications } from '@/lib/recruitment-api';
 import { formatDate } from '@/lib/format';
+import { useToast } from '@/components/toast';
 import type { ApplicationStatus } from '@/types/recruitment';
 
 const STATUSES: ApplicationStatus[] = [
@@ -23,6 +24,7 @@ export default function ApplicationsListPage() {
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
+  const { toast } = useToast();
 
   const status = (searchParams.get('status') as ApplicationStatus) || '';
   const requisitionId = searchParams.get('requisitionId') || '';
@@ -96,7 +98,7 @@ export default function ApplicationsListPage() {
         </select>
       </FilterBar>
 
-      {loading && <Loading />}
+      {loading && <SkeletonTable rows={6} cols={7} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No applications found" description="Create an application to get started." />
@@ -113,11 +115,12 @@ export default function ApplicationsListPage() {
                   <SortableHeader label="Source" sortKey="source" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Applied" sortKey="appliedAt" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <th></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((app) => (
-                  <tr key={app.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={app.id} className="group hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link href={`/recruitment/applications/${app.id}`} className="font-medium text-primary hover:underline">
                         {app.candidate
@@ -134,6 +137,31 @@ export default function ApplicationsListPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{app.source.replace(/_/g, ' ')}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(app.appliedAt)}</td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <Link
+                          href={`/recruitment/applications/${app.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground hover:bg-secondary/80 motion-press transition-colors"
+                        >
+                          View
+                        </Link>
+                        {app.status === 'IN_PROGRESS' && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toast({
+                                title: 'Move stage',
+                                description: 'Open the application to move stage',
+                                variant: 'info',
+                              })
+                            }
+                            className="inline-flex h-7 items-center gap-1 rounded-lg bg-info/15 px-2 text-xs font-medium text-info hover:bg-info/25 motion-press transition-colors"
+                          >
+                            Move stage
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

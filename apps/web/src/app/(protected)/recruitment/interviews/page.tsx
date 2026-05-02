@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -12,11 +12,13 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { useAsync, usePermission, useTableParams, sortLocal, paginateLocal } from '@/lib/hooks';
 import { listInterviews } from '@/lib/recruitment-api';
 import { formatDateTime, employeeName } from '@/lib/format';
+import { useToast } from '@/components/toast';
 
 export default function InterviewsListPage() {
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, searchParams } =
     useTableParams();
+  const { toast } = useToast();
   const applicationId = searchParams.get('applicationId') || '';
 
   const { data, error, loading, refetch } = useAsync(
@@ -66,7 +68,7 @@ export default function InterviewsListPage() {
         />
       )}
 
-      {applicationId && loading && <Loading />}
+      {applicationId && loading && <SkeletonTable rows={6} cols={7} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && applicationId && (
         <EmptyState title="No interviews scheduled" description="Schedule the first interview for this application." />
@@ -83,11 +85,12 @@ export default function InterviewsListPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Panelists</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Feedback</th>
                   <SortableHeader label="Status" sortKey="status" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <th></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((interview) => (
-                  <tr key={interview.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={interview.id} className="group hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link href={`/recruitment/interviews/${interview.id}`} className="font-medium text-primary hover:underline">
                         {interview.type.replace(/_/g, ' ')}
@@ -104,6 +107,31 @@ export default function InterviewsListPage() {
                       {interview.feedback?.length || 0}/{interview.interviewers?.length || 0}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={interview.status} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <Link
+                          href={`/recruitment/interviews/${interview.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground hover:bg-secondary/80 motion-press transition-colors"
+                        >
+                          View
+                        </Link>
+                        {interview.status === 'COMPLETED' && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toast({
+                                title: 'Submit feedback',
+                                description: 'Open the interview to submit feedback',
+                                variant: 'info',
+                              })
+                            }
+                            className="inline-flex h-7 items-center gap-1 rounded-lg bg-info/15 px-2 text-xs font-medium text-info hover:bg-info/25 motion-press transition-colors"
+                          >
+                            Submit feedback
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
