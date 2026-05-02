@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
 import { getUnreadCount } from '@/lib/notification-api';
@@ -175,6 +175,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: unreadData } = useAsync(() => getUnreadCount(), []);
   const unreadCount = unreadData?.count ?? 0;
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Close drawer on Escape key and on resize to desktop
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setDrawerOpen(false);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Body scroll-lock when drawer is open on mobile
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
+
+  const closeDrawer = () => setDrawerOpen(false);
+
   return (
     <div className="relative flex min-h-screen bg-background">
       {/* Ambient aurora behind everything — drifts very slowly */}
@@ -184,8 +213,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="absolute bottom-0 left-1/3 h-[30rem] w-[30rem] rounded-full bg-pink/8 blur-[140px]" />
       </div>
 
+      {/* Backdrop — mobile only, fades in when drawer is open */}
+      <div
+        aria-hidden
+        onClick={closeDrawer}
+        className={`fixed inset-0 z-20 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
       {/* Sidebar */}
-      <aside className="surface-glass relative flex w-60 flex-col border-r border-hairline">
+      <aside
+        className={`surface-glass fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-hairline transition-transform duration-300 ease-out lg:relative lg:z-auto lg:translate-x-0 ${
+          drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
         {/* Brand */}
         <div className="flex items-center gap-3 border-b border-hairline px-5 py-4">
           <div className="gradient-brand flex h-9 w-9 items-center justify-center rounded-xl shadow-glow-primary">
@@ -211,6 +253,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={closeDrawer}
                   className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-primary/10 text-primary'
@@ -238,6 +281,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         <Link
                           key={child.href}
                           href={child.href}
+                          onClick={closeDrawer}
                           className={`block rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 ${
                             childActive
                               ? 'text-foreground'
@@ -282,9 +326,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <header className="surface-glass sticky top-0 z-10 flex items-center justify-end border-b border-hairline px-6 py-3">
+        <header className="surface-glass sticky top-0 z-10 flex items-center justify-between border-b border-hairline px-6 py-3 lg:justify-end">
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setDrawerOpen((prev) => !prev)}
+            aria-label={drawerOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={drawerOpen}
+            className="relative rounded-xl border border-hairline bg-card/40 p-2 text-muted-foreground transition-all hover:border-border hover:bg-secondary hover:text-foreground motion-press lg:hidden"
+          >
+            <span className="flex h-4 w-4 flex-col items-center justify-center gap-[3px]">
+              <span
+                className={`block h-0.5 w-4 rounded-full bg-current transition-all duration-300 ${
+                  drawerOpen ? 'translate-y-[5.5px] rotate-45' : ''
+                }`}
+              />
+              <span
+                className={`block h-0.5 w-4 rounded-full bg-current transition-all duration-300 ${
+                  drawerOpen ? 'opacity-0 scale-x-0' : ''
+                }`}
+              />
+              <span
+                className={`block h-0.5 w-4 rounded-full bg-current transition-all duration-300 ${
+                  drawerOpen ? '-translate-y-[5.5px] -rotate-45' : ''
+                }`}
+              />
+            </span>
+          </button>
+
           <div className="flex items-center gap-3">
             <OrgSwitcher />
             <ThemeToggle />
