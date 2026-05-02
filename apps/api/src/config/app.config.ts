@@ -26,4 +26,17 @@ export default registerAs('app', () => ({
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },
+
+  mail: {
+    transport: process.env.MAIL_TRANSPORT ?? 'console',
+    from:
+      process.env.MAIL_FROM ?? 'PbHub HRMS <noreply@pbhub.local>',
+    smtp: {
+      host: process.env.MAIL_SMTP_HOST,
+      port: parseInt(process.env.MAIL_SMTP_PORT ?? '587', 10),
+      user: process.env.MAIL_SMTP_USER,
+      password: process.env.MAIL_SMTP_PASSWORD,
+      secure: process.env.MAIL_SMTP_SECURE === 'true',
+    },
+  },
 }));

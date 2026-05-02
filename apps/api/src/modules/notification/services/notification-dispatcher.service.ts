@@ -3,6 +3,7 @@ import { NotificationChannel, NotificationStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationTemplatesService } from './notification-templates.service';
 import { NotificationPreferencesService } from './notification-preferences.service';
+import { MailerService } from '../../../common/mail/mail.service';
 import {
   DEFAULT_TEMPLATES,
   NotificationEventPayload,
@@ -16,6 +17,7 @@ export class NotificationDispatcherService {
     private readonly prisma: PrismaService,
     private readonly templatesService: NotificationTemplatesService,
     private readonly preferencesService: NotificationPreferencesService,
+    private readonly mailerService: MailerService,
   ) {}
 
   /**
@@ -82,53 +84,107 @@ export class NotificationDispatcherService {
         (userId) => prefMap.get(userId) !== false,
       );
 
-      if (deliverable.length === 0) {
-        this.logger.debug(`No deliverable recipients after preference check for ${eventType}`);
-        return;
-      }
-
-      // Batch-insert notifications
-      const now = new Date();
-      const notificationRows = deliverable.map((userId) => ({
-        organizationId: payload.organizationId,
-        recipientUserId: userId,
-        eventType,
-        title,
-        body,
-        referenceId: payload.referenceId ?? null,
-        referenceType: payload.referenceType ?? null,
-      }));
-
-      await this.prisma.notification.createMany({
-        data: notificationRows,
-      });
-
-      // Fetch the created notifications to get their IDs for delivery logs
-      // (createMany doesn't return ids; use createdAt window to fetch)
-      const created = await this.prisma.notification.findMany({
-        where: {
+      // Batch-insert IN_APP notifications (skip if no one wants IN_APP)
+      if (deliverable.length > 0) {
+        const now = new Date();
+        const notificationRows = deliverable.map((userId) => ({
           organizationId: payload.organizationId,
+          recipientUserId: userId,
           eventType,
-          recipientUserId: { in: deliverable },
-          createdAt: { gte: now },
-        },
-        select: { id: true },
-      });
+          title,
+          body,
+          referenceId: payload.referenceId ?? null,
+          referenceType: payload.referenceType ?? null,
+        }));
 
-      if (created.length > 0) {
-        await this.prisma.notificationDeliveryLog.createMany({
-          data: created.map((n) => ({
-            notificationId: n.id,
-            channel: NotificationChannel.IN_APP,
-            status: NotificationStatus.SENT,
-            deliveredAt: new Date(),
-          })),
+        await this.prisma.notification.createMany({
+          data: notificationRows,
         });
+
+        // Fetch the created notifications to get their IDs for delivery logs
+        // (createMany doesn't return ids; use createdAt window to fetch)
+        const created = await this.prisma.notification.findMany({
+          where: {
+            organizationId: payload.organizationId,
+            eventType,
+            recipientUserId: { in: deliverable },
+            createdAt: { gte: now },
+          },
+          select: { id: true },
+        });
+
+        if (created.length > 0) {
+          await this.prisma.notificationDeliveryLog.createMany({
+            data: created.map((n) => ({
+              notificationId: n.id,
+              channel: NotificationChannel.IN_APP,
+              status: NotificationStatus.SENT,
+              deliveredAt: new Date(),
+            })),
+          });
+        }
+
+        this.logger.log(
+          `Dispatched ${deliverable.length} IN_APP notification(s) for event ${eventType}`,
+        );
+      } else {
+        this.logger.debug(
+          `No deliverable IN_APP recipients after preference check for ${eventType}`,
+        );
       }
 
-      this.logger.log(
-        `Dispatched ${deliverable.length} notification(s) for event ${eventType}`,
-      );
+      // ── EMAIL channel fan-out ──────────────────────────────────────────
+      // EMAIL is opt-in: only send if the user has explicitly enabled it.
+      const emailPrefs = await this.prisma.notificationPreference.findMany({
+        where: {
+          userId: { in: filteredRecipients },
+          eventType,
+          channel: NotificationChannel.EMAIL,
+          enabled: true,
+        },
+        select: { userId: true },
+      });
+
+      const emailRecipientIds = new Set(emailPrefs.map((p) => p.userId));
+
+      if (emailRecipientIds.size > 0) {
+        const users = await this.prisma.user.findMany({
+          where: { id: { in: [...emailRecipientIds] } },
+          include: {
+            account: { select: { email: true, firstName: true, lastName: true } },
+          },
+        });
+
+        // Try EMAIL-specific template; fall back to the already-resolved IN_APP text
+        const emailTemplate = await this.templatesService.resolveTemplate(
+          payload.organizationId,
+          eventType,
+          NotificationChannel.EMAIL,
+        );
+
+        const emailSubject = this.interpolate(
+          emailTemplate?.subject ?? rawSubject,
+          payload.variables,
+        );
+        const emailBody = this.interpolate(
+          emailTemplate?.body ?? rawBody,
+          payload.variables,
+        );
+
+        for (const u of users) {
+          if (!u.account?.email) continue;
+          await this.mailerService.send({
+            to: u.account.email,
+            subject: emailSubject,
+            body: emailBody,
+          });
+        }
+
+        this.logger.log(
+          `Sent ${users.length} EMAIL notification(s) for event ${eventType}`,
+        );
+      }
+      // ─────────────────────────────────────────────────────────────────────
     } catch (error) {
       // Never fail parent workflow
       this.logger.error(

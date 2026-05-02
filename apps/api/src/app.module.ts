@@ -5,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
+import { MailModule } from './common/mail/mail.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -40,6 +41,7 @@ import appConfig from './config/app.config';
     // Infrastructure
     PrismaModule,
     RedisModule,
+    MailModule,
 
     // Feature modules
     HealthModule,
