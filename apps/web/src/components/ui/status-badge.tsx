@@ -102,7 +102,9 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide ${color} ${className}`}
     >
-      {label}
+      <span key={status} className="motion-scale-in">
+        {label}
+      </span>
     </span>
   );
 }
