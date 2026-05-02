@@ -20,9 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-foreground">
         <ThemeProvider>
           <ToastProvider>
-            <CommandPaletteProvider>
-              <AuthProvider>{children}</AuthProvider>
-            </CommandPaletteProvider>
+            <AuthProvider>
+              <CommandPaletteProvider>{children}</CommandPaletteProvider>
+            </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>
