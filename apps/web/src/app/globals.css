@@ -3,107 +3,129 @@
 @tailwind utilities;
 
 /* =====================================================================
- * Design tokens
+ * Design tokens — Apple / Arc / Raycast inspired
  *
- * All colors are HSL channel triplets so Tailwind can apply alpha
- * modifiers (e.g. `bg-primary/80`) via `hsl(var(--primary) / <alpha>)`.
- * Light mode lives on :root; dark mode lives on .dark (toggled on
- * the <html> element by ThemeProvider).
+ * - Warm off-white in light mode, deep blue-black in dark mode
+ * - Electric blue primary with violet→pink gradient accent
+ * - Larger radii, softer shadows with primary tint, glass surfaces
+ * - All colors as HSL channels so Tailwind can apply alpha modifiers
  * ===================================================================== */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    /* Backgrounds & surfaces */
+    --background: 30 25% 98%;
+    --foreground: 224 32% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card-foreground: 224 32% 12%;
+    --card-glass: 0 0% 100%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover-foreground: 224 32% 12%;
 
-    --primary: 262 83% 58%;
+    /* Brand */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 262 83% 96%;
+    --primary-soft: 217 91% 95%;
+    --primary-glow: 217 91% 60%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 10%;
+    /* Gradient stop — used by gradient utilities */
+    --accent-violet: 262 83% 65%;
+    --accent-pink: 330 81% 65%;
+    --accent-cyan: 188 86% 53%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    /* Muted / secondary */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 32% 12%;
 
-    --accent: 262 83% 96%;
-    --accent-foreground: 262 83% 30%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 30%;
+
+    /* Status */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --destructive-soft: 0 86% 97%;
 
-    --success: 142 71% 45%;
+    --success: 158 64% 42%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 142 76% 95%;
+    --success-soft: 152 76% 95%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 240 10% 4%;
+    --warning: 32 95% 50%;
+    --warning-foreground: 224 32% 12%;
     --warning-soft: 48 96% 89%;
 
-    --info: 200 98% 39%;
+    --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
     --info-soft: 204 94% 94%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 262 83% 58%;
+    /* Borders & rings */
+    --border: 220 13% 90%;
+    --input: 220 13% 88%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.5rem;
+    /* Geometry */
+    --radius: 1rem;
+    --radius-button: 0.75rem;
+    --radius-input: 0.625rem;
 
-    --shadow-color: 240 10% 50%;
+    --shadow-color: 217 91% 30%;
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
+    /* Deep blue-black, not pure */
+    --background: 230 30% 6%;
+    --foreground: 220 20% 96%;
 
-    --card: 240 6% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 230 25% 9%;
+    --card-foreground: 220 20% 96%;
+    --card-glass: 230 25% 12%;
 
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 230 25% 11%;
+    --popover-foreground: 220 20% 96%;
 
-    --primary: 262 83% 65%;
-    --primary-foreground: 240 10% 4%;
-    --primary-soft: 262 30% 18%;
+    --primary: 217 91% 65%;
+    --primary-foreground: 230 30% 6%;
+    --primary-soft: 217 60% 18%;
+    --primary-glow: 217 91% 70%;
 
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
+    --accent-violet: 262 83% 70%;
+    --accent-pink: 330 81% 70%;
+    --accent-cyan: 188 86% 60%;
 
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
+    --secondary: 230 20% 14%;
+    --secondary-foreground: 220 20% 96%;
 
-    --accent: 262 30% 18%;
-    --accent-foreground: 262 80% 80%;
+    --muted: 230 20% 14%;
+    --muted-foreground: 220 12% 65%;
 
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 0 0% 98%;
-    --destructive-soft: 0 60% 18%;
+    --accent: 217 60% 18%;
+    --accent-foreground: 217 91% 80%;
 
-    --success: 142 70% 50%;
-    --success-foreground: 0 0% 98%;
-    --success-soft: 142 50% 16%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 60% 16%;
 
-    --warning: 38 92% 55%;
-    --warning-foreground: 240 10% 4%;
-    --warning-soft: 38 60% 18%;
+    --success: 158 64% 50%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 152 50% 14%;
 
-    --info: 200 90% 55%;
-    --info-foreground: 0 0% 98%;
-    --info-soft: 200 60% 18%;
+    --warning: 32 95% 58%;
+    --warning-foreground: 230 30% 6%;
+    --warning-soft: 38 60% 16%;
 
-    --border: 240 4% 20%;
-    --input: 240 4% 20%;
-    --ring: 262 83% 65%;
+    --info: 199 89% 60%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 199 60% 16%;
 
-    --shadow-color: 240 10% 0%;
+    --border: 230 15% 18%;
+    --input: 230 15% 20%;
+    --ring: 217 91% 65%;
+
+    --shadow-color: 230 50% 4%;
   }
 
   * {
@@ -114,13 +136,14 @@
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
   }
 
   body {
     @apply bg-background text-foreground;
   }
 
-  /* Smoother scrollbar in dark mode */
+  /* Refined scrollbar */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -135,59 +158,172 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.4);
   }
+
+  /* Selection uses primary tint */
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
+  }
 }
 
 /* =====================================================================
- * Motion utilities — subtle, productivity-friendly
+ * Motion utilities
  * ===================================================================== */
 
 @layer utilities {
+  /* Card hover — pronounced lift for the new aesthetic */
   .motion-lift {
-    @apply transition-all duration-200 ease-out;
+    @apply transition-all duration-300 ease-out;
   }
   .motion-lift:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px -8px hsl(var(--shadow-color) / 0.25);
+    transform: translateY(-2px);
+    box-shadow:
+      0 20px 40px -12px hsl(var(--shadow-color) / 0.18),
+      0 4px 12px -2px hsl(var(--shadow-color) / 0.10);
   }
 
+  /* Buttons — visible press, smooth release */
   .motion-press {
-    @apply transition-transform duration-100 ease-out active:scale-[0.98];
+    @apply transition-transform duration-150 ease-out active:scale-[0.96];
   }
 
   .motion-fade-in {
-    animation: fade-in 200ms ease-out both;
+    animation: fade-in 280ms ease-out both;
   }
-
   .motion-slide-up {
-    animation: slide-up 300ms ease-out both;
+    animation: slide-up 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .motion-scale-in {
+    animation: scale-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   @keyframes fade-in {
     from { opacity: 0; }
     to   { opacity: 1; }
   }
-
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
 
-  /* Soft elevated card — used for KPI tiles, dashboards */
+  /* =====================================================================
+   * Surface treatments
+   * ===================================================================== */
+
+  /* Soft elevated card — used for KPI tiles, hero panels */
   .surface-elevated {
     background: linear-gradient(
       180deg,
       hsl(var(--card) / 1) 0%,
-      hsl(var(--card) / 0.6) 100%
+      hsl(var(--card) / 0.85) 100%
     );
     box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.04) inset,
       0 1px 2px 0 hsl(var(--shadow-color) / 0.06),
-      0 4px 12px -4px hsl(var(--shadow-color) / 0.10);
+      0 8px 24px -8px hsl(var(--shadow-color) / 0.10);
   }
 
-  /* Glass treatment for the app shell sidebar/header */
+  /* Glass — translucent surface for sidebar, header, modals */
   .surface-glass {
-    background: hsl(var(--background) / 0.85);
-    backdrop-filter: saturate(180%) blur(12px);
-    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    background: hsl(var(--card-glass) / 0.72);
+    backdrop-filter: saturate(160%) blur(20px);
+    -webkit-backdrop-filter: saturate(160%) blur(20px);
+    border-color: hsl(var(--border) / 0.6);
+  }
+
+  /* Subtle bordered glass for cards inside glass containers */
+  .surface-glass-card {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* =====================================================================
+   * Aurora / mesh gradient backgrounds — used on hero pages (login, dashboard)
+   * ===================================================================== */
+
+  .aurora {
+    position: relative;
+    isolation: isolate;
+  }
+  .aurora::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.18), transparent 50%),
+      radial-gradient(circle at 80% 30%, hsl(var(--accent-violet) / 0.16), transparent 55%),
+      radial-gradient(circle at 60% 80%, hsl(var(--accent-pink) / 0.12), transparent 50%),
+      radial-gradient(circle at 10% 80%, hsl(var(--accent-cyan) / 0.10), transparent 55%);
+    filter: blur(40px);
+    pointer-events: none;
+    animation: aurora-drift 24s ease-in-out infinite alternate;
+  }
+
+  @keyframes aurora-drift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    50%  { transform: translate(-3%, 2%) rotate(2deg); }
+    100% { transform: translate(2%, -2%) rotate(-2deg); }
+  }
+
+  /* Tight aurora — for smaller surfaces (KPI hero, login card) */
+  .aurora-tight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 30% 20%, hsl(var(--primary) / 0.12), transparent 60%),
+      radial-gradient(circle at 80% 80%, hsl(var(--accent-violet) / 0.10), transparent 60%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* =====================================================================
+   * Gradient utilities
+   * ===================================================================== */
+
+  .gradient-brand {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--accent-violet)) 100%
+    );
+  }
+  .gradient-brand-soft {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.12) 0%,
+      hsl(var(--accent-violet) / 0.12) 100%
+    );
+  }
+  .text-gradient-brand {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--accent-violet)) 50%,
+      hsl(var(--accent-pink)) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  /* Glow used for primary buttons + focused inputs */
+  .glow-primary {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.25),
+      0 8px 24px -8px hsl(var(--primary) / 0.45);
+  }
+
+  /* Hairline border (1px on retina) for glass surfaces */
+  .border-hairline {
+    border-width: 1px;
+    border-color: hsl(var(--border) / 0.6);
   }
 }

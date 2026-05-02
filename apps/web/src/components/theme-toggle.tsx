@@ -39,7 +39,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="inline-flex rounded-lg border border-border bg-secondary p-0.5"
+      className="inline-flex rounded-xl border border-hairline bg-card/40 p-0.5 backdrop-blur"
     >
       {OPTIONS.map((opt) => {
         const active = theme === opt.value;
@@ -52,9 +52,9 @@ export function ThemeToggle() {
             aria-label={opt.label}
             title={opt.label}
             onClick={() => setTheme(opt.value)}
-            className={`flex items-center justify-center rounded-md px-2 py-1 transition-colors motion-press ${
+            className={`flex items-center justify-center rounded-lg px-2 py-1.5 transition-all duration-200 motion-press ${
               active
-                ? 'bg-card text-foreground shadow-soft'
+                ? 'bg-card text-primary shadow-soft'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
