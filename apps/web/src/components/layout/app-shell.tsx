@@ -340,15 +340,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Sidebar footer — user pill */}
         <div className="border-t border-hairline px-3 py-3">
           <div className="flex items-center gap-3 rounded-xl bg-secondary/40 px-2.5 py-2">
-            <div className="gradient-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm">
-              {initials(user?.account?.firstName, user?.account?.lastName)}
-            </div>
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-xs font-semibold text-foreground">
-                {user?.account?.firstName} {user?.account?.lastName}
-              </p>
-              <p className="truncate text-[10px] text-muted-foreground">{user?.account?.email}</p>
-            </div>
+            <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:opacity-80" onClick={closeDrawer}>
+              <div className="gradient-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm">
+                {initials(user?.account?.firstName, user?.account?.lastName)}
+              </div>
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-xs font-semibold text-foreground">
+                  {user?.account?.firstName} {user?.account?.lastName}
+                </p>
+                <p className="truncate text-[10px] text-muted-foreground">{user?.account?.email}</p>
+              </div>
+            </Link>
             <button
               onClick={logout}
               aria-label="Logout"

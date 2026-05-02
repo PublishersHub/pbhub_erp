@@ -36,6 +36,7 @@ interface AuthContextValue {
   selectOrganization: (organizationId: string) => Promise<void>;
   switchOrganization: (organizationId: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -142,6 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   }, [router]);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await fetchMe();
+      setUser(me);
+    } catch {
+      // If me fails, the silent-refresh interceptor will handle re-auth on the next call.
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -153,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         selectOrganization,
         switchOrganization,
         logout,
+        refreshUser,
       }}
     >
       {children}

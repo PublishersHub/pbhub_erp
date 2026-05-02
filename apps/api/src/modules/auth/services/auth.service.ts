@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
@@ -6,13 +8,17 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../../users/services/users.service';
 import { TokenService } from './token.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { LoginDto } from '../dto/login.dto';
+import { UpdateAccountDto } from '../dto/update-account.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly tokenService: TokenService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -173,6 +179,71 @@ export class AuthService {
       },
       memberships,
     };
+  }
+
+  async getMyAccount(accountId: string) {
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        lastLoginAt: true,
+        isActive: true,
+      },
+    });
+    if (!account) throw new UnauthorizedException('Account not found');
+    return account;
+  }
+
+  async updateMyAccount(accountId: string, dto: UpdateAccountDto) {
+    if (dto.email) {
+      const normalized = dto.email.toLowerCase().trim();
+      const existing = await this.prisma.account.findUnique({
+        where: { email: normalized },
+      });
+      if (existing && existing.id !== accountId) {
+        throw new ConflictException('An account with that email already exists');
+      }
+      dto.email = normalized;
+    }
+    const updated = await this.prisma.account.update({
+      where: { id: accountId },
+      data: {
+        ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+        ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+        ...(dto.email !== undefined && { email: dto.email }),
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        lastLoginAt: true,
+        isActive: true,
+      },
+    });
+    return updated;
+  }
+
+  async changeMyPassword(accountId: string, dto: ChangePasswordDto) {
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+    });
+    if (!account) throw new UnauthorizedException('Account not found');
+
+    const ok = await bcrypt.compare(dto.currentPassword, account.passwordHash);
+    if (!ok) throw new BadRequestException('Current password is incorrect');
+
+    const newHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.account.update({
+      where: { id: accountId },
+      data: { passwordHash: newHash },
+    });
+
+    // Sign out everywhere — revoke all refresh tokens
+    await this.tokenService.revokeAllAccountTokens(accountId);
   }
 
   /**
