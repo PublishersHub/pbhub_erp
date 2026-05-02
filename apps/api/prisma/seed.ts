@@ -705,6 +705,1117 @@ async function main() {
   }
   console.log(`Notification templates: ${NOTIFICATION_TEMPLATES.length} system defaults seeded`);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Helper: look up an employee id by code (populated during phase 1+2 seed above)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // Re-fetch employee IDs from DB in case this seed run didn't build empCodeToId
+  const allEmployees = await prisma.employee.findMany({
+    where: { organizationId: org.id },
+    select: { id: true, employeeCode: true, userId: true },
+  });
+  const empById = new Map<string, string>(); // code → id
+  const empUserIdByCode = new Map<string, string>(); // code → userId
+  for (const e of allEmployees) {
+    empById.set(e.employeeCode, e.id);
+    if (e.userId) empUserIdByCode.set(e.employeeCode, e.userId);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section A: Attendance policy assignments (all employees → "Standard 9-to-6")
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const attendancePolicy = await prisma.attendancePolicy.findFirst({
+    where: { organizationId: org.id, name: 'Standard 9-to-6' },
+  });
+  if (!attendancePolicy) throw new Error('Attendance policy not found');
+
+  // Joining dates per code
+  const joiningDates: Record<string, Date> = {
+    EMP001: new Date('2024-08-01'),
+    EMP002: new Date('2024-11-15'),
+    EMP003: new Date('2025-03-01'),
+    EMP004: new Date('2025-09-01'),
+    EMP005: new Date('2024-10-01'),
+    EMP006: new Date('2024-09-01'),
+    EMP007: new Date('2025-04-15'),
+    EMP008: new Date('2024-12-01'),
+  };
+
+  let attendanceAssignCount = 0;
+  for (const [code, joiningDate] of Object.entries(joiningDates)) {
+    const employeeId = empById.get(code)!;
+    const existing = await prisma.employeeAttendancePolicyAssignment.findFirst({
+      where: { employeeId, attendancePolicyId: attendancePolicy.id },
+    });
+    if (!existing) {
+      await prisma.employeeAttendancePolicyAssignment.create({
+        data: {
+          employeeId,
+          attendancePolicyId: attendancePolicy.id,
+          effectiveFrom: joiningDate,
+        },
+      });
+      attendanceAssignCount++;
+    }
+  }
+  console.log(`Section A: created ${attendanceAssignCount} attendance policy assignments`);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section B: Leave policy assignments + balances for current year
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const leavePolicies = await prisma.leavePolicy.findMany({
+    where: { organizationId: org.id },
+  });
+  const leavePolicyByCode = new Map(leavePolicies.map((lp) => [lp.code, lp]));
+
+  const currentYear = new Date().getUTCFullYear();
+  let leavePolicyAssignCount = 0;
+  let leaveBalanceCount = 0;
+
+  for (const [code, joiningDate] of Object.entries(joiningDates)) {
+    const employeeId = empById.get(code)!;
+    for (const lp of leavePolicies) {
+      // Upsert assignment
+      const existingAssign = await prisma.employeeLeavePolicyAssignment.findFirst({
+        where: { employeeId, leavePolicyId: lp.id },
+      });
+      if (!existingAssign) {
+        await prisma.employeeLeavePolicyAssignment.create({
+          data: {
+            organizationId: org.id,
+            employeeId,
+            leavePolicyId: lp.id,
+            effectiveFrom: joiningDate,
+          },
+        });
+        leavePolicyAssignCount++;
+      }
+
+      // Upsert balance
+      const entitled = Number(lp.annualQuotaDefault);
+      await prisma.employeeLeaveBalance.upsert({
+        where: { employeeId_leavePolicyId_year: { employeeId, leavePolicyId: lp.id, year: currentYear } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          employeeId,
+          leavePolicyId: lp.id,
+          year: currentYear,
+          totalEntitled: entitled,
+          used: 0,
+          carriedForward: 0,
+          adjustments: 0,
+          balance: entitled,
+        },
+      });
+      leaveBalanceCount++;
+    }
+  }
+  console.log(`Section B: created ${leavePolicyAssignCount} leave policy assignments, ${leaveBalanceCount} leave balances`);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section C: Leave requests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const existingLeaveCount = await prisma.leaveRequest.count({ where: { organizationId: org.id } });
+  if (existingLeaveCount === 0) {
+    const now = new Date();
+    const todayMs = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z').getTime();
+    const d = (offsetDays: number) => new Date(todayMs + offsetDays * 86400000);
+
+    const annualPolicy = leavePolicyByCode.get('ANNUAL')!;
+    const sickPolicy = leavePolicyByCode.get('SICK')!;
+    const casualPolicy = leavePolicyByCode.get('CASUAL')!;
+
+    const hamzaId = empById.get('EMP004')!;
+    const ayeshaId = empById.get('EMP003')!;
+    const aliId = empById.get('EMP002')!;
+    const saraId = empById.get('EMP001')!;
+    const zainabId = empById.get('EMP007')!;
+    const bilalId = empById.get('EMP006')!;
+    const fatimaId = empById.get('EMP005')!;
+
+    // Helper: create leave request with days
+    async function createLeaveRequest(params: {
+      employeeId: string;
+      leavePolicyId: string;
+      startDate: Date;
+      endDate: Date;
+      totalDays: number;
+      reason: string;
+      status: 'PENDING' | 'APPROVED' | 'REJECTED';
+      managerDecisionAt?: Date;
+      hrDecisionAt?: Date;
+      finalDecisionAt?: Date;
+      finalDecisionById?: string;
+    }) {
+      const req = await prisma.leaveRequest.create({
+        data: {
+          organizationId: org.id,
+          employeeId: params.employeeId,
+          leavePolicyId: params.leavePolicyId,
+          startDate: params.startDate,
+          endDate: params.endDate,
+          totalDays: params.totalDays,
+          reason: params.reason,
+          status: params.status,
+          managerDecisionAt: params.managerDecisionAt,
+          hrDecisionAt: params.hrDecisionAt,
+          finalDecisionAt: params.finalDecisionAt,
+          finalDecisionById: params.finalDecisionById,
+        },
+      });
+      // Create day rows
+      const days = params.totalDays;
+      for (let i = 0; i < days; i++) {
+        const dayDate = new Date(params.startDate.getTime() + i * 86400000);
+        await prisma.leaveRequestDay.create({
+          data: {
+            leaveRequestId: req.id,
+            date: dayDate,
+            dayType: 'FULL_DAY',
+            days: 1,
+          },
+        });
+      }
+      return req;
+    }
+
+    // 1. Hamza — ANNUAL, PENDING, today+3 to today+5 (3 days)
+    await createLeaveRequest({
+      employeeId: hamzaId,
+      leavePolicyId: annualPolicy.id,
+      startDate: d(3),
+      endDate: d(5),
+      totalDays: 3,
+      reason: 'Family event',
+      status: 'PENDING',
+    });
+
+    // 2. Ayesha — SICK, PENDING, today+1 to today+1 (1 day)
+    await createLeaveRequest({
+      employeeId: ayeshaId,
+      leavePolicyId: sickPolicy.id,
+      startDate: d(1),
+      endDate: d(1),
+      totalDays: 1,
+      reason: "Doctor's appointment",
+      status: 'PENDING',
+    });
+
+    // 3. Ali — ANNUAL, APPROVED, today-1 to today+2 (4 days)
+    const aliLeave = await createLeaveRequest({
+      employeeId: aliId,
+      leavePolicyId: annualPolicy.id,
+      startDate: d(-1),
+      endDate: d(2),
+      totalDays: 4,
+      reason: 'Annual vacation',
+      status: 'APPROVED',
+      managerDecisionAt: now,
+      hrDecisionAt: now,
+      finalDecisionAt: now,
+      finalDecisionById: bilalId,
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: aliLeave.id, approverEmployeeId: saraId, approverRole: 'MANAGER', action: 'APPROVED' },
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: aliLeave.id, approverEmployeeId: bilalId, approverRole: 'HR', action: 'APPROVED' },
+    });
+    // Decrement Ali's ANNUAL balance by 4
+    await prisma.employeeLeaveBalance.updateMany({
+      where: { employeeId: aliId, leavePolicyId: annualPolicy.id, year: currentYear },
+      data: { used: 4, balance: Number(annualPolicy.annualQuotaDefault) - 4 },
+    });
+
+    // 4. Zainab — CASUAL, APPROVED, today to today+1 (2 days)
+    const zainabLeave = await createLeaveRequest({
+      employeeId: zainabId,
+      leavePolicyId: casualPolicy.id,
+      startDate: d(0),
+      endDate: d(1),
+      totalDays: 2,
+      reason: 'Personal work',
+      status: 'APPROVED',
+      managerDecisionAt: now,
+      hrDecisionAt: now,
+      finalDecisionAt: now,
+      finalDecisionById: bilalId,
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: zainabLeave.id, approverEmployeeId: bilalId, approverRole: 'MANAGER', action: 'APPROVED' },
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: zainabLeave.id, approverEmployeeId: bilalId, approverRole: 'HR', action: 'APPROVED' },
+    });
+    // Decrement Zainab's CASUAL balance by 2
+    await prisma.employeeLeaveBalance.updateMany({
+      where: { employeeId: zainabId, leavePolicyId: casualPolicy.id, year: currentYear },
+      data: { used: 2, balance: Number(casualPolicy.annualQuotaDefault) - 2 },
+    });
+
+    // 5. Fatima — ANNUAL, APPROVED, today+10 to today+14 (5 days)
+    const fatimaLeave = await createLeaveRequest({
+      employeeId: fatimaId,
+      leavePolicyId: annualPolicy.id,
+      startDate: d(10),
+      endDate: d(14),
+      totalDays: 5,
+      reason: 'Vacation',
+      status: 'APPROVED',
+      hrDecisionAt: now,
+      finalDecisionAt: now,
+      finalDecisionById: bilalId,
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: fatimaLeave.id, approverEmployeeId: bilalId, approverRole: 'HR', action: 'APPROVED' },
+    });
+    // Decrement Fatima's ANNUAL balance by 5
+    await prisma.employeeLeaveBalance.updateMany({
+      where: { employeeId: fatimaId, leavePolicyId: annualPolicy.id, year: currentYear },
+      data: { used: 5, balance: Number(annualPolicy.annualQuotaDefault) - 5 },
+    });
+
+    // 6. Hamza — SICK, REJECTED, today-7 (1 day)
+    const hamzaRejected = await createLeaveRequest({
+      employeeId: hamzaId,
+      leavePolicyId: sickPolicy.id,
+      startDate: d(-7),
+      endDate: d(-7),
+      totalDays: 1,
+      reason: 'Feeling unwell',
+      status: 'REJECTED',
+      managerDecisionAt: now,
+      finalDecisionAt: now,
+      finalDecisionById: aliId,
+    });
+    await prisma.leaveApprovalAction.create({
+      data: { leaveRequestId: hamzaRejected.id, approverEmployeeId: aliId, approverRole: 'MANAGER', action: 'REJECTED', remarks: 'No prior notice' },
+    });
+
+    console.log('Section C: created 6 leave requests with days and approval actions');
+  } else {
+    console.log(`Section C: ${existingLeaveCount} leave requests already exist, skipped`);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section D: Attendance logs + daily summaries for today
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayDate = new Date(todayStr + 'T00:00:00Z');
+
+  const todayLogsExist = await prisma.attendanceLog.findFirst({
+    where: { organizationId: org.id, timestamp: { gte: new Date(todayStr + 'T00:00:00Z') } },
+  });
+
+  if (!todayLogsExist) {
+    const ts = (hh: number, mm: number) => new Date(todayStr + `T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
+
+    // EMP001 Sara: CHECK_IN 08:55, CHECK_OUT 18:10 → PRESENT, 555 min
+    const saraId = empById.get('EMP001')!;
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_IN', timestamp: ts(8, 55), source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_OUT', timestamp: ts(18, 10), source: 'WEB' } });
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: saraId, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: saraId, date: todayDate,
+        status: 'PRESENT', firstCheckIn: ts(8, 55), lastCheckOut: ts(18, 10),
+        totalWorkedMinutes: 555, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP003 Ayesha: CHECK_IN 09:42, no checkout → LATE (lateMinutes = max(0, 42-15) = 27)
+    const ayeshaId2 = empById.get('EMP003')!;
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: ayeshaId2, logType: 'CHECK_IN', timestamp: ts(9, 42), source: 'WEB' } });
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: ayeshaId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: ayeshaId2, date: todayDate,
+        status: 'LATE', firstCheckIn: ts(9, 42), lastCheckOut: null,
+        totalWorkedMinutes: 0, lateMinutes: 27, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP004 Hamza: CHECK_IN 09:08 (within grace), CHECK_OUT 17:30 → PRESENT, 502 min
+    const hamzaId2 = empById.get('EMP004')!;
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_IN', timestamp: ts(9, 8), source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_OUT', timestamp: ts(17, 30), source: 'WEB' } });
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: hamzaId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: hamzaId2, date: todayDate,
+        status: 'PRESENT', firstCheckIn: ts(9, 8), lastCheckOut: ts(17, 30),
+        totalWorkedMinutes: 502, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP005 Fatima: CHECK_IN 08:50, CHECK_OUT 18:00 → PRESENT, 550 min
+    const fatimaId2 = empById.get('EMP005')!;
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_IN', timestamp: ts(8, 50), source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_OUT', timestamp: ts(18, 0), source: 'WEB' } });
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: fatimaId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: fatimaId2, date: todayDate,
+        status: 'PRESENT', firstCheckIn: ts(8, 50), lastCheckOut: ts(18, 0),
+        totalWorkedMinutes: 550, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP006 Bilal: CHECK_IN 09:00, CHECK_OUT 18:30 → PRESENT, 570 min
+    const bilalId2 = empById.get('EMP006')!;
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_IN', timestamp: ts(9, 0), source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_OUT', timestamp: ts(18, 30), source: 'WEB' } });
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: bilalId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: bilalId2, date: todayDate,
+        status: 'PRESENT', firstCheckIn: ts(9, 0), lastCheckOut: ts(18, 30),
+        totalWorkedMinutes: 570, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP002 Ali: on leave → ON_LEAVE summary
+    const aliId2 = empById.get('EMP002')!;
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: aliId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: aliId2, date: todayDate,
+        status: 'ON_LEAVE', totalWorkedMinutes: 0, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP007 Zainab: on leave → ON_LEAVE summary
+    const zainabId2 = empById.get('EMP007')!;
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: zainabId2, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: zainabId2, date: todayDate,
+        status: 'ON_LEAVE', totalWorkedMinutes: 0, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    // EMP008 Usman: ABSENT
+    const usmanId = empById.get('EMP008')!;
+    await prisma.attendanceDailySummary.upsert({
+      where: { employeeId_date: { employeeId: usmanId, date: todayDate } },
+      update: {},
+      create: {
+        organizationId: org.id, employeeId: usmanId, date: todayDate,
+        status: 'ABSENT', totalWorkedMinutes: 0, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
+      },
+    });
+
+    console.log('Section D: created today\'s attendance logs (10 logs) and 8 daily summaries');
+  } else {
+    console.log('Section D: today\'s attendance logs already exist, skipped');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section E: Expense categories + policy + claims
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const expenseCategoryDefs = [
+    { name: 'Travel', code: 'TRAVEL', description: 'Airfare, ground transport, lodging' },
+    { name: 'Meals', code: 'MEALS', description: 'Meals while traveling or with clients' },
+    { name: 'Office Supplies', code: 'OFFICE', description: 'Stationery, equipment under $500' },
+    { name: 'Software', code: 'SOFTWARE', description: 'Subscriptions and licenses' },
+  ];
+  const expenseCatMap = new Map<string, string>(); // code → id
+  for (const cat of expenseCategoryDefs) {
+    const record = await prisma.expenseCategory.upsert({
+      where: { organizationId_code: { organizationId: org.id, code: cat.code } },
+      update: { name: cat.name, description: cat.description },
+      create: { organizationId: org.id, name: cat.name, code: cat.code, description: cat.description, isActive: true },
+    });
+    expenseCatMap.set(cat.code, record.id);
+  }
+  console.log(`Section E: created/upserted ${expenseCategoryDefs.length} expense categories`);
+
+  const expensePolicy = await prisma.expensePolicy.upsert({
+    where: { organizationId_name: { organizationId: org.id, name: 'Standard Expense Policy' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      name: 'Standard Expense Policy',
+      maxClaimAmount: 10000,
+      maxItemAmount: 5000,
+      receiptRequiredAbove: 100,
+      autoApproveBelow: null,
+      isActive: true,
+    },
+  });
+  console.log('Section E: upserted expense policy');
+
+  const existingClaimCount = await prisma.expenseClaim.count({ where: { organizationId: org.id } });
+  if (existingClaimCount === 0) {
+    const nowMs = Date.now();
+    const dExp = (offsetDays: number) => new Date(nowMs + offsetDays * 86400000);
+
+    const aliId3 = empById.get('EMP002')!;
+    const ayeshaId3 = empById.get('EMP003')!;
+    const hamzaId3 = empById.get('EMP004')!;
+    const saraId3 = empById.get('EMP001')!;
+    const bilalId3 = empById.get('EMP006')!;
+    const usmanId3 = empById.get('EMP008')!;
+
+    // Claim 1: Ali — "Client dinner — Acme deal", SUBMITTED
+    const claim1 = await prisma.expenseClaim.create({
+      data: {
+        organizationId: org.id,
+        employeeId: aliId3,
+        expensePolicyId: expensePolicy.id,
+        claimNumber: 'CLM-0001',
+        title: 'Client dinner — Acme deal',
+        totalAmount: 145,
+        status: 'SUBMITTED',
+        submittedAt: dExp(-2),
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim1.id,
+        expenseCategoryId: expenseCatMap.get('MEALS')!,
+        description: 'Client dinner at Café Alam',
+        amount: 145,
+        expenseDate: dExp(-2),
+      },
+    });
+
+    // Claim 2: Ayesha — "Conference travel — ReactConf", SUBMITTED
+    const claim2 = await prisma.expenseClaim.create({
+      data: {
+        organizationId: org.id,
+        employeeId: ayeshaId3,
+        expensePolicyId: expensePolicy.id,
+        claimNumber: 'CLM-0002',
+        title: 'Conference travel — ReactConf',
+        totalAmount: 705,
+        status: 'SUBMITTED',
+        submittedAt: dExp(-3),
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim2.id,
+        expenseCategoryId: expenseCatMap.get('TRAVEL')!,
+        description: 'Flights to ReactConf',
+        amount: 620,
+        expenseDate: dExp(-5),
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim2.id,
+        expenseCategoryId: expenseCatMap.get('MEALS')!,
+        description: 'Meals during conference',
+        amount: 85,
+        expenseDate: dExp(-4),
+      },
+    });
+
+    // Claim 3: Hamza — "Annual JetBrains license", MANAGER_APPROVED
+    const claim3 = await prisma.expenseClaim.create({
+      data: {
+        organizationId: org.id,
+        employeeId: hamzaId3,
+        expensePolicyId: expensePolicy.id,
+        claimNumber: 'CLM-0003',
+        title: 'Annual JetBrains license',
+        totalAmount: 250,
+        status: 'MANAGER_APPROVED',
+        submittedAt: dExp(-10),
+        managerDecisionAt: dExp(-9),
+        finalDecisionById: aliId3,
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim3.id,
+        expenseCategoryId: expenseCatMap.get('SOFTWARE')!,
+        description: 'JetBrains All Products Pack annual license',
+        amount: 250,
+        expenseDate: dExp(-10),
+      },
+    });
+    await prisma.expenseApprovalAction.create({
+      data: {
+        expenseClaimId: claim3.id,
+        approverEmployeeId: aliId3,
+        approverRole: 'MANAGER',
+        action: 'APPROVED',
+        remarks: 'Approved',
+      },
+    });
+
+    // Claim 4: Sara — "Office monitor", REIMBURSED
+    const claim4 = await prisma.expenseClaim.create({
+      data: {
+        organizationId: org.id,
+        employeeId: saraId3,
+        expensePolicyId: expensePolicy.id,
+        claimNumber: 'CLM-0004',
+        title: 'Office monitor',
+        totalAmount: 349,
+        status: 'REIMBURSED',
+        submittedAt: dExp(-29),
+        managerDecisionAt: dExp(-28),
+        financeDecisionAt: dExp(-20),
+        finalDecisionAt: dExp(-20),
+        finalDecisionById: usmanId3,
+        reimbursedAt: dExp(-15),
+        reimbursedById: usmanId3,
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim4.id,
+        expenseCategoryId: expenseCatMap.get('OFFICE')!,
+        description: 'Dell 24" monitor for home office',
+        amount: 349,
+        expenseDate: dExp(-30),
+      },
+    });
+    await prisma.expenseApprovalAction.create({
+      data: {
+        expenseClaimId: claim4.id,
+        approverEmployeeId: bilalId3,
+        approverRole: 'MANAGER',
+        action: 'APPROVED',
+        remarks: 'Approved',
+      },
+    });
+    await prisma.expenseApprovalAction.create({
+      data: {
+        expenseClaimId: claim4.id,
+        approverEmployeeId: usmanId3,
+        approverRole: 'FINANCE',
+        action: 'APPROVED',
+        remarks: 'Approved',
+      },
+    });
+
+    // Claim 5: Hamza — "Coffee with candidate", REJECTED
+    const claim5 = await prisma.expenseClaim.create({
+      data: {
+        organizationId: org.id,
+        employeeId: hamzaId3,
+        expensePolicyId: expensePolicy.id,
+        claimNumber: 'CLM-0005',
+        title: 'Coffee with candidate',
+        totalAmount: 48,
+        status: 'REJECTED',
+        submittedAt: dExp(-15),
+        managerDecisionAt: dExp(-14),
+        finalDecisionAt: dExp(-14),
+        finalDecisionById: aliId3,
+      },
+    });
+    await prisma.expenseItem.create({
+      data: {
+        expenseClaimId: claim5.id,
+        expenseCategoryId: expenseCatMap.get('MEALS')!,
+        description: 'Coffee meeting with candidate',
+        amount: 48,
+        expenseDate: dExp(-15),
+      },
+    });
+    await prisma.expenseApprovalAction.create({
+      data: {
+        expenseClaimId: claim5.id,
+        approverEmployeeId: aliId3,
+        approverRole: 'MANAGER',
+        action: 'REJECTED',
+        remarks: 'Not pre-approved',
+      },
+    });
+
+    console.log('Section E: created 5 expense claims with items and approval actions');
+  } else {
+    console.log(`Section E: ${existingClaimCount} expense claims already exist, skipped`);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section F: Recruitment activity
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const reqsExist = await prisma.jobRequisition.count({ where: { organizationId: org.id } });
+  if (reqsExist === 0) {
+    const nowMs2 = Date.now();
+    const dR = (offsetDays: number) => new Date(nowMs2 + offsetDays * 86400000);
+
+    const saraId4 = empById.get('EMP001')!;
+    const fatimaId4 = empById.get('EMP005')!;
+    const bilalId4 = empById.get('EMP006')!;
+    const ayeshaId4 = empById.get('EMP003')!;
+
+    // Requisitions
+    const req1 = await prisma.jobRequisition.upsert({
+      where: { organizationId_requisitionNumber: { organizationId: org.id, requisitionNumber: 'REQ-2026-001' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        requisitionNumber: 'REQ-2026-001',
+        title: 'Senior Frontend Engineer',
+        departmentId: deptMap.get('ENG')!,
+        designationId: desgMap.get('Senior Software Engineer')!,
+        hiringManagerId: saraId4,
+        createdByEmployeeId: saraId4,
+        employmentType: 'FULL_TIME',
+        numberOfOpenings: 2,
+        positionsFilled: 0,
+        location: 'Remote / Karachi',
+        minSalary: 200000,
+        maxSalary: 350000,
+        description: 'We are looking for a Senior Frontend Engineer to join our growing engineering team.',
+        requirements: '5+ years React experience, TypeScript proficiency, strong UI/UX sensibility.',
+        status: 'OPEN',
+        submittedAt: dR(-15),
+        approvedByEmployeeId: bilalId4,
+        approvedAt: dR(-14),
+        targetStartDate: dR(30),
+      },
+    });
+
+    const req2 = await prisma.jobRequisition.upsert({
+      where: { organizationId_requisitionNumber: { organizationId: org.id, requisitionNumber: 'REQ-2026-002' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        requisitionNumber: 'REQ-2026-002',
+        title: 'Product Designer',
+        departmentId: deptMap.get('PROD')!,
+        designationId: desgMap.get('Product Manager')!,
+        hiringManagerId: fatimaId4,
+        createdByEmployeeId: fatimaId4,
+        employmentType: 'FULL_TIME',
+        numberOfOpenings: 1,
+        positionsFilled: 0,
+        status: 'PENDING_APPROVAL',
+        submittedAt: dR(-2),
+      },
+    });
+
+    await prisma.jobRequisition.upsert({
+      where: { organizationId_requisitionNumber: { organizationId: org.id, requisitionNumber: 'REQ-2026-003' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        requisitionNumber: 'REQ-2026-003',
+        title: 'HR Coordinator',
+        departmentId: deptMap.get('HR')!,
+        designationId: desgMap.get('HR Specialist')!,
+        hiringManagerId: bilalId4,
+        createdByEmployeeId: bilalId4,
+        employmentType: 'FULL_TIME',
+        numberOfOpenings: 1,
+        positionsFilled: 0,
+        status: 'DRAFT',
+      },
+    });
+    console.log('Section F: created 3 job requisitions');
+
+    // Job posting for REQ-2026-001
+    const posting = await prisma.jobPosting.upsert({
+      where: { organizationId_slug: { organizationId: org.id, slug: 'senior-frontend-engineer-2026' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        jobRequisitionId: req1.id,
+        title: 'Senior Frontend Engineer',
+        slug: 'senior-frontend-engineer-2026',
+        channel: 'CAREERS_PAGE',
+        description: 'Join our engineering team as a Senior Frontend Engineer. Build world-class user interfaces.',
+        isInternal: false,
+        status: 'PUBLISHED',
+        publishedAt: dR(-13),
+      },
+    });
+
+    // Application stages
+    const stageDefs = [
+      { sortOrder: 1, name: 'Applied', slug: 'applied', isTerminal: false, isHired: false, isRejected: false },
+      { sortOrder: 2, name: 'Phone Screen', slug: 'phone-screen', isTerminal: false, isHired: false, isRejected: false },
+      { sortOrder: 3, name: 'Technical', slug: 'technical', isTerminal: false, isHired: false, isRejected: false },
+      { sortOrder: 4, name: 'Offer', slug: 'offer', isTerminal: false, isHired: false, isRejected: false },
+      { sortOrder: 5, name: 'Hired', slug: 'hired', isTerminal: true, isHired: true, isRejected: false },
+    ];
+    const stageMap = new Map<string, string>(); // slug → id
+    for (const s of stageDefs) {
+      const stage = await prisma.applicationStage.upsert({
+        where: { jobPostingId_slug: { jobPostingId: posting.id, slug: s.slug } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          jobPostingId: posting.id,
+          name: s.name,
+          slug: s.slug,
+          sortOrder: s.sortOrder,
+          isTerminal: s.isTerminal,
+          isHired: s.isHired,
+          isRejected: s.isRejected,
+        },
+      });
+      stageMap.set(s.slug, stage.id);
+    }
+    console.log('Section F: created 1 job posting with 5 application stages');
+
+    // Candidates
+    const candidateDefs = [
+      { firstName: 'Tariq', lastName: 'Mehmood', email: 'tariq.mehmood@example.com', phone: '+92-300-1234567', currentCompany: 'TechCo', currentTitle: 'Senior Engineer', totalExperience: 7, source: 'LINKEDIN' as const, location: 'Karachi' },
+      { firstName: 'Sana', lastName: 'Riaz', email: 'sana.riaz@example.com', phone: '+92-321-7654321', currentCompany: 'WebStudio', currentTitle: 'FE Engineer', totalExperience: 5, source: 'REFERRAL' as const, referrerEmployeeId: ayeshaId4 },
+      { firstName: 'Adeel', lastName: 'Khan', email: 'adeel.khan@example.com', phone: '+92-333-1112233', currentCompany: 'StartupX', currentTitle: 'Frontend Lead', totalExperience: 8, source: 'CAREERS_PAGE' as const },
+      { firstName: 'Hira', lastName: 'Iqbal', email: 'hira.iqbal@example.com', phone: '+92-345-9988776', currentCompany: null, currentTitle: 'Junior Dev', totalExperience: 1, source: 'CAREERS_PAGE' as const },
+      { firstName: 'Faisal', lastName: 'Akram', email: 'faisal.akram@example.com', phone: '+92-300-5556677', currentCompany: 'GlobalCo', currentTitle: 'FE Engineer', totalExperience: 4, source: 'AGENCY' as const },
+    ];
+    const candidateMap = new Map<string, string>(); // email → id
+    for (const c of candidateDefs) {
+      const candidate = await prisma.candidate.upsert({
+        where: { organizationId_email: { organizationId: org.id, email: c.email } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          email: c.email,
+          phone: c.phone,
+          currentCompany: c.currentCompany ?? undefined,
+          currentTitle: c.currentTitle,
+          totalExperience: c.totalExperience,
+          source: c.source,
+          referrerEmployeeId: 'referrerEmployeeId' in c ? c.referrerEmployeeId : undefined,
+          location: 'location' in c ? c.location : undefined,
+        },
+      });
+      candidateMap.set(c.email, candidate.id);
+    }
+    console.log('Section F: created 5 candidates');
+
+    // Job applications
+    const appDefs = [
+      { email: 'tariq.mehmood@example.com', status: 'IN_PROGRESS' as const, stageSlug: 'phone-screen', appliedAt: dR(-10) },
+      { email: 'sana.riaz@example.com', status: 'IN_PROGRESS' as const, stageSlug: 'technical', appliedAt: dR(-12) },
+      { email: 'adeel.khan@example.com', status: 'OFFER_EXTENDED' as const, stageSlug: 'offer', appliedAt: dR(-15) },
+      { email: 'hira.iqbal@example.com', status: 'APPLIED' as const, stageSlug: 'applied', appliedAt: dR(-3) },
+      { email: 'faisal.akram@example.com', status: 'REJECTED' as const, stageSlug: 'applied', appliedAt: dR(-7), rejectedAt: dR(-5), rejectionReason: 'NOT_QUALIFIED' as const, rejectedByEmployeeId: saraId4 },
+    ];
+    const appMap = new Map<string, string>(); // candidate email → application id
+    for (const a of appDefs) {
+      const candidateId = candidateMap.get(a.email)!;
+      const app = await prisma.jobApplication.upsert({
+        where: { candidateId_jobRequisitionId: { candidateId, jobRequisitionId: req1.id } },
+        update: {},
+        create: {
+          organizationId: org.id,
+          candidateId,
+          jobRequisitionId: req1.id,
+          jobPostingId: posting.id,
+          currentStageId: stageMap.get(a.stageSlug)!,
+          status: a.status,
+          source: candidateDefs.find((c) => c.email === a.email)!.source,
+          appliedAt: a.appliedAt,
+          rejectionReason: 'rejectionReason' in a ? a.rejectionReason : undefined,
+          rejectedAt: 'rejectedAt' in a ? a.rejectedAt : undefined,
+          rejectedByEmployeeId: 'rejectedByEmployeeId' in a ? a.rejectedByEmployeeId : undefined,
+        },
+      });
+      appMap.set(a.email, app.id);
+    }
+    console.log('Section F: created 5 job applications');
+
+    // Interviews
+    const tariqAppId = appMap.get('tariq.mehmood@example.com')!;
+    const sanaAppId = appMap.get('sana.riaz@example.com')!;
+    const adeelAppId = appMap.get('adeel.khan@example.com')!;
+
+    const nowMs3 = Date.now();
+    const dI = (offsetDays: number, hour: number) => {
+      const base = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime();
+      return new Date(base + offsetDays * 86400000 + hour * 3600000);
+    };
+
+    // Interview 1: Tariq — PHONE_SCREEN, SCHEDULED
+    const interview1 = await prisma.interview.create({
+      data: {
+        organizationId: org.id,
+        applicationId: tariqAppId,
+        stageId: stageMap.get('phone-screen')!,
+        scheduledAt: dI(1, 10),
+        durationMinutes: 30,
+        type: 'PHONE_SCREEN',
+        mode: 'VIDEO',
+        status: 'SCHEDULED',
+        scheduledByEmployeeId: saraId4,
+        meetingUrl: 'https://meet.example.com/tariq-phone',
+      },
+    });
+    await prisma.interviewPanelist.create({
+      data: { interviewId: interview1.id, employeeId: saraId4, isPrimary: true },
+    });
+
+    // Interview 2: Sana — TECHNICAL, SCHEDULED
+    const interview2 = await prisma.interview.create({
+      data: {
+        organizationId: org.id,
+        applicationId: sanaAppId,
+        stageId: stageMap.get('technical')!,
+        scheduledAt: dI(2, 14),
+        durationMinutes: 60,
+        type: 'TECHNICAL',
+        mode: 'VIDEO',
+        status: 'SCHEDULED',
+        scheduledByEmployeeId: saraId4,
+      },
+    });
+    await prisma.interviewPanelist.create({
+      data: { interviewId: interview2.id, employeeId: saraId4, isPrimary: true },
+    });
+
+    // Interview 3: Adeel — HIRING_MANAGER, COMPLETED
+    const interview3 = await prisma.interview.create({
+      data: {
+        organizationId: org.id,
+        applicationId: adeelAppId,
+        stageId: stageMap.get('offer')!,
+        scheduledAt: dI(-5, 11),
+        durationMinutes: 45,
+        type: 'HIRING_MANAGER',
+        mode: 'VIDEO',
+        status: 'COMPLETED',
+        scheduledByEmployeeId: saraId4,
+      },
+    });
+    await prisma.interviewPanelist.create({
+      data: { interviewId: interview3.id, employeeId: saraId4, isPrimary: true },
+    });
+    // Feedback for Adeel's completed interview
+    await prisma.interviewFeedback.create({
+      data: {
+        interviewId: interview3.id,
+        panelistEmployeeId: saraId4,
+        rating: 4,
+        recommendation: 'HIRE',
+        strengths: 'Strong React + TypeScript',
+        weaknesses: null,
+        comments: 'Good cultural fit',
+      },
+    });
+    console.log('Section F: created 3 interviews with panelists (and 1 feedback)');
+
+    // Offer for Adeel
+    await prisma.offer.upsert({
+      where: { organizationId_offerNumber: { organizationId: org.id, offerNumber: 'OFR-2026-001' } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        applicationId: adeelAppId,
+        offerNumber: 'OFR-2026-001',
+        employmentType: 'FULL_TIME',
+        designationId: desgMap.get('Senior Software Engineer')!,
+        departmentId: deptMap.get('ENG')!,
+        reportingManagerId: saraId4,
+        baseSalary: 280000,
+        joiningBonus: 50000,
+        currency: 'PKR',
+        proposedJoiningDate: dR(45),
+        expiresAt: dR(10),
+        status: 'EXTENDED',
+        extendedAt: dR(-3),
+        extendedByEmployeeId: saraId4,
+      },
+    });
+    console.log('Section F: created 1 offer for Adeel');
+  } else {
+    console.log(`Section F: ${reqsExist} job requisitions already exist, skipped`);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section G: Onboarding instance for Hamza
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const hamzaEmpId = empById.get('EMP004')!;
+  const existingOnboarding = await prisma.onboardingInstance.findUnique({
+    where: { employeeId: hamzaEmpId },
+  });
+
+  if (!existingOnboarding) {
+    const template = await prisma.onboardingTemplate.findFirst({
+      where: { organizationId: org.id, name: 'Standard Onboarding' },
+      include: { tasks: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (!template) throw new Error('Onboarding template not found');
+
+    const hamzaJoiningDate = new Date('2025-09-01');
+    const nowMs4 = Date.now();
+    const todayMs2 = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime();
+    const joinMs = hamzaJoiningDate.getTime();
+
+    const instance = await prisma.onboardingInstance.create({
+      data: {
+        organizationId: org.id,
+        employeeId: hamzaEmpId,
+        templateId: template.id,
+        templateName: 'Standard Onboarding',
+        joiningDate: hamzaJoiningDate,
+        status: 'IN_PROGRESS',
+        startedAt: hamzaJoiningDate,
+        createdByUserId: superAdmin.id,
+      },
+    });
+
+    // Determine assignee IDs per role
+    const aliEmpId = empById.get('EMP002')!; // Hamza's manager
+    const bilalEmpId = empById.get('EMP006')!; // HR + IT
+
+    // User IDs for completedByUserId
+    const hamzaUserId = empUserIdByCode.get('EMP004')!;
+    const aliUserId = empUserIdByCode.get('EMP002')!;
+    const bilalUserId = empUserIdByCode.get('EMP006')!;
+
+    for (const templateTask of template.tasks) {
+      const dueDate = new Date(joinMs + templateTask.offsetDays * 86400000);
+
+      // Determine assignee
+      let assigneeEmployeeId: string | null = null;
+      let assigneeUserId: string | null = null;
+      if (templateTask.assigneeRole === 'NEW_HIRE') {
+        assigneeEmployeeId = hamzaEmpId;
+        assigneeUserId = hamzaUserId;
+      } else if (templateTask.assigneeRole === 'MANAGER') {
+        assigneeEmployeeId = aliEmpId;
+        assigneeUserId = aliUserId;
+      } else if (templateTask.assigneeRole === 'HR') {
+        assigneeEmployeeId = bilalEmpId;
+        assigneeUserId = bilalUserId;
+      } else if (templateTask.assigneeRole === 'IT') {
+        assigneeEmployeeId = bilalEmpId;
+        assigneeUserId = bilalUserId;
+      }
+
+      // Determine task status
+      let taskStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' = 'NOT_STARTED';
+      let startedAt: Date | null = null;
+      let completedAt: Date | null = null;
+      let completedByUserId: string | null = null;
+
+      if (templateTask.sortOrder <= 2) {
+        taskStatus = 'COMPLETED';
+        startedAt = dueDate;
+        completedAt = dueDate;
+        completedByUserId = assigneeUserId;
+      } else if (templateTask.sortOrder === 3 || templateTask.sortOrder === 4) {
+        taskStatus = 'IN_PROGRESS';
+        startedAt = new Date(todayMs2 - 15 * 86400000);
+      }
+
+      await prisma.onboardingTask.create({
+        data: {
+          onboardingInstanceId: instance.id,
+          templateTaskId: templateTask.id,
+          title: templateTask.title,
+          description: templateTask.description,
+          assigneeRole: templateTask.assigneeRole,
+          assigneeEmployeeId,
+          sortOrder: templateTask.sortOrder,
+          isRequired: templateTask.isRequired,
+          allowDocument: templateTask.allowDocument,
+          dueDate,
+          status: taskStatus,
+          startedAt,
+          completedAt,
+          completedByUserId,
+        },
+      });
+    }
+    console.log(`Section G: created onboarding instance for Hamza with ${template.tasks.length} tasks`);
+  } else {
+    console.log('Section G: onboarding instance for Hamza already exists, skipped');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section H: Salary structures for all employees
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const salaryComponents = await prisma.salaryComponent.findMany({
+    where: { organizationId: org.id },
+  });
+  const salaryCompMap = new Map(salaryComponents.map((sc) => [sc.code, sc]));
+
+  const grossByCode: Record<string, number> = {
+    EMP001: 400000,
+    EMP002: 280000,
+    EMP003: 200000,
+    EMP004: 120000,
+    EMP005: 350000,
+    EMP006: 350000,
+    EMP007: 180000,
+    EMP008: 200000,
+  };
+
+  let salaryStructureCount = 0;
+  for (const [code, gross] of Object.entries(grossByCode)) {
+    const employeeId = empById.get(code)!;
+    const effectiveFrom = joiningDates[code];
+
+    const existing = await prisma.employeeSalaryStructure.findFirst({
+      where: { employeeId, isActive: true },
+    });
+    if (existing) continue;
+
+    const pf = Math.round(gross * 0.08);
+    const tax = Math.round(gross * 0.12);
+    const totalDeductions = pf + tax;
+    const netSalary = gross - totalDeductions;
+
+    const structure = await prisma.employeeSalaryStructure.create({
+      data: {
+        organizationId: org.id,
+        employeeId,
+        effectiveFrom,
+        grossSalary: gross,
+        totalDeductions,
+        netSalary,
+        isActive: true,
+      },
+    });
+    salaryStructureCount++;
+
+    const componentAmounts: Record<string, number> = {
+      BASIC: Math.round(gross * 0.5),
+      HRA: Math.round(gross * 0.25),
+      CONV: Math.round(gross * 0.1),
+      MED: Math.round(gross * 0.15),
+      PF: pf,
+      TAX: tax,
+    };
+
+    for (const [componentCode, amount] of Object.entries(componentAmounts)) {
+      const salaryComponent = salaryCompMap.get(componentCode);
+      if (!salaryComponent) continue;
+      await prisma.employeeSalaryComponent.upsert({
+        where: { employeeSalaryStructureId_salaryComponentId: { employeeSalaryStructureId: structure.id, salaryComponentId: salaryComponent.id } },
+        update: {},
+        create: {
+          employeeSalaryStructureId: structure.id,
+          salaryComponentId: salaryComponent.id,
+          amount,
+        },
+      });
+    }
+  }
+  console.log(`Section H: created ${salaryStructureCount} salary structures (6 components each)`);
+
   console.log('\nSeed complete.');
 }
 
