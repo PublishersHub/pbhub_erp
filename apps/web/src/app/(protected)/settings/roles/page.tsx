@@ -16,6 +16,7 @@ import {
   updateRole,
   updateRolePermissions,
   deactivateRole,
+  activateRole,
 } from '@/lib/roles-api';
 import type { Role, Permission } from '@/types/role';
 
@@ -274,8 +275,9 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  // Deactivate state
+  // Deactivate / Activate state
   const [deactivating, setDeactivating] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   const startEdit = useCallback(() => {
     if (!detail) return;
@@ -346,6 +348,23 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
       toast.error('Failed to save', err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleActivate() {
+    if (!detail || activating) return;
+    setActivating(true);
+    try {
+      await activateRole(detail.id);
+      toast.success('Role reactivated', detail.name);
+      onRoleUpdated();
+    } catch (err) {
+      toast.error(
+        'Failed to reactivate role',
+        err instanceof Error ? err.message : 'Unknown error',
+      );
+    } finally {
+      setActivating(false);
     }
   }
 
@@ -432,7 +451,7 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
           )}
         </div>
 
-        {/* Edit / Deactivate actions — only for non-system editable roles */}
+        {/* Edit / Deactivate / Reactivate actions */}
         {canManage && (!detail.isSystem || isSuperAdmin) && !editing && (
           <div className="flex shrink-0 gap-2">
             <button
@@ -442,7 +461,8 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
             >
               Edit
             </button>
-            {detail.isActive && (
+            {/* Deactivate — only for active CUSTOM org roles (system roles can't be disabled) */}
+            {detail.isActive && !detail.isSystem && (
               <button
                 type="button"
                 onClick={handleDeactivate}
@@ -450,6 +470,17 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
                 className="rounded-md bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 motion-press disabled:opacity-50"
               >
                 {deactivating ? 'Deactivating...' : 'Deactivate'}
+              </button>
+            )}
+            {/* Reactivate — only for inactive (custom) roles */}
+            {!detail.isActive && !detail.isSystem && (
+              <button
+                type="button"
+                onClick={handleActivate}
+                disabled={activating}
+                className="rounded-md bg-success/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20 motion-press disabled:opacity-50"
+              >
+                {activating ? 'Reactivating...' : 'Reactivate'}
               </button>
             )}
           </div>

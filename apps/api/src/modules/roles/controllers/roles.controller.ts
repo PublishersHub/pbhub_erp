@@ -112,9 +112,16 @@ export class RolesController {
   @Delete(':id')
   @RequirePermissions('role.manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Deactivate a role' })
+  @ApiOperation({ summary: 'Deactivate a custom org role (no assignments allowed)' })
   async deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    const isSuperAdmin = user.roles.includes('super_admin');
-    return this.rolesService.deactivateRole(user.organizationId, id, isSuperAdmin);
+    return this.rolesService.deactivateRole(user.organizationId, id);
+  }
+
+  @Post(':id/activate')
+  @RequirePermissions('role.manage')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reactivate a previously-deactivated org role' })
+  async activate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.rolesService.activateRole(user.organizationId, id);
   }
 }

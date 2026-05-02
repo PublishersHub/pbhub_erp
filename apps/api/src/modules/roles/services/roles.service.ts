@@ -164,11 +164,12 @@ export class RolesService {
   }
 
   /**
-   * Deactivate a role. Super admins can deactivate any non-super_admin
-   * role. We block deactivating the super_admin role itself to avoid
-   * a foot-gun where the only super admin locks themselves out.
+   * Deactivate a custom org role. System roles cannot be deactivated
+   * (they are platform-defined). A role with active assignments cannot
+   * be deactivated either — the caller must remove the assignments
+   * first so the impact is explicit, not silent.
    */
-  async deactivateRole(organizationId: string, id: string, isSuperAdmin: boolean) {
+  async deactivateRole(organizationId: string, id: string) {
     const role = await this.prisma.role.findFirst({
       where: {
         id,
@@ -177,16 +178,37 @@ export class RolesService {
     });
     if (!role) throw new NotFoundException('Role not found');
 
-    if (role.isSystem && role.slug === 'super_admin') {
-      throw new ForbiddenException('The super_admin role cannot be deactivated');
+    if (role.isSystem) {
+      throw new ForbiddenException(
+        'System roles cannot be deactivated. They are platform-defined.',
+      );
     }
-    if (role.isSystem && !isSuperAdmin) {
-      throw new ForbiddenException('System roles can only be deactivated by a super admin');
-    }
-    if (!role.isSystem && role.organizationId !== organizationId) {
+    if (role.organizationId !== organizationId) {
       throw new NotFoundException('Role not found');
     }
 
+    const assignmentCount = await this.prisma.userRole.count({
+      where: { roleId: id, organizationId },
+    });
+    if (assignmentCount > 0) {
+      throw new ConflictException(
+        `Cannot deactivate: this role is assigned to ${assignmentCount} user${assignmentCount === 1 ? '' : 's'}. Remove the assignment${assignmentCount === 1 ? '' : 's'} first.`,
+      );
+    }
+
     return this.prisma.role.update({ where: { id }, data: { isActive: false } });
+  }
+
+  /**
+   * Reactivate a previously-deactivated org role. Idempotent.
+   */
+  async activateRole(organizationId: string, id: string) {
+    const role = await this.prisma.role.findFirst({ where: { id, organizationId } });
+    if (!role) throw new NotFoundException('Role not found');
+    if (role.isSystem) {
+      throw new ForbiddenException('System roles are always active');
+    }
+    if (role.isActive) return role;
+    return this.prisma.role.update({ where: { id }, data: { isActive: true } });
   }
 }

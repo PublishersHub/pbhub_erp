@@ -33,3 +33,7 @@ export function updateRolePermissions(id: string, permissionCodes: string[]) {
 export function deactivateRole(id: string) {
   return del<{ message: string }>(`/api/roles/${id}`);
 }
+
+export function activateRole(id: string) {
+  return post<Role>(`/api/roles/${id}/activate`, {});
+}
