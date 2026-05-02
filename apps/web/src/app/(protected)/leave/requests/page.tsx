@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import { useToast } from '@/components/toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -27,6 +29,7 @@ type ViewMode = 'my' | 'pending' | 'all';
 
 export default function LeaveRequestsPage() {
   const { can } = usePermission();
+  const { info } = useToast();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
   const status = (searchParams.get('status') as LeaveRequestStatus) || '';
@@ -124,7 +127,7 @@ export default function LeaveRequestsPage() {
         )}
       </FilterBar>
 
-      {loading && <Loading />}
+      {loading && <SkeletonTable rows={6} cols={6} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState
@@ -182,11 +185,12 @@ export default function LeaveRequestsPage() {
                     currentOrder={order}
                     onSort={setSort}
                   />
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((req: LeaveRequest) => (
-                  <tr key={req.id} className="transition-colors hover:bg-muted/50">
+                  <tr key={req.id} className="group transition-colors hover:bg-muted/50">
                     {view !== 'my' && (
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
                         {employeeName(req.employee)}
@@ -214,6 +218,32 @@ export default function LeaveRequestsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={req.status} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <Link
+                          href={`/leave/requests/${req.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary/80 motion-press"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clipRule="evenodd" />
+                          </svg>
+                          View
+                        </Link>
+                        {req.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => info('Open the request to review approvals')}
+                            className="inline-flex h-7 items-center gap-1 rounded-lg bg-success/15 px-2 text-xs font-medium text-success transition-colors hover:bg-success/25 motion-press"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                            </svg>
+                            Quick approve
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

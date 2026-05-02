@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -142,7 +143,7 @@ export default function EmployeesListPage() {
         </select>
       </FilterBar>
 
-      {loading && <Loading />}
+      {loading && <SkeletonTable rows={6} cols={6} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState
@@ -190,11 +191,12 @@ export default function EmployeesListPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
                     Status
                   </th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((emp) => (
-                  <tr key={emp.id} className="transition-colors hover:bg-muted/50">
+                  <tr key={emp.id} className="group transition-colors hover:bg-muted/50">
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       <Link
                         href={`/employees/${emp.id}`}
@@ -225,6 +227,29 @@ export default function EmployeesListPage() {
                           Inactive
                         </span>
                       )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <Link
+                          href={`/employees/${emp.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary/80 motion-press"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clipRule="evenodd" />
+                          </svg>
+                          View
+                        </Link>
+                        <Link
+                          href={`/employees/${emp.id}/edit`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary/80 motion-press"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                            <path d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.885L17.5 5.5a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" />
+                          </svg>
+                          Edit
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

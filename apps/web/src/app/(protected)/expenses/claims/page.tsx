@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
@@ -144,7 +145,7 @@ export default function ExpenseClaimsPage() {
         </FilterBar>
       )}
 
-      {loading && <Loading />}
+      {loading && <SkeletonTable rows={6} cols={7} />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState
@@ -172,7 +173,7 @@ export default function ExpenseClaimsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((c) => (
-                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={c.id} className="group hover:bg-muted/50 transition-colors">
                     <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.claimNumber}</td>
                     <td className="px-4 py-3 text-sm text-foreground max-w-[200px] truncate" title={c.title}>{c.title}</td>
                     {view !== 'my' && (
@@ -183,12 +184,18 @@ export default function ExpenseClaimsPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground/70">{c.expensePolicy?.name ?? '—'}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(c.createdAt)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <Link
-                        href={`/expenses/claims/${c.id}`}
-                        className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20 font-medium"
-                      >
-                        View
-                      </Link>
+                      <div className="flex items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <Link
+                          href={`/expenses/claims/${c.id}`}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg bg-secondary px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary/80 motion-press"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clipRule="evenodd" />
+                          </svg>
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
