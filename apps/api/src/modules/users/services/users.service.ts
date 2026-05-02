@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthenticatedUser } from '../../../common/types';
 
@@ -134,6 +134,56 @@ export class UsersService {
     await this.prisma.account.update({
       where: { id: accountId },
       data: { lastLoginAt: new Date() },
+    });
+  }
+
+  /**
+   * List all memberships (users) in an org with their roles and linked employee record.
+   */
+  async listMembersWithRoles(organizationId: string) {
+    return this.prisma.user.findMany({
+      where: { organizationId },
+      include: {
+        account: { select: { id: true, email: true, firstName: true, lastName: true } },
+        employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } },
+        userRoles: {
+          include: { role: { select: { id: true, name: true, slug: true, isActive: true } } },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * Assign a role to a user (membership) in the current org.
+   * Idempotent — returns the existing row if the assignment already exists.
+   */
+  async assignRole(organizationId: string, userId: string, roleId: string) {
+    const user = await this.prisma.user.findFirst({ where: { id: userId, organizationId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        OR: [{ organizationId }, { organizationId: null, isSystem: true }],
+        isActive: true,
+      },
+    });
+    if (!role) throw new NotFoundException('Role not found');
+
+    return this.prisma.userRole.upsert({
+      where: { userId_roleId_organizationId: { userId, roleId, organizationId } },
+      update: {},
+      create: { userId, roleId, organizationId },
+    });
+  }
+
+  /**
+   * Remove a role from a user (membership) in the current org.
+   */
+  async removeRole(organizationId: string, userId: string, roleId: string) {
+    await this.prisma.userRole.deleteMany({
+      where: { userId, roleId, organizationId },
     });
   }
 }
