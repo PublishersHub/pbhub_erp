@@ -46,10 +46,12 @@ model Organization {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // White-label branding (all optional)
-  brandName    String? @map("brand_name")
-  brandLogoUrl String? @map("brand_logo_url")
-  brandPrimary String? @map("brand_primary")
-  brandTagline String? @map("brand_tagline")
+  brandName       String? @map("brand_name")
+  brandLogoUrl    String? @map("brand_logo_url")
+  brandPrimary    String? @map("brand_primary")
+  brandTagline    String? @map("brand_tagline")
+  brandFaviconUrl String? @map("brand_favicon_url")
+  brandLoginBg    String? @map("brand_login_bg")
 
   users        User[]
   roles        Role[]

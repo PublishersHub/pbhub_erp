@@ -13,6 +13,7 @@ import { TokenService } from '../../auth/services/token.service';
 import { UsersService } from '../../users/services/users.service';
 import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { AcceptInvitationDto } from '../dto/accept-invitation.dto';
+import { renderBrandedHtml } from '../../../common/mail/templates/branded-html';
 
 @Injectable()
 export class InvitationsService {
@@ -98,7 +99,15 @@ export class InvitationsService {
           },
         },
         include: {
-          organization: { select: { name: true } },
+          organization: {
+            select: {
+              name: true,
+              brandName: true,
+              brandLogoUrl: true,
+              brandPrimary: true,
+              brandTagline: true,
+            },
+          },
           invitedByUser: {
             include: {
               account: { select: { firstName: true, lastName: true, email: true } },
@@ -116,23 +125,28 @@ export class InvitationsService {
     const appBaseUrl = this.config.get<string>('app.appBaseUrl', 'http://localhost:3000');
     const inviteLink = `${appBaseUrl}/accept-invitation?token=${rawToken}`;
 
+    const org = invitation.organization;
+    const displayName = org.brandName ?? org.name;
+    const branding = {
+      brandName: org.brandName,
+      brandLogoUrl: org.brandLogoUrl,
+      brandPrimary: org.brandPrimary,
+      brandTagline: org.brandTagline,
+    };
+
     await this.mailer.send({
       to: email,
-      subject: `You've been invited to join ${invitation.organization.name} on PbHub HRMS`,
-      body: [
-        `You've been invited to join ${invitation.organization.name} on PbHub HRMS.`,
-        '',
-        'Click the link below to accept the invitation and set your password:',
-        inviteLink,
-        '',
-        'This invitation expires in 7 days.',
-      ].join('\n'),
-      html: `
-        <p>You've been invited to join <strong>${invitation.organization.name}</strong> on PbHub HRMS.</p>
-        <p>Click the link below to accept the invitation and set your password:</p>
-        <p><a href="${inviteLink}">${inviteLink}</a></p>
-        <p>This invitation expires in 7 days.</p>
-      `,
+      subject: `You've been invited to join ${displayName}`,
+      body: `You've been invited to join ${displayName}.\n\nClick to accept: ${inviteLink}\n\nThis invitation expires in 7 days.`,
+      html: renderBrandedHtml({
+        branding,
+        preheader: `Accept your invitation to ${displayName}`,
+        heading: `You've been invited to join ${displayName}`,
+        intro: `Hi ${invitation.firstName}, ${displayName} has invited you to join their HR portal. Click below to set your password and start using the system.`,
+        ctaLabel: 'Accept invitation',
+        ctaUrl: inviteLink,
+        footerNote: `This invitation expires in 7 days. If you didn't expect this email, you can safely ignore it.`,
+      }),
     });
 
     // Return invitation without tokenHash + the raw token for dev convenience
@@ -207,6 +221,8 @@ export class InvitationsService {
             brandLogoUrl: true,
             brandPrimary: true,
             brandTagline: true,
+            brandFaviconUrl: true,
+            brandLoginBg: true,
           },
         },
       },
@@ -230,6 +246,8 @@ export class InvitationsService {
       organizationBrandLogoUrl: invitation.organization.brandLogoUrl,
       organizationBrandPrimary: invitation.organization.brandPrimary,
       organizationBrandTagline: invitation.organization.brandTagline,
+      organizationBrandFaviconUrl: invitation.organization.brandFaviconUrl,
+      organizationBrandLoginBg: invitation.organization.brandLoginBg,
       expiresAt: invitation.expiresAt,
     };
   }

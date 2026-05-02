@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { MailerService } from '../../../common/mail/mail.service';
+import { renderBrandedHtml } from '../../../common/mail/templates/branded-html';
 
 @Injectable()
 export class PasswordResetService {
@@ -35,8 +36,16 @@ export class PasswordResetService {
 
         await this.mailer.send({
           to: account.email,
-          subject: 'Reset your PbHub HRMS password',
+          subject: 'Reset your password',
           body: `Hi ${account.firstName},\n\nA password reset was requested for your account. Click the link below within 30 minutes to set a new password:\n\n${link}\n\nIf you didn't request this, ignore this email — your password will stay the same.`,
+          html: renderBrandedHtml({
+            preheader: 'Reset your PbHub HRMS password',
+            heading: 'Reset your password',
+            intro: `Hi ${account.firstName}, we received a request to reset your password. Click below to set a new one — this link expires in 30 minutes.`,
+            ctaLabel: 'Reset password',
+            ctaUrl: link,
+            footerNote: `If you didn't request this, ignore this email — your password will stay the same.`,
+          }),
         });
       } catch (err) {
         this.logger.error(

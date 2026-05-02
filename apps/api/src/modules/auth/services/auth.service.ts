@@ -175,6 +175,8 @@ export class AuthService {
             brandLogoUrl: true,
             brandPrimary: true,
             brandTagline: true,
+            brandFaviconUrl: true,
+            brandLoginBg: true,
           },
         })
       : null;

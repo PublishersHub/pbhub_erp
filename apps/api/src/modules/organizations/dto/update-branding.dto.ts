@@ -25,4 +25,16 @@ export class UpdateBrandingDto {
   @ValidateIf((_, v) => v !== null)
   @IsString()
   brandTagline?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== '')
+  @IsUrl({ require_tld: false }, { message: 'brandFaviconUrl must be a valid URL' })
+  brandFaviconUrl?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== '')
+  @IsUrl({ require_tld: false }, { message: 'brandLoginBg must be a valid URL' })
+  brandLoginBg?: string | null;
 }

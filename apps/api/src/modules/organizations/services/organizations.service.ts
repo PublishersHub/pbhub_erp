@@ -30,6 +30,8 @@ export class OrganizationsService {
         brandLogoUrl: true,
         brandPrimary: true,
         brandTagline: true,
+        brandFaviconUrl: true,
+        brandLoginBg: true,
       },
     });
     if (!org || !org.isActive) {
@@ -47,6 +49,8 @@ export class OrganizationsService {
     if (dto.brandLogoUrl !== undefined) data.brandLogoUrl = dto.brandLogoUrl;
     if (dto.brandPrimary !== undefined) data.brandPrimary = dto.brandPrimary;
     if (dto.brandTagline !== undefined) data.brandTagline = dto.brandTagline;
+    if (dto.brandFaviconUrl !== undefined) data.brandFaviconUrl = dto.brandFaviconUrl;
+    if (dto.brandLoginBg !== undefined) data.brandLoginBg = dto.brandLoginBg;
 
     return this.prisma.organization.update({
       where: { id: organizationId },
