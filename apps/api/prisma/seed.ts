@@ -1816,6 +1816,130 @@ async function main() {
   }
   console.log(`Section H: created ${salaryStructureCount} salary structures (6 components each)`);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Section I: Last month's payroll cycle (FINALIZED) + payslips for all employees
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const today = new Date();
+  const lastMonthAnchor = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1),
+  );
+  const cycleYear = lastMonthAnchor.getUTCFullYear();
+  const cycleMonth = lastMonthAnchor.getUTCMonth() + 1; // 1..12
+  const periodStart = new Date(Date.UTC(cycleYear, cycleMonth - 1, 1));
+  const periodEnd = new Date(Date.UTC(cycleYear, cycleMonth, 0)); // last day of month
+
+  const existingCycle = await prisma.payrollCycle.findUnique({
+    where: {
+      organizationId_year_month: {
+        organizationId: org.id,
+        year: cycleYear,
+        month: cycleMonth,
+      },
+    },
+  });
+
+  if (!existingCycle) {
+    const finalizerEmployeeId = empById.get('EMP006')!; // Bilal — HR Manager
+    const cycle = await prisma.payrollCycle.create({
+      data: {
+        organizationId: org.id,
+        year: cycleYear,
+        month: cycleMonth,
+        periodStart,
+        periodEnd,
+        status: 'DRAFT',
+      },
+    });
+
+    let totalGross = 0;
+    let totalDed = 0;
+    let totalNet = 0;
+    let payrollCount = 0;
+
+    for (const code of Object.keys(grossByCode)) {
+      const employeeId = empById.get(code);
+      if (!employeeId) continue;
+      const gross = grossByCode[code];
+
+      const structure = await prisma.employeeSalaryStructure.findFirst({
+        where: { employeeId, isActive: true },
+        include: { components: { include: { salaryComponent: true } } },
+      });
+      if (!structure) continue;
+
+      let grossEarnings = 0;
+      let deductions = 0;
+      for (const c of structure.components) {
+        const amt = Number(c.amount);
+        if (c.salaryComponent.type === 'EARNING') grossEarnings += amt;
+        else deductions += amt;
+      }
+      const netPayable = grossEarnings - deductions;
+
+      const payroll = await prisma.payroll.create({
+        data: {
+          organizationId: org.id,
+          payrollCycleId: cycle.id,
+          employeeId,
+          totalWorkingDays: 22,
+          paidLeaveDays: 0,
+          unpaidLeaveDays: 0,
+          halfDays: 0,
+          holidayDays: 0,
+          effectiveWorkingDays: 22,
+          baseSalary: gross,
+          grossEarnings,
+          totalDeductions: deductions,
+          totalAdjustments: 0,
+          lossOfPayDeduction: 0,
+          netPayable,
+        },
+      });
+
+      for (const c of structure.components) {
+        await prisma.payrollLineItem.create({
+          data: {
+            payrollId: payroll.id,
+            salaryComponentId: c.salaryComponent.id,
+            componentName: c.salaryComponent.name,
+            componentCode: c.salaryComponent.code,
+            type: c.salaryComponent.type,
+            amount: Number(c.amount),
+            sortOrder: c.salaryComponent.sortOrder,
+          },
+        });
+      }
+
+      totalGross += grossEarnings;
+      totalDed += deductions;
+      totalNet += netPayable;
+      payrollCount++;
+    }
+
+    await prisma.payrollCycle.update({
+      where: { id: cycle.id },
+      data: {
+        status: 'FINALIZED',
+        totalGross,
+        totalDeductions: totalDed,
+        totalNet,
+        employeeCount: payrollCount,
+        generatedAt: new Date(),
+        finalizedAt: new Date(),
+        finalizedById: finalizerEmployeeId,
+      },
+    });
+
+    console.log(
+      `Section I: created FINALIZED payroll cycle ${cycleYear}-${String(cycleMonth).padStart(2, '0')} with ${payrollCount} payslips (net total: ${totalNet})`,
+    );
+  } else {
+    console.log(
+      `Section I: payroll cycle ${cycleYear}-${String(cycleMonth).padStart(2, '0')} already exists, skipped`,
+    );
+  }
+
   console.log('\nSeed complete.');
 }
 
