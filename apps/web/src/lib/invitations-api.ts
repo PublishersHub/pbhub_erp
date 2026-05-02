@@ -27,6 +27,11 @@ export interface InvitationContext {
   firstName: string;
   lastName: string;
   organizationName: string;
+  organizationSlug: string;
+  organizationBrandName: string | null;
+  organizationBrandLogoUrl: string | null;
+  organizationBrandPrimary: string | null;
+  organizationBrandTagline: string | null;
   expiresAt: string;
 }
 
