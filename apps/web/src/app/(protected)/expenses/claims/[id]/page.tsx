@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
@@ -17,20 +17,30 @@ import {
   reimburseExpenseClaim,
 } from '@/lib/expense-api';
 import { formatCurrency, formatDate, formatDateTime, employeeName } from '@/lib/format';
-import type { ExpenseApprovalDecision } from '@/types/expense';
+import { useToast } from '@/components/toast';
+import type { ExpenseClaim, ExpenseApprovalDecision } from '@/types/expense';
 
 export default function ExpenseClaimDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const toast = useToast();
   const canReadAll = can('expense.read');
   const canApprove = can('expense.approve');
   const canReimburse = can('expense.reimburse');
   const canCreate = can('expense.create');
 
-  const { data: claim, error, loading, refetch } = useAsync(
+  const { data: remoteClaim, error, loading, refetch } = useAsync(
     () => (canReadAll ? getClaimDetail(id) : getMyClaimDetail(id)),
     [id, canReadAll],
   );
+
+  // Local copy for optimistic mutations
+  const [claim, setClaim] = useState<ExpenseClaim | null>(null);
+
+  // Keep local copy in sync when remote data arrives (initial load + refetch)
+  useEffect(() => {
+    if (remoteClaim) setClaim(remoteClaim);
+  }, [remoteClaim]);
 
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -76,17 +86,71 @@ export default function ExpenseClaimDetailPage() {
   }
 
   async function handleReview(action: ExpenseApprovalDecision) {
-    setActionError('');
+    if (!claim) return;
+
+    const prev = claim;
+    const trimmedRemarks = reviewRemarks.trim() || null;
+
+    // Determine the optimistic next status based on current status + action
+    let optimisticStatus: ExpenseClaim['status'];
+    let optimisticRole: 'MANAGER' | 'FINANCE';
+    if (action === 'APPROVED') {
+      if (claim.status === 'SUBMITTED') {
+        optimisticStatus = 'MANAGER_APPROVED';
+        optimisticRole = 'MANAGER';
+      } else {
+        // MANAGER_APPROVED → FINANCE_APPROVED
+        optimisticStatus = 'FINANCE_APPROVED';
+        optimisticRole = 'FINANCE';
+      }
+    } else {
+      optimisticStatus = 'REJECTED';
+      optimisticRole = claim.status === 'SUBMITTED' ? 'MANAGER' : 'FINANCE';
+    }
+
+    // Optimistic update
+    setClaim({
+      ...claim,
+      status: optimisticStatus,
+      finalDecisionAt: action === 'REJECTED' ? new Date().toISOString() : claim.finalDecisionAt,
+      approvalActions: [
+        ...(claim.approvalActions ?? []),
+        {
+          id: 'optimistic-' + Date.now(),
+          expenseClaimId: claim.id,
+          approverEmployeeId: '?',
+          approverRole: optimisticRole,
+          action,
+          remarks: trimmedRemarks,
+          createdAt: new Date().toISOString(),
+          approverEmployee: { id: '?', firstName: 'You', lastName: '' },
+        },
+      ],
+    });
+
+    const actionLabel = action === 'APPROVED' ? 'approved' : 'rejected';
+    toast.success(
+      `Claim ${actionLabel}`,
+      `Decision recorded for ${employeeName(claim.employee)}`,
+    );
+    setShowReview(false);
+    setReviewRemarks('');
     setActionLoading(true);
+    setActionError('');
+
     try {
       await reviewExpenseClaim(id, {
         action,
-        ...(reviewRemarks.trim() && { remarks: reviewRemarks.trim() }),
+        ...(trimmedRemarks && { remarks: trimmedRemarks }),
       });
-      setShowReview(false);
-      setReviewRemarks('');
-      refetch();
+      await refetch();
     } catch (err) {
+      setClaim(prev);
+      setShowReview(true);
+      toast.error(
+        `Failed to ${action === 'APPROVED' ? 'approve' : 'reject'}`,
+        err instanceof Error ? err.message : 'Unknown error',
+      );
       setActionError(err instanceof Error ? err.message : 'Review failed');
     } finally {
       setActionLoading(false);
@@ -270,7 +334,8 @@ export default function ExpenseClaimDetailPage() {
             {canReviewClaim && !showReview && (
               <button
                 onClick={() => setShowReview(true)}
-                className="w-full rounded-md bg-info text-info-foreground hover:bg-info/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
+                disabled={actionLoading}
+                className="w-full rounded-md bg-info text-info-foreground hover:bg-info/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Review
               </button>
@@ -291,17 +356,17 @@ export default function ExpenseClaimDetailPage() {
                     disabled={actionLoading}
                     className="flex-1 rounded-md bg-success text-success-foreground px-3 py-1.5 text-xs font-medium hover:bg-success/90 disabled:opacity-50"
                   >
-                    Approve
+                    {actionLoading ? 'Approving...' : 'Approve'}
                   </button>
                   <button
                     onClick={() => handleReview('REJECTED')}
                     disabled={actionLoading}
                     className="flex-1 rounded-md bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-medium hover:bg-destructive/90 disabled:opacity-50"
                   >
-                    Reject
+                    {actionLoading ? 'Rejecting...' : 'Reject'}
                   </button>
                 </div>
-                <button onClick={() => setShowReview(false)} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80">
+                <button onClick={() => setShowReview(false)} disabled={actionLoading} className="w-full rounded-md bg-secondary text-secondary-foreground px-3 py-1.5 text-xs hover:bg-secondary/80 disabled:opacity-50">
                   Cancel
                 </button>
               </div>
@@ -310,7 +375,8 @@ export default function ExpenseClaimDetailPage() {
             {canReimburseClaim && !showReimburse && (
               <button
                 onClick={() => setShowReimburse(true)}
-                className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
+                disabled={actionLoading}
+                className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Reimburse
               </button>
@@ -344,7 +410,8 @@ export default function ExpenseClaimDetailPage() {
             {canCancelClaim && !showCancel && (
               <button
                 onClick={() => setShowCancel(true)}
-                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20"
+                disabled={actionLoading}
+                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20 disabled:opacity-50"
               >
                 Cancel Claim
               </button>

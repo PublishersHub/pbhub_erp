@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -10,11 +10,23 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { getLeaveRequest, reviewLeaveRequest, cancelLeaveRequest } from '@/lib/leave-api';
 import { formatDate, employeeName } from '@/lib/format';
+import { useToast } from '@/components/toast';
+import type { LeaveRequest } from '@/types/leave';
 
 export default function LeaveRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
-  const { data: req, error, loading, refetch } = useAsync(() => getLeaveRequest(id), [id]);
+  const toast = useToast();
+  const { data: remoteReq, error, loading, refetch } = useAsync(() => getLeaveRequest(id), [id]);
+
+  // Local copy for optimistic mutations
+  const [req, setReq] = useState<LeaveRequest | null>(null);
+
+  // Keep local copy in sync when remote data arrives (initial load + refetch)
+  useEffect(() => {
+    if (remoteReq) setReq(remoteReq);
+  }, [remoteReq]);
+
   const [actionError, setActionError] = useState('');
   const [acting, setActing] = useState(false);
 
@@ -23,6 +35,91 @@ export default function LeaveRequestDetailPage() {
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
+  async function handleApprove() {
+    if (!req) return;
+
+    const prev = req;
+
+    // Optimistic update
+    setReq({
+      ...req,
+      status: 'APPROVED',
+      finalDecisionAt: new Date().toISOString(),
+      approvalActions: [
+        ...(req.approvalActions ?? []),
+        {
+          id: 'optimistic-' + Date.now(),
+          leaveRequestId: req.id,
+          approverEmployeeId: '?',
+          approverRole: 'MANAGER',
+          action: 'APPROVED',
+          remarks: null,
+          createdAt: new Date().toISOString(),
+          approverEmployee: { id: '?', firstName: 'You', lastName: '' },
+        },
+      ],
+    });
+    toast.success('Leave approved', `Decision recorded for ${employeeName(req.employee)}`);
+    setActing(true);
+    setActionError('');
+
+    try {
+      await reviewLeaveRequest(id, { action: 'APPROVED', remarks: undefined });
+      await refetch();
+    } catch (err) {
+      setReq(prev);
+      toast.error('Failed to approve', err instanceof Error ? err.message : 'Unknown error');
+      setActionError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleReject() {
+    if (!req) return;
+
+    const prev = req;
+    const trimmedRemarks = remarks.trim() || null;
+
+    // Optimistic update
+    setReq({
+      ...req,
+      status: 'REJECTED',
+      finalDecisionAt: new Date().toISOString(),
+      approvalActions: [
+        ...(req.approvalActions ?? []),
+        {
+          id: 'optimistic-' + Date.now(),
+          leaveRequestId: req.id,
+          approverEmployeeId: '?',
+          approverRole: 'MANAGER',
+          action: 'REJECTED',
+          remarks: trimmedRemarks,
+          createdAt: new Date().toISOString(),
+          approverEmployee: { id: '?', firstName: 'You', lastName: '' },
+        },
+      ],
+    });
+    toast.success('Leave rejected', `Decision recorded for ${employeeName(req.employee)}`);
+    setShowRejectForm(false);
+    setRemarks('');
+    setActing(true);
+    setActionError('');
+
+    try {
+      await reviewLeaveRequest(id, { action: 'REJECTED', remarks: trimmedRemarks ?? undefined });
+      await refetch();
+    } catch (err) {
+      setReq(prev);
+      setShowRejectForm(true);
+      toast.error('Failed to reject', err instanceof Error ? err.message : 'Unknown error');
+      setActionError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  // Generic doAction for cancel (no optimistic needed — just refetch)
   async function doAction(fn: () => Promise<unknown>) {
     setActionError('');
     setActing(true);
@@ -164,11 +261,7 @@ export default function LeaveRequestDetailPage() {
                 <>
                   <button
                     disabled={acting}
-                    onClick={() =>
-                      doAction(() =>
-                        reviewLeaveRequest(id, { action: 'APPROVED', remarks: undefined }),
-                      )
-                    }
+                    onClick={handleApprove}
                     className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
                   >
                     {acting ? 'Approving...' : 'Approve'}
@@ -193,14 +286,7 @@ export default function LeaveRequestDetailPage() {
                       <div className="flex gap-2">
                         <button
                           disabled={acting}
-                          onClick={() =>
-                            doAction(() =>
-                              reviewLeaveRequest(id, {
-                                action: 'REJECTED',
-                                remarks: remarks.trim() || undefined,
-                              }),
-                            )
-                          }
+                          onClick={handleReject}
                           className="rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
                         >
                           {acting ? 'Rejecting...' : 'Confirm Reject'}
