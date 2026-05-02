@@ -45,6 +45,8 @@ export interface OrganizationBrand {
   brandLogoUrl: string | null;
   brandPrimary: string | null;
   brandTagline: string | null;
+  brandFaviconUrl: string | null;
+  brandLoginBg: string | null;
 }
 
 export interface AuthUser {

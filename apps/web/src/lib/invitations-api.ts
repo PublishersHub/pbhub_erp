@@ -32,6 +32,8 @@ export interface InvitationContext {
   organizationBrandLogoUrl: string | null;
   organizationBrandPrimary: string | null;
   organizationBrandTagline: string | null;
+  organizationBrandFaviconUrl: string | null;
+  organizationBrandLoginBg: string | null;
   expiresAt: string;
 }
 

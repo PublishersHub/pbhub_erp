@@ -80,6 +80,8 @@ function AcceptInvitationInner() {
         brandLogoUrl: context.organizationBrandLogoUrl,
         brandPrimary: context.organizationBrandPrimary,
         brandTagline: context.organizationBrandTagline,
+        brandFaviconUrl: context.organizationBrandFaviconUrl,
+        brandLoginBg: context.organizationBrandLoginBg,
       }
     : null;
 

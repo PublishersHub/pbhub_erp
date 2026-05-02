@@ -27,6 +27,19 @@ function shiftHex(hex: string, dl: number): string {
   return `#${toHex(r + dl)}${toHex(g + dl)}${toHex(b + dl)}`;
 }
 
+// ─── Presets ──────────────────────────────────
+
+const PRESETS = [
+  { id: 'ocean',    name: 'Ocean',    primary: '#0284c7', tagline: 'Calm, deep, professional' },
+  { id: 'forest',   name: 'Forest',   primary: '#16a34a', tagline: 'Grounded, sustainable' },
+  { id: 'sunset',   name: 'Sunset',   primary: '#ea580c', tagline: 'Warm, energetic' },
+  { id: 'midnight', name: 'Midnight', primary: '#7c3aed', tagline: 'Modern, premium' },
+  { id: 'rose',     name: 'Rose',     primary: '#e11d48', tagline: 'Bold, distinctive' },
+  { id: 'slate',    name: 'Slate',    primary: '#475569', tagline: 'Minimal, professional' },
+  { id: 'teal',     name: 'Teal',     primary: '#0d9488', tagline: 'Fresh, balanced' },
+  { id: 'indigo',   name: 'Indigo',   primary: '#4f46e5', tagline: 'Trustworthy, established' },
+];
+
 // ─── Live Preview ─────────────────────────────
 
 function PreviewCard({
@@ -34,11 +47,13 @@ function PreviewCard({
   logoUrl,
   primary,
   tagline,
+  loginBg,
 }: {
   name: string;
   logoUrl: string;
   primary: string;
   tagline: string;
+  loginBg: string;
 }) {
   const displayPrimary = isValidHex(primary) ? primary : '#3b82f6';
 
@@ -48,6 +63,21 @@ function PreviewCard({
         Preview
       </p>
       <div className="space-y-4">
+        {/* Login background thumbnail */}
+        {loginBg && (
+          <div className="overflow-hidden rounded-xl border border-hairline">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={loginBg}
+              alt="Login background preview"
+              className="h-16 w-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
         {/* Mock sidebar header */}
         <div className="flex items-center gap-3 rounded-xl border border-hairline bg-card/40 p-3">
           {logoUrl ? (
@@ -130,6 +160,8 @@ export default function BrandingSettingsPage() {
   const [primary, setPrimary] = useState('#3b82f6');
   const [hexInput, setHexInput] = useState('#3b82f6');
   const [tagline, setTagline] = useState('');
+  const [faviconUrl, setFaviconUrl] = useState('');
+  const [loginBg, setLoginBg] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,7 +173,9 @@ export default function BrandingSettingsPage() {
     setPrimary(color);
     setHexInput(color);
     setTagline(org.brandTagline ?? '');
-  }, [org?.id, org?.brandName, org?.brandLogoUrl, org?.brandPrimary, org?.brandTagline]);
+    setFaviconUrl(org.brandFaviconUrl ?? '');
+    setLoginBg(org.brandLoginBg ?? '');
+  }, [org?.id, org?.brandName, org?.brandLogoUrl, org?.brandPrimary, org?.brandTagline, org?.brandFaviconUrl, org?.brandLoginBg]);
 
   if (!canManage) {
     return (
@@ -185,6 +219,8 @@ export default function BrandingSettingsPage() {
         brandLogoUrl: logoUrl.trim() || null,
         brandPrimary: primary || null,
         brandTagline: tagline.trim() || null,
+        brandFaviconUrl: faviconUrl.trim() || null,
+        brandLoginBg: loginBg.trim() || null,
       });
       toast.success('Branding updated', 'The new branding is live across the app.');
       await refreshUser();
@@ -206,6 +242,8 @@ export default function BrandingSettingsPage() {
         brandLogoUrl: null,
         brandPrimary: null,
         brandTagline: null,
+        brandFaviconUrl: null,
+        brandLoginBg: null,
       });
       toast.success('Branding reset to defaults');
       await refreshUser();
@@ -281,6 +319,45 @@ export default function BrandingSettingsPage() {
               </p>
             </div>
 
+            {/* Quick presets */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">Quick presets</p>
+                <p className="text-xs text-muted-foreground">Pick a starting point — you can fine-tune below.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {PRESETS.map((p) => {
+                  const isMatch = primary.toLowerCase() === p.primary.toLowerCase();
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setPrimary(p.primary);
+                        setHexInput(p.primary);
+                        if (!tagline.trim()) setTagline(p.tagline);
+                      }}
+                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all motion-press ${
+                        isMatch
+                          ? 'border-primary ring-2 ring-primary/30'
+                          : 'border-hairline hover:border-primary/40'
+                      }`}
+                      style={{ backgroundColor: p.primary + '08' }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-6 w-6 rounded-full ring-2 ring-white shadow-sm"
+                          style={{ backgroundColor: p.primary }}
+                        />
+                        <span className="text-sm font-semibold text-foreground">{p.name}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{p.tagline}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Primary color */}
             <div className="space-y-1.5">
               <label
@@ -352,6 +429,48 @@ export default function BrandingSettingsPage() {
                 Optional short subline under the brand name.
               </p>
             </div>
+
+            {/* Favicon URL */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="favicon-url"
+                className="block text-sm font-medium text-foreground"
+              >
+                Favicon URL
+              </label>
+              <input
+                id="favicon-url"
+                type="url"
+                value={faviconUrl}
+                onChange={(e) => setFaviconUrl(e.target.value)}
+                placeholder="https://example.com/favicon.png"
+                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Public URL to your favicon (32×32 or 64×64 PNG/ICO recommended).
+              </p>
+            </div>
+
+            {/* Login background image */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="login-bg"
+                className="block text-sm font-medium text-foreground"
+              >
+                Login background image
+              </label>
+              <input
+                id="login-bg"
+                type="url"
+                value={loginBg}
+                onChange={(e) => setLoginBg(e.target.value)}
+                placeholder="https://example.com/background.jpg"
+                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. Public URL to the image shown behind the sign-in form. Landscape works best.
+              </p>
+            </div>
           </div>
 
           {error && <ErrorMessage message={error} />}
@@ -374,6 +493,7 @@ export default function BrandingSettingsPage() {
             logoUrl={logoUrl}
             primary={primary}
             tagline={tagline}
+            loginBg={loginBg}
           />
         </div>
       </div>

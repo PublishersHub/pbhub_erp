@@ -8,6 +8,8 @@ export interface OrganizationBrand {
   brandLogoUrl: string | null;
   brandPrimary: string | null;
   brandTagline: string | null;
+  brandFaviconUrl: string | null;
+  brandLoginBg: string | null;
 }
 
 export interface UpdateBrandingPayload {
@@ -15,6 +17,8 @@ export interface UpdateBrandingPayload {
   brandLogoUrl?: string | null;
   brandPrimary?: string | null;
   brandTagline?: string | null;
+  brandFaviconUrl?: string | null;
+  brandLoginBg?: string | null;
 }
 
 export function updateBranding(payload: UpdateBrandingPayload) {

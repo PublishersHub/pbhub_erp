@@ -18,9 +18,23 @@ export function AuthBrandShell({
     : undefined;
 
   const name = branding?.brandName?.trim() || branding?.name || 'PbHub HRMS';
+  const bgUrl = branding?.brandLoginBg ?? null;
 
   return (
     <div className="aurora relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {bgUrl && (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
+            style={{ backgroundImage: `url(${bgUrl})` }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 bg-background/70 backdrop-blur-sm"
+          />
+        </>
+      )}
       <div className="motion-scale-in relative w-full max-w-md" style={styleVars}>
         <div className="surface-glass relative overflow-hidden rounded-2xl border-hairline p-8 shadow-floating">
           <div className="mb-8 flex flex-col items-start gap-3">

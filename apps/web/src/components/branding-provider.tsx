@@ -8,6 +8,8 @@ interface Brand {
   logoUrl: string | null;
   primaryHex: string | null;
   tagline: string | null;
+  faviconUrl: string | null;
+  loginBg: string | null;
 }
 
 const DEFAULT_BRAND: Brand = {
@@ -15,6 +17,8 @@ const DEFAULT_BRAND: Brand = {
   logoUrl: null,
   primaryHex: null,
   tagline: null,
+  faviconUrl: null,
+  loginBg: null,
 };
 
 const BrandingContext = createContext<Brand>(DEFAULT_BRAND);
@@ -30,6 +34,8 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       logoUrl: org.brandLogoUrl || null,
       primaryHex: org.brandPrimary || null,
       tagline: org.brandTagline || null,
+      faviconUrl: org.brandFaviconUrl || null,
+      loginBg: org.brandLoginBg || null,
     };
   }, [org]);
 
@@ -57,6 +63,25 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     if (typeof document === 'undefined') return;
     document.title = brand.name;
   }, [brand.name]);
+
+  // Update <link rel="icon">
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const url = brand.faviconUrl;
+    if (!url) {
+      const existing = document.querySelector('link[rel="icon"][data-brand="org"]') as HTMLLinkElement | null;
+      if (existing) existing.remove();
+      return;
+    }
+    let link = document.querySelector('link[rel="icon"][data-brand="org"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      link.dataset.brand = 'org';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+  }, [brand.faviconUrl]);
 
   return <BrandingContext.Provider value={brand}>{children}</BrandingContext.Provider>;
 }

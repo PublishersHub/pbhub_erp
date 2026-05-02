@@ -7,6 +7,8 @@ export interface OrgBrandPublic {
   brandLogoUrl: string | null;
   brandPrimary: string | null;
   brandTagline: string | null;
+  brandFaviconUrl: string | null;
+  brandLoginBg: string | null;
 }
 
 export function getOrganizationBranding(slug: string) {
