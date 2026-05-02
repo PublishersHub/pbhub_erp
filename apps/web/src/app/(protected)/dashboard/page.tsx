@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
@@ -20,10 +20,25 @@ import { getDashboardSummary } from '@/lib/recruitment-api';
 import { formatDate, formatDateTime, formatCurrency, employeeName } from '@/lib/format';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Sparkline } from '@/components/ui/sparkline';
 
 // ─── Helpers ────────────────────────────────
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+// Synthetic series — replace with real historical data when a backend endpoint is available.
+function fakeTrend(current: number, days = 7): number[] {
+  const out: number[] = [];
+  let v = Math.max(0, current * 0.7);
+  const step = (current - v) / (days - 1);
+  for (let i = 0; i < days; i++) {
+    const noise = (Math.random() - 0.5) * Math.max(1, current * 0.15);
+    out.push(Math.max(0, Math.round(v + noise)));
+    v += step;
+  }
+  out[out.length - 1] = current;
+  return out;
+}
 
 function safe<T>(fn: () => Promise<T>): () => Promise<T | null> {
   return () => fn().catch(() => null);
@@ -110,6 +125,7 @@ function KpiCard({
   accent = 'primary',
   icon,
   loading,
+  trend,
 }: {
   label: string;
   value: number | string;
@@ -118,6 +134,7 @@ function KpiCard({
   accent?: 'primary' | 'violet' | 'pink' | 'cyan' | 'success' | 'warning';
   icon: JSX.Element;
   loading?: boolean;
+  trend?: number[];
 }) {
   const accentClass = {
     primary: 'from-primary/30 to-primary/0',
@@ -134,6 +151,14 @@ function KpiCard({
     cyan: 'bg-cyan/15 text-cyan',
     success: 'bg-success/15 text-success',
     warning: 'bg-warning/15 text-warning',
+  }[accent];
+  const trendColorClass = {
+    primary: 'text-primary',
+    violet: 'text-violet',
+    pink: 'text-pink',
+    cyan: 'text-cyan',
+    success: 'text-success',
+    warning: 'text-warning',
   }[accent];
 
   return (
@@ -154,6 +179,11 @@ function KpiCard({
             {loading ? <span className="inline-block h-8 w-12 animate-pulse rounded bg-muted" /> : value}
           </span>
           {hint && <span className="text-xs text-muted-foreground/80">{hint}</span>}
+          {trend && trend.length >= 2 && (
+            <div className="mt-2">
+              <Sparkline data={trend} className={trendColorClass} width={120} height={28} smooth fill="none" />
+            </div>
+          )}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconBg}`}>
           {icon}
@@ -293,6 +323,13 @@ function CompanyDashboard() {
   const openPositions = 0; // openRequisitions not in DashboardSummary; use /recruitment/requisitions for full count
   const upcomingInterviews = recruitment.data?.upcomingInterviews ?? [];
 
+  // Synthetic trend series — stable per value change via useMemo
+  const trendActiveEmployees = useMemo(() => fakeTrend(activeEmployees), [activeEmployees]);
+  const trendPresent = useMemo(() => fakeTrend(present), [present]);
+  const trendOnLeave = useMemo(() => fakeTrend(onLeaveToday), [onLeaveToday]);
+  const trendPendingApprovals = useMemo(() => fakeTrend(totalPendingApprovals), [totalPendingApprovals]);
+  const trendOpenPositions = useMemo(() => fakeTrend(openPositions), [openPositions]);
+
   return (
     <div className="space-y-6">
       {/* Top KPI row */}
@@ -305,6 +342,7 @@ function CompanyDashboard() {
           accent="primary"
           icon={I.Users}
           loading={employees.loading}
+          trend={trendActiveEmployees}
         />
         <KpiCard
           label="Present Today"
@@ -314,6 +352,7 @@ function CompanyDashboard() {
           accent="success"
           icon={I.CheckCircle}
           loading={todayAttendance.loading}
+          trend={trendPresent}
         />
         <KpiCard
           label="On Leave Today"
@@ -323,6 +362,7 @@ function CompanyDashboard() {
           accent="violet"
           icon={I.Plane}
           loading={todayAttendance.loading}
+          trend={trendOnLeave}
         />
         <KpiCard
           label="Pending Approvals"
@@ -332,6 +372,7 @@ function CompanyDashboard() {
           accent="warning"
           icon={I.Bell}
           loading={pendingLeaves.loading || pendingClaims.loading}
+          trend={trendPendingApprovals}
         />
         <KpiCard
           label="Open Positions"
@@ -341,6 +382,7 @@ function CompanyDashboard() {
           accent="cyan"
           icon={I.Briefcase}
           loading={recruitment.loading}
+          trend={trendOpenPositions}
         />
       </div>
 
