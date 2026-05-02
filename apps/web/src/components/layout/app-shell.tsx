@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
+import { useBranding } from '@/components/branding-provider';
 import { useAsync } from '@/lib/hooks';
 import { getUnreadCount } from '@/lib/notification-api';
 import { OrgSwitcher } from './org-switcher';
@@ -201,6 +202,7 @@ function allowedByPerms(permissions: string[] | undefined, perms: Set<string>): 
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const brand = useBranding();
   const pathname = usePathname();
   const { data: unreadData } = useAsync(() => getUnreadCount(), []);
   const unreadCount = unreadData?.count ?? 0;
@@ -269,18 +271,32 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         {/* Brand */}
         <div className="flex items-center gap-3 border-b border-hairline px-5 py-4">
-          <div className="gradient-brand flex h-9 w-9 items-center justify-center rounded-xl shadow-glow-primary">
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.4} stroke="white" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 11a4 4 0 100-8 4 4 0 000 8z" />
-            </svg>
-          </div>
+          {brand.logoUrl ? (
+            <img
+              src={brand.logoUrl}
+              alt={brand.name}
+              className="h-9 w-9 rounded-xl object-cover shadow-glow-primary"
+            />
+          ) : (
+            <div className="gradient-brand flex h-9 w-9 items-center justify-center rounded-xl shadow-glow-primary">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.4} stroke="white" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 11a4 4 0 100-8 4 4 0 000 8z" />
+              </svg>
+            </div>
+          )}
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold text-foreground">
-              <span className="text-gradient-brand">PbHub</span>
+              <span className="text-gradient-brand">{brand.name}</span>
             </span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              HRMS
-            </span>
+            {brand.tagline ? (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {brand.tagline}
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                HRMS
+              </span>
+            )}
           </div>
         </div>
 

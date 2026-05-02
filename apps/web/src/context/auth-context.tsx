@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           account: res.account,
           activeOrganizationId: res.activeOrganizationId,
+          activeOrganization: res.activeOrganization ?? null,
           user: res.user,
           memberships: res.memberships,
         });
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         account: res.account,
         activeOrganizationId: null,
+        activeOrganization: null,
         user: null,
         memberships: res.memberships,
       });
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? {
               ...prev,
               activeOrganizationId: res.activeOrganizationId,
+              activeOrganization: res.activeOrganization,
               user: res.user,
               memberships: res.memberships,
             }
@@ -126,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? {
               ...prev,
               activeOrganizationId: res.activeOrganizationId,
+              activeOrganization: res.activeOrganization,
               user: res.user,
               memberships: res.memberships,
             }

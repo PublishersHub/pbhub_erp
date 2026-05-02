@@ -37,9 +37,20 @@ export interface ActiveUser {
   permissions: string[];
 }
 
+export interface OrganizationBrand {
+  id: string;
+  name: string;
+  slug: string;
+  brandName: string | null;
+  brandLogoUrl: string | null;
+  brandPrimary: string | null;
+  brandTagline: string | null;
+}
+
 export interface AuthUser {
   account: AccountProfile;
   activeOrganizationId: string | null;
+  activeOrganization: OrganizationBrand | null;
   user: ActiveUser | null;
   memberships: Membership[];
 }
@@ -55,12 +66,14 @@ export interface LoginResponse {
   account: AccountProfile;
   memberships: Membership[];
   activeOrganizationId?: string;
+  activeOrganization?: OrganizationBrand;
   user?: ActiveUser;
 }
 
 export interface SelectOrganizationResponse {
   accessToken: string;
   activeOrganizationId: string;
+  activeOrganization: OrganizationBrand;
   memberships: Membership[];
   user: ActiveUser;
 }
