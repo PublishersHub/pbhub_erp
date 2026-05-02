@@ -88,12 +88,23 @@ export class RolesService {
   }
 
   /**
-   * Rename / update description of a custom org role.
+   * Rename / update description of a role. System roles are editable
+   * only by super admins; org roles must belong to the current org.
    */
-  async updateRole(organizationId: string, id: string, dto: UpdateRoleDto) {
-    const role = await this.prisma.role.findFirst({ where: { id, organizationId } });
+  async updateRole(organizationId: string, id: string, dto: UpdateRoleDto, isSuperAdmin: boolean) {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id,
+        OR: [{ organizationId }, { organizationId: null, isSystem: true }],
+      },
+    });
     if (!role) throw new NotFoundException('Role not found');
-    if (role.isSystem) throw new ForbiddenException('System roles cannot be modified');
+    if (role.isSystem && !isSuperAdmin) {
+      throw new ForbiddenException('System roles can only be modified by a super admin');
+    }
+    if (!role.isSystem && role.organizationId !== organizationId) {
+      throw new NotFoundException('Role not found');
+    }
 
     return this.prisma.role.update({
       where: { id },
@@ -111,8 +122,14 @@ export class RolesService {
 
   /**
    * Replace the full permission set on a role (in a single transaction).
+   * System roles are editable only by super admins.
    */
-  async updateRolePermissions(organizationId: string, id: string, codes: string[]) {
+  async updateRolePermissions(
+    organizationId: string,
+    id: string,
+    codes: string[],
+    isSuperAdmin: boolean,
+  ) {
     const role = await this.prisma.role.findFirst({
       where: {
         id,
@@ -121,8 +138,12 @@ export class RolesService {
     });
 
     if (!role) throw new NotFoundException('Role not found');
-    if (role.isSystem) throw new ForbiddenException('System roles cannot be modified');
-    if (role.organizationId !== organizationId) throw new NotFoundException('Role not found');
+    if (role.isSystem && !isSuperAdmin) {
+      throw new ForbiddenException('System roles can only be modified by a super admin');
+    }
+    if (!role.isSystem && role.organizationId !== organizationId) {
+      throw new NotFoundException('Role not found');
+    }
 
     // Validate every provided code is a known permission
     const perms = await this.prisma.permission.findMany({ where: { code: { in: codes } } });
@@ -143,12 +164,28 @@ export class RolesService {
   }
 
   /**
-   * Deactivate (soft-delete) a custom org role.
+   * Deactivate a role. Super admins can deactivate any non-super_admin
+   * role. We block deactivating the super_admin role itself to avoid
+   * a foot-gun where the only super admin locks themselves out.
    */
-  async deactivateRole(organizationId: string, id: string) {
-    const role = await this.prisma.role.findFirst({ where: { id, organizationId } });
+  async deactivateRole(organizationId: string, id: string, isSuperAdmin: boolean) {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id,
+        OR: [{ organizationId }, { organizationId: null, isSystem: true }],
+      },
+    });
     if (!role) throw new NotFoundException('Role not found');
-    if (role.isSystem) throw new ForbiddenException('System roles cannot be deactivated');
+
+    if (role.isSystem && role.slug === 'super_admin') {
+      throw new ForbiddenException('The super_admin role cannot be deactivated');
+    }
+    if (role.isSystem && !isSuperAdmin) {
+      throw new ForbiddenException('System roles can only be deactivated by a super admin');
+    }
+    if (!role.isSystem && role.organizationId !== organizationId) {
+      throw new NotFoundException('Role not found');
+    }
 
     return this.prisma.role.update({ where: { id }, data: { isActive: false } });
   }

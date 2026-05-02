@@ -6,6 +6,7 @@ import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { useAsync, usePermission } from '@/lib/hooks';
+import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/toast';
 import {
   listRoles,
@@ -238,10 +239,11 @@ interface DetailPanelProps {
   roleId: string;
   allPerms: Permission[];
   canManage: boolean;
+  isSuperAdmin: boolean;
   onRoleUpdated: () => void;
 }
 
-function DetailPanel({ roleId, allPerms, canManage, onRoleUpdated }: DetailPanelProps) {
+function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated }: DetailPanelProps) {
   const toast = useToast();
 
   const {
@@ -366,7 +368,8 @@ function DetailPanel({ roleId, allPerms, canManage, onRoleUpdated }: DetailPanel
   if (!detail) return null;
 
   const grouped = groupByModule(allPerms);
-  const isReadOnly = detail.isSystem || !canManage;
+  // System roles editable only by super admins; org roles by anyone with role.manage.
+  const isReadOnly = (detail.isSystem && !isSuperAdmin) || !canManage;
 
   return (
     <div className="flex flex-col gap-6">
@@ -430,7 +433,7 @@ function DetailPanel({ roleId, allPerms, canManage, onRoleUpdated }: DetailPanel
         </div>
 
         {/* Edit / Deactivate actions — only for non-system editable roles */}
-        {canManage && !detail.isSystem && !editing && (
+        {canManage && (!detail.isSystem || isSuperAdmin) && !editing && (
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
@@ -459,7 +462,9 @@ function DetailPanel({ roleId, allPerms, canManage, onRoleUpdated }: DetailPanel
           <h4 className="text-sm font-semibold text-foreground">Permissions</h4>
           {isReadOnly && detail.isSystem && (
             <p className="text-xs text-muted-foreground italic">
-              System role permissions are managed by the platform.
+              {canManage
+                ? 'System role permissions can only be modified by a super admin.'
+                : 'System role permissions are managed by the platform.'}
             </p>
           )}
         </div>
@@ -544,8 +549,10 @@ function DetailPanel({ roleId, allPerms, canManage, onRoleUpdated }: DetailPanel
 
 export default function RolesPage() {
   const { can } = usePermission();
+  const { user } = useAuth();
   const canManage = can('role.manage');
   const canRead = can('role.read') || canManage;
+  const isSuperAdmin = user?.user?.roles?.includes('super_admin') ?? false;
 
   const toast = useToast();
 
@@ -667,6 +674,7 @@ export default function RolesPage() {
                 roleId={selectedId}
                 allPerms={allPerms ?? []}
                 canManage={canManage}
+                isSuperAdmin={isSuperAdmin}
                 onRoleUpdated={handleRoleUpdated}
               />
             </div>

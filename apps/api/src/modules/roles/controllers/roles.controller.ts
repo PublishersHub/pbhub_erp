@@ -82,13 +82,14 @@ export class RolesController {
 
   @Patch(':id')
   @RequirePermissions('role.manage')
-  @ApiOperation({ summary: 'Rename or update description of a custom org role' })
+  @ApiOperation({ summary: 'Rename or update description of a role' })
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
   ) {
-    return this.rolesService.updateRole(user.organizationId, id, dto);
+    const isSuperAdmin = user.roles.includes('super_admin');
+    return this.rolesService.updateRole(user.organizationId, id, dto, isSuperAdmin);
   }
 
   @Patch(':id/permissions')
@@ -99,14 +100,21 @@ export class RolesController {
     @Param('id') id: string,
     @Body() dto: UpdateRolePermissionsDto,
   ) {
-    return this.rolesService.updateRolePermissions(user.organizationId, id, dto.permissionCodes);
+    const isSuperAdmin = user.roles.includes('super_admin');
+    return this.rolesService.updateRolePermissions(
+      user.organizationId,
+      id,
+      dto.permissionCodes,
+      isSuperAdmin,
+    );
   }
 
   @Delete(':id')
   @RequirePermissions('role.manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Deactivate (soft-delete) a custom org role' })
+  @ApiOperation({ summary: 'Deactivate a role' })
   async deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.rolesService.deactivateRole(user.organizationId, id);
+    const isSuperAdmin = user.roles.includes('super_admin');
+    return this.rolesService.deactivateRole(user.organizationId, id, isSuperAdmin);
   }
 }
