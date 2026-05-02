@@ -185,6 +185,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { href: '/settings/roles', label: 'Roles & Permissions', permissions: ['role.read', 'role.manage'] },
       { href: '/settings/users', label: 'Members', permissions: ['user.read', 'user.manage_roles'] },
+      { href: '/settings/invitations', label: 'Invitations', permissions: ['user.create', 'user.manage_roles'] },
     ],
   },
 ];

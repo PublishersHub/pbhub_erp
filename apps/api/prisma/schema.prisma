@@ -98,6 +98,9 @@ model Organization {
   onboardingTemplates OnboardingTemplate[]
   onboardingInstances OnboardingInstance[]
 
+  // Invitations
+  invitations Invitation[]
+
   @@map("organizations")
 }
 
@@ -117,8 +120,10 @@ model Account {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  users         User[]
-  refreshTokens RefreshToken[]
+  users                User[]
+  refreshTokens        RefreshToken[]
+  acceptedInvitations  Invitation[] @relation("AcceptedInvitations")
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("accounts")
 }
@@ -146,6 +151,7 @@ model User {
   uploadedDocuments       EmployeeDocument[]
   notificationPreferences NotificationPreference[]
   notifications           Notification[]
+  invitedInvitations      Invitation[] @relation("InvitedByUser")
 
   @@unique([accountId, organizationId])
   @@index([accountId])
@@ -170,9 +176,10 @@ model Role {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization    Organization?    @relation(fields: [organizationId], references: [id])
-  rolePermissions RolePermission[]
-  userRoles       UserRole[]
+  organization        Organization?            @relation(fields: [organizationId], references: [id])
+  rolePermissions     RolePermission[]
+  userRoles           UserRole[]
+  invitationAssignments InvitationRoleAssignment[]
 
   // Uniqueness is enforced via partial indexes in the migration:
   //   roles_org_slug_unique  → (organization_id, slug) WHERE organization_id IS NOT NULL
@@ -229,6 +236,58 @@ model UserRole {
 }
 
 // ============================================
+// Invitations — tokenized email invitations
+// ============================================
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model Invitation {
+  id                String           @id @default(uuid())
+  organizationId    String           @map("organization_id")
+  email             String
+  firstName         String           @map("first_name")
+  lastName          String           @map("last_name")
+  tokenHash         String           @map("token_hash")
+  expiresAt         DateTime         @map("expires_at")
+  status            InvitationStatus @default(PENDING)
+  invitedByUserId   String?          @map("invited_by_user_id")
+  acceptedAt        DateTime?        @map("accepted_at")
+  acceptedAccountId String?          @map("accepted_account_id")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  invitedByUser   User?        @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
+  acceptedAccount Account?     @relation("AcceptedInvitations", fields: [acceptedAccountId], references: [id])
+  roleAssignments InvitationRoleAssignment[]
+
+  @@unique([tokenHash])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([email])
+  @@map("invitations")
+}
+
+model InvitationRoleAssignment {
+  id           String   @id @default(uuid())
+  invitationId String   @map("invitation_id")
+  roleId       String   @map("role_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([invitationId, roleId])
+  @@index([invitationId])
+  @@map("invitation_role_assignments")
+}
+
+// ============================================
 // Refresh Tokens — account-scoped (no org claim).
 // One refresh token represents "this human is logged in."
 // ============================================
@@ -245,6 +304,25 @@ model RefreshToken {
 
   @@index([accountId])
   @@map("refresh_tokens")
+}
+
+// ============================================
+// Password Reset Tokens
+// ============================================
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  accountId String    @map("account_id")
+  tokenHash String    @map("token_hash") @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ============================================
