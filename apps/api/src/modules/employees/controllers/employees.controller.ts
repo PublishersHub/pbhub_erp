@@ -54,6 +54,14 @@ export class EmployeesController {
     });
   }
 
+  @Get('my-team')
+  @ApiOperation({
+    summary: "Get the calling user's direct reports + themselves",
+  })
+  async findMyTeam(@CurrentUser() user: AuthenticatedUser) {
+    return this.employeesService.findMyTeam(user.organizationId, user.userId);
+  }
+
   @Get(':id')
   @RequirePermissions('employee.read')
   @ApiOperation({ summary: 'Get employee by ID with full details' })

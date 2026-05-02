@@ -157,6 +157,32 @@ export class EmployeesService {
     });
   }
 
+  /**
+   * Returns the employee profile of the calling user plus all employees who
+   * report to them. Requires the user to have an Employee row linked via
+   * userId. Returns [] if the user has no employee profile.
+   */
+  async findMyTeam(organizationId: string, userId: string) {
+    // userId here is the per-org User membership id (AuthenticatedUser.userId)
+    const me = await this.prisma.employee.findFirst({
+      where: { userId, organizationId },
+      include: this.defaultInclude(),
+    });
+
+    if (!me) return [];
+
+    const reports = await this.prisma.employee.findMany({
+      where: {
+        organizationId,
+        reportingManagerId: me.id,
+      },
+      include: this.defaultInclude(),
+      orderBy: { firstName: 'asc' },
+    });
+
+    return [me, ...reports];
+  }
+
   async deactivate(organizationId: string, id: string) {
     await this.findById(organizationId, id);
     return this.prisma.employee.update({

@@ -33,6 +33,15 @@ export function listEmployees(filters?: EmployeeFilters) {
   );
 }
 
+/**
+ * Get the calling user's direct reports + themselves.
+ * Returns [] if the user has no employee profile.
+ * No permission required.
+ */
+export function listMyTeam() {
+  return get<Employee[]>('/api/employees/my-team');
+}
+
 export function getEmployee(id: string) {
   return get<Employee>(`/api/employees/${id}`);
 }
