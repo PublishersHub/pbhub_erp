@@ -227,3 +227,19 @@ export function logout(refreshToken: string) {
 export function fetchMe() {
   return get<AuthUser>('/api/auth/me');
 }
+
+export function forgotPassword(email: string) {
+  return post<{ message: string; __devToken?: string }>(
+    '/api/auth/forgot-password',
+    { email },
+    { skipAuth: true },
+  );
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return post<{ message: string }>(
+    '/api/auth/reset-password',
+    { token, newPassword },
+    { skipAuth: true },
+  );
+}
