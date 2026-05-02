@@ -20,6 +20,7 @@ import { ExpenseModule } from './modules/expense/expense.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { RecruitmentModule } from './modules/recruitment/recruitment.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { JwtAccessGuard } from './modules/auth/guards/jwt-access.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import appConfig from './config/app.config';
@@ -58,6 +59,7 @@ import appConfig from './config/app.config';
     OnboardingModule,
     RecruitmentModule,
     NotificationModule,
+    ActivityModule,
   ],
   providers: [
     // Global guards applied in order:

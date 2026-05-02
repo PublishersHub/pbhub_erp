@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
@@ -17,6 +17,7 @@ import {
 import { getAllClaims, getPendingClaims, getMyClaims } from '@/lib/expense-api';
 import { listInstances, getMyInstance } from '@/lib/onboarding-api';
 import { getDashboardSummary } from '@/lib/recruitment-api';
+import { getActivity, ActivityEvent, ActivityPage, ActivityVariant } from '@/lib/activity-api';
 import { formatDate, formatDateTime, formatCurrency, employeeName } from '@/lib/format';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -372,203 +373,122 @@ function AttendanceHeatmap({ activeEmployees }: { activeEmployees: number }) {
 
 // ─── Activity Feed ───────────────────────────
 
-interface ActivityEvent {
-  id: string;
-  timestamp: string;
-  type: string;
-  title: string;
-  subtitle?: string;
-  href?: string;
-  variant: 'leave' | 'expense' | 'onboarding';
-}
-
-const ActivityIcon = {
-  leave: (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-    </svg>
-  ),
-  expense: (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 3h6m-6 3h6M5.25 4.5a2.25 2.25 0 012.25-2.25h9a2.25 2.25 0 012.25 2.25V21l-4.5-1.5L9 21l-3-1.5L5.25 21V4.5z" />
-    </svg>
-  ),
-  onboarding: (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-    </svg>
-  ),
-};
-
-const variantIconBg: Record<ActivityEvent['variant'], string> = {
+const activityIconBg: Record<ActivityVariant, string> = {
   leave: 'bg-violet/15 text-violet',
   expense: 'bg-pink/15 text-pink',
   onboarding: 'bg-cyan/15 text-cyan',
+  recruitment: 'bg-primary/15 text-primary',
+  payroll: 'bg-success/15 text-success',
+  attendance: 'bg-warning/15 text-warning',
 };
 
+function variantIcon(variant: ActivityVariant): JSX.Element {
+  if (variant === 'leave') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+      </svg>
+    );
+  }
+  if (variant === 'expense') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 3h6m-6 3h6M5.25 4.5a2.25 2.25 0 012.25-2.25h9a2.25 2.25 0 012.25 2.25V21l-4.5-1.5L9 21l-3-1.5L5.25 21V4.5z" />
+      </svg>
+    );
+  }
+  if (variant === 'recruitment') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.073a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-4.072m16.5 0a24.301 24.301 0 01-4.5.892m4.5-.892l-.834-3.32a4.5 4.5 0 00-4.282-3.405h-2.268a4.5 4.5 0 00-4.282 3.405l-.834 3.32m16.5 0a24.301 24.301 0 01-4.5.892m0 0v-4.572m0 4.572a23.999 23.999 0 01-7.5 0m7.5 0v-4.572m-7.5 4.572V14.15m0 4.572a23.999 23.999 0 01-7.5 0m0 0V14.15m7.5 4.572V14.15M14.25 9h-4.5m4.5 0v-1.5a2.25 2.25 0 00-2.25-2.25h0a2.25 2.25 0 00-2.25 2.25V9" />
+      </svg>
+    );
+  }
+  // onboarding, payroll, attendance — use rocket / default
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="h-9 w-9 animate-pulse rounded-lg bg-muted/60" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-2/3 animate-pulse rounded bg-muted/60" />
+            <div className="h-2.5 w-1/3 animate-pulse rounded bg-muted/40" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ActivityFeed() {
-  const allLeaves = useAsync(safe(() => getAllLeaveRequests()), []);
-  const allClaims = useAsync(safe(() => getAllClaims()), []);
-  const allInstances = useAsync(safe(() => listInstances({})), []);
+  const [page, setPage] = useState<ActivityPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [appended, setAppended] = useState<ActivityEvent[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const events = useMemo<ActivityEvent[]>(() => {
-    const out: ActivityEvent[] = [];
+  useEffect(() => {
+    let cancelled = false;
+    getActivity({ limit: 10 })
+      .then((p) => { if (!cancelled) setPage(p); })
+      .catch(() => {/* swallow — empty state will render */})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-    // Leave events
-    for (const lr of allLeaves.data ?? []) {
-      out.push({
-        id: `leave-submitted-${lr.id}`,
-        timestamp: lr.submittedAt,
-        type: 'leave.submitted',
-        title: `${employeeName(lr.employee)} submitted a leave request`,
-        subtitle: `${lr.totalDays}d · ${lr.leavePolicy?.name ?? 'Leave'}`,
-        href: `/leave/requests/${lr.id}`,
-        variant: 'leave',
-      });
-      if ((lr.status === 'APPROVED' || lr.status === 'REJECTED') && lr.finalDecisionAt) {
-        out.push({
-          id: `leave-${lr.status.toLowerCase()}-${lr.id}`,
-          timestamp: lr.finalDecisionAt,
-          type: `leave.${lr.status.toLowerCase()}`,
-          title: `${employeeName(lr.employee)}'s leave was ${lr.status.toLowerCase()}`,
-          subtitle: `${lr.totalDays}d · ${lr.leavePolicy?.name ?? 'Leave'}`,
-          href: `/leave/requests/${lr.id}`,
-          variant: 'leave',
-        });
-      }
-    }
+  async function loadMore() {
+    if (!page?.nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await getActivity({ limit: 10, before: page.nextCursor });
+      setAppended((prev) => [...prev, ...next.items]);
+      setPage((p) => p ? { ...p, nextCursor: next.nextCursor } : p);
+    } catch {/* show error toast if you like */}
+    setLoadingMore(false);
+  }
 
-    // Expense events
-    for (const c of allClaims.data ?? []) {
-      if (c.submittedAt) {
-        out.push({
-          id: `expense-submitted-${c.id}`,
-          timestamp: c.submittedAt,
-          type: 'expense.submitted',
-          title: `${employeeName(c.employee)} submitted an expense claim`,
-          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
-          href: `/expenses/claims/${c.id}`,
-          variant: 'expense',
-        });
-      }
-      if (c.status === 'REIMBURSED' && c.reimbursedAt) {
-        out.push({
-          id: `expense-reimbursed-${c.id}`,
-          timestamp: c.reimbursedAt,
-          type: 'expense.reimbursed',
-          title: `${employeeName(c.employee)}'s expense was reimbursed`,
-          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
-          href: `/expenses/claims/${c.id}`,
-          variant: 'expense',
-        });
-      }
-      if (c.status === 'REJECTED' && c.finalDecisionAt) {
-        out.push({
-          id: `expense-rejected-${c.id}`,
-          timestamp: c.finalDecisionAt,
-          type: 'expense.rejected',
-          title: `${employeeName(c.employee)}'s expense was rejected`,
-          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
-          href: `/expenses/claims/${c.id}`,
-          variant: 'expense',
-        });
-      }
-    }
+  if (loading) return <Loading />;
+  if (!page || (page.items.length === 0 && appended.length === 0)) {
+    return <EmptyState variant="default" title="No activity yet" description="Recent events across the company will appear here." />;
+  }
 
-    // Onboarding events
-    for (const inst of (allInstances.data ?? []) as any[]) {
-      const startTs = inst.startedAt ?? inst.createdAt;
-      if (startTs) {
-        out.push({
-          id: `onboarding-started-${inst.id}`,
-          timestamp: startTs,
-          type: 'onboarding.started',
-          title: `${employeeName(inst.employee)} started onboarding`,
-          subtitle: `Joined ${formatDate(inst.joiningDate)}`,
-          href: `/onboarding/${inst.id}`,
-          variant: 'onboarding',
-        });
-      }
-      if (inst.status === 'COMPLETED' && inst.completedAt) {
-        out.push({
-          id: `onboarding-completed-${inst.id}`,
-          timestamp: inst.completedAt,
-          type: 'onboarding.completed',
-          title: `${employeeName(inst.employee)} completed onboarding`,
-          subtitle: `Joined ${formatDate(inst.joiningDate)}`,
-          href: `/onboarding/${inst.id}`,
-          variant: 'onboarding',
-        });
-      }
-    }
-
-    return out.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
-  }, [allLeaves.data, allClaims.data, allInstances.data]);
-
-  const isLoading = allLeaves.loading || allClaims.loading || allInstances.loading;
+  const all = [...page.items, ...appended];
 
   return (
-    <div>
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="h-9 w-9 animate-pulse rounded-lg bg-muted/60" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-2/3 animate-pulse rounded bg-muted/60" />
-                <div className="h-2.5 w-1/3 animate-pulse rounded bg-muted/40" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : events.length === 0 ? (
-        <EmptyState title="No recent activity" description="Events from leave, expenses, and onboarding will appear here." />
-      ) : (
-        <div className="-mx-2 space-y-0.5">
-          {events.map((ev) => (
-            ev.href ? (
-              <Link
-                key={ev.id}
-                href={ev.href}
-                className="flex items-center justify-between rounded-xl px-2 py-2.5 transition-colors hover:bg-secondary/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variantIconBg[ev.variant]}`}>
-                    {ActivityIcon[ev.variant]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{ev.title}</p>
-                    {ev.subtitle && (
-                      <p className="truncate text-xs text-muted-foreground">{ev.subtitle}</p>
-                    )}
-                  </div>
-                </div>
-                <span className="ml-3 shrink-0 text-xs text-muted-foreground tabular-nums">
-                  {relativeTime(ev.timestamp)}
-                </span>
-              </Link>
-            ) : (
-              <div
-                key={ev.id}
-                className="flex items-center justify-between rounded-xl px-2 py-2.5"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variantIconBg[ev.variant]}`}>
-                    {ActivityIcon[ev.variant]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{ev.title}</p>
-                    {ev.subtitle && (
-                      <p className="truncate text-xs text-muted-foreground">{ev.subtitle}</p>
-                    )}
-                  </div>
-                </div>
-                <span className="ml-3 shrink-0 text-xs text-muted-foreground tabular-nums">
-                  {relativeTime(ev.timestamp)}
-                </span>
-              </div>
-            )
-          ))}
+    <div className="-mx-2 space-y-1">
+      {all.map((ev) => (
+        <a
+          key={ev.id}
+          href={ev.href ?? '#'}
+          className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-secondary/60"
+        >
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${activityIconBg[ev.variant] ?? activityIconBg.onboarding}`}>
+            {variantIcon(ev.variant)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">{ev.title}</p>
+            {ev.subtitle && <p className="truncate text-xs text-muted-foreground">{ev.subtitle}</p>}
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground/70">{relativeTime(ev.timestamp)}</span>
+        </a>
+      ))}
+      {page.nextCursor && (
+        <div className="pt-3 text-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="motion-press rounded-xl border border-hairline bg-card/40 px-3.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
         </div>
       )}
     </div>
