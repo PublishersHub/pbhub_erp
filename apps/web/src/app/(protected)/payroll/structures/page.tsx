@@ -33,7 +33,7 @@ export default function SalaryStructuresPage() {
     [],
   );
 
-  const { data: structure, error: structureError, loading: structureLoading, refetch: refetchStructure } = useAsync(
+  const { data: structure, error: structureError, errorStatus: structureErrorStatus, loading: structureLoading, refetch: refetchStructure } = useAsync(
     () => (selectedEmpId ? getEmployeeSalaryStructure(selectedEmpId) : Promise.resolve(null)),
     [selectedEmpId],
   );
@@ -235,7 +235,7 @@ export default function SalaryStructuresPage() {
       {selectedEmpId && !showHistory && (
         <>
           {structureLoading && <Loading />}
-          {structureError && <ErrorMessage message={structureError} onRetry={refetchStructure} />}
+          {structureError && <ErrorMessage message={structureError} status={structureErrorStatus} onRetry={refetchStructure} />}
           {!structureLoading && !structureError && !structure && (
             <EmptyState title="No salary structure" description="This employee has no active salary structure." />
           )}

@@ -15,7 +15,7 @@ export default function TemplatesListPage() {
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listTemplates());
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listTemplates());
 
   const sorted = useMemo(
     () =>
@@ -51,7 +51,7 @@ export default function TemplatesListPage() {
       />
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my onboarding', href: '/onboarding/my' }} />}
       {data && total === 0 && (
         <EmptyState title="No templates" description="Create your first onboarding template to get started." />
       )}

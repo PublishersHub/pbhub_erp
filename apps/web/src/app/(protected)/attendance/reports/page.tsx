@@ -26,12 +26,12 @@ export default function AttendanceReportsPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [month, setMonth] = useState(currentMonth);
 
-  const { data: todayReport, error: todayError, loading: todayLoading } = useAsync(
+  const { data: todayReport, error: todayError, errorStatus: todayErrorStatus, loading: todayLoading } = useAsync(
     () => (canRead ? getTodayReport() : Promise.resolve(null)),
     [],
   );
 
-  const { data: monthlyData, error: monthlyError, loading: monthlyLoading, refetch: monthlyRefetch } = useAsync(
+  const { data: monthlyData, error: monthlyError, errorStatus: monthlyErrorStatus, loading: monthlyLoading, refetch: monthlyRefetch } = useAsync(
     () => (canRead ? getMonthlyReport(month) : Promise.resolve(null)),
     [month],
   );
@@ -98,7 +98,7 @@ export default function AttendanceReportsPage() {
       <div className="mb-8">
         <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Today&apos;s Overview</h3>
         {todayLoading && <Loading />}
-        {todayError && <ErrorMessage message={todayError} />}
+        {todayError && <ErrorMessage message={todayError} status={todayErrorStatus} fallback={{ label: 'View attendance', href: '/attendance' }} />}
         {todayReport && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {todayCards.map((c) => (
@@ -123,7 +123,7 @@ export default function AttendanceReportsPage() {
           />
         </div>
         {monthlyLoading && <Loading />}
-        {monthlyError && <ErrorMessage message={monthlyError} onRetry={monthlyRefetch} />}
+        {monthlyError && <ErrorMessage message={monthlyError} status={monthlyErrorStatus} onRetry={monthlyRefetch} fallback={{ label: 'View attendance', href: '/attendance' }} />}
         {monthlyData && total === 0 && (
           <EmptyState title="No data" description="No attendance data for the selected month." />
         )}

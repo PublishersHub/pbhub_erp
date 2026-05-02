@@ -31,7 +31,7 @@ export default function MyPayslipsPage() {
   const yearFilter = searchParams.get('year') || '';
   const [year, setYear] = useState(yearFilter);
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => getMyPayslips(year ? parseInt(year, 10) : undefined),
     [year],
   );
@@ -88,7 +88,7 @@ export default function MyPayslipsPage() {
       </FilterBar>
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No payslips" description="Your payslips will appear here once payroll is processed." />
       )}

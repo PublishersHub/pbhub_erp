@@ -36,7 +36,7 @@ export default function CorrectionsPage() {
   const [view, setView] = useState<ViewMode>('my');
   const statusFilter = (searchParams.get('status') || '') as CorrectionRequestStatus | '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
       view === 'all' && canManage
         ? getAllCorrections(statusFilter || undefined)
@@ -261,7 +261,7 @@ export default function CorrectionsPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View attendance', href: '/attendance' }} />}
       {data && total === 0 && (
         <EmptyState
           title="No correction requests"

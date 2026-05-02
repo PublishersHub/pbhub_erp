@@ -26,7 +26,7 @@ export default function RequisitionsListPage() {
     useTableParams();
   const status = (searchParams.get('status') as RequisitionStatus) || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listRequisitions(status ? { status } : undefined),
     [status],
   );
@@ -83,7 +83,7 @@ export default function RequisitionsListPage() {
       </FilterBar>
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No requisitions found" description="Create your first requisition to get started." />
       )}

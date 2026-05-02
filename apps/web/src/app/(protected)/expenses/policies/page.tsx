@@ -26,7 +26,7 @@ export default function ExpensePoliciesPage() {
   const canManage = can('expense.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listExpensePolicies(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listExpensePolicies(), []);
 
   const sorted = useMemo(
     () =>
@@ -193,7 +193,7 @@ export default function ExpensePoliciesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my claims', href: '/expenses/claims' }} />}
       {data && total === 0 && (
         <EmptyState title="No policies" description="Create expense policies to define spending limits." />
       )}

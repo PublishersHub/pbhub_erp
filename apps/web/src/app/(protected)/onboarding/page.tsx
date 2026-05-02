@@ -23,7 +23,7 @@ export default function OnboardingInstancesPage() {
     useTableParams();
   const status = (searchParams.get('status') as OnboardingInstanceStatus) || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listInstances(status ? { status } : undefined),
     [status],
   );
@@ -79,7 +79,7 @@ export default function OnboardingInstancesPage() {
       </FilterBar>
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my onboarding', href: '/onboarding/my' }} />}
       {data && total === 0 && (
         <EmptyState title="No onboarding instances" description="Onboarding instances will appear here when employees are hired." />
       )}

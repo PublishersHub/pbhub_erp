@@ -26,7 +26,7 @@ export default function HolidaysPage() {
     useTableParams();
   const yearFilter = searchParams.get('year') || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listHolidays(yearFilter ? parseInt(yearFilter, 10) : undefined),
     [yearFilter],
   );
@@ -197,7 +197,7 @@ export default function HolidaysPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my requests', href: '/leave/requests' }} />}
       {data && total === 0 && (
         <EmptyState title="No holidays found" description="Add holidays for your organization." />
       )}

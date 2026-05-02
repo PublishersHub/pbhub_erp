@@ -25,7 +25,7 @@ export default function ExpenseCategoriesPage() {
   const canManage = can('expense.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listExpenseCategories(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listExpenseCategories(), []);
 
   const sorted = useMemo(
     () =>
@@ -159,7 +159,7 @@ export default function ExpenseCategoriesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my claims', href: '/expenses/claims' }} />}
       {data && total === 0 && (
         <EmptyState title="No categories" description="Create expense categories to classify expenses." />
       )}

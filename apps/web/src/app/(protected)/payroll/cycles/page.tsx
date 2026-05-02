@@ -33,7 +33,7 @@ export default function PayrollCyclesPage() {
 
   const yearFilter = searchParams.get('year') || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listPayrollCycles(yearFilter ? parseInt(yearFilter, 10) : undefined),
     [yearFilter],
   );
@@ -176,7 +176,7 @@ export default function PayrollCyclesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my payslips', href: '/payroll/payslips/my' }} />}
       {data && total === 0 && (
         <EmptyState title="No payroll cycles" description="Create a payroll cycle to get started." />
       )}

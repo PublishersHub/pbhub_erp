@@ -46,7 +46,7 @@ export default function PerformanceCyclesPage() {
   const canManage = can('performance.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listPerformanceCycles(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listPerformanceCycles(), []);
 
   const sorted = useMemo(
     () =>
@@ -210,7 +210,7 @@ export default function PerformanceCyclesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my goals', href: '/performance/goals' }} />}
       {data && total === 0 && (
         <EmptyState title="No cycles" description="Create performance cycles to start reviews." />
       )}

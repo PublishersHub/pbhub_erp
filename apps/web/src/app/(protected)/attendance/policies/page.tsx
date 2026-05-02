@@ -30,7 +30,7 @@ export default function AttendancePoliciesPage() {
   const canManage = can('attendance.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listAttendancePolicies(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listAttendancePolicies(), []);
 
   const sorted = useMemo(
     () =>
@@ -246,7 +246,7 @@ export default function AttendancePoliciesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View attendance', href: '/attendance' }} />}
       {data && total === 0 && (
         <EmptyState title="No policies" description="Create an attendance policy to get started." />
       )}

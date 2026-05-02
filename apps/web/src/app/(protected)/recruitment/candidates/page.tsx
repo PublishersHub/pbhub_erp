@@ -20,7 +20,7 @@ export default function CandidatesListPage() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listCandidates(debouncedSearch ? { search: debouncedSearch } : undefined),
     [debouncedSearch],
   );
@@ -76,7 +76,7 @@ export default function CandidatesListPage() {
       </FilterBar>
 
       {loading && <SkeletonTable rows={6} cols={7} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No candidates found" description="Add your first candidate to get started." />
       )}

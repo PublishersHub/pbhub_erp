@@ -28,7 +28,7 @@ export default function SalaryComponentsPage() {
   const canManage = can('payroll.run');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  const { data, error, loading, refetch } = useAsync(() => listSalaryComponents(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listSalaryComponents(), []);
 
   const sorted = useMemo(
     () =>
@@ -220,7 +220,7 @@ export default function SalaryComponentsPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No salary components" description="Create salary components to define earnings and deductions." />
       )}

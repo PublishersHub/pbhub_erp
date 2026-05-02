@@ -21,7 +21,7 @@ export default function InterviewsListPage() {
   const { toast } = useToast();
   const applicationId = searchParams.get('applicationId') || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => (applicationId ? listInterviews(applicationId) : Promise.resolve([])),
     [applicationId],
   );
@@ -69,7 +69,7 @@ export default function InterviewsListPage() {
       )}
 
       {applicationId && loading && <SkeletonTable rows={6} cols={7} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && applicationId && (
         <EmptyState title="No interviews scheduled" description="Schedule the first interview for this application." />
       )}

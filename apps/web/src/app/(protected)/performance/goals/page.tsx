@@ -36,7 +36,7 @@ export default function GoalsPage() {
   const { data: cycles } = useAsync(() => listPerformanceCycles(), []);
 
   const fetcher = view === 'all' ? getAllGoals : view === 'team' ? getTeamGoals : getMyGoals;
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => fetcher(cycleFilter || undefined),
     [view, cycleFilter],
   );
@@ -111,7 +111,7 @@ export default function GoalsPage() {
       </FilterBar>
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No goals" description="Create goals for your performance cycle." />
       )}

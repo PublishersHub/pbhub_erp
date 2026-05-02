@@ -21,7 +21,7 @@ export default function LeavePoliciesPage() {
   const { can } = usePermission();
   const canManage = can('leave.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
-  const { data, error, loading, refetch } = useAsync(() => listLeavePolicies(), []);
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => listLeavePolicies(), []);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -196,7 +196,7 @@ export default function LeavePoliciesPage() {
       )}
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my requests', href: '/leave/requests' }} />}
       {data && total === 0 && (
         <EmptyState title="No leave policies" description="Create your first leave policy." />
       )}

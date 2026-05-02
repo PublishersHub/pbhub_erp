@@ -19,7 +19,7 @@ export default function OffersListPage() {
     useTableParams();
   const applicationId = searchParams.get('applicationId') || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => (applicationId ? listOffers(applicationId) : Promise.resolve([])),
     [applicationId],
   );
@@ -69,7 +69,7 @@ export default function OffersListPage() {
       )}
 
       {applicationId && loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && applicationId && (
         <EmptyState title="No offers found" description="Create the first offer for this application." />
       )}

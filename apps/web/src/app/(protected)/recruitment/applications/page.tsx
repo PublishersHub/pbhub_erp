@@ -31,7 +31,7 @@ export default function ApplicationsListPage() {
   const candidateId = searchParams.get('candidateId') || '';
   const hasFilters = !!(status || requisitionId || candidateId);
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
       listApplications({
         ...(status && { status }),
@@ -99,7 +99,7 @@ export default function ApplicationsListPage() {
       </FilterBar>
 
       {loading && <SkeletonTable rows={6} cols={7} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No applications found" description="Create an application to get started." />
       )}
