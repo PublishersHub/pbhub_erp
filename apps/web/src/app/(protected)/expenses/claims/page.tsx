@@ -96,17 +96,6 @@ export default function ExpenseClaimsPage() {
 
       {/* View toggle */}
       <div className="mb-4 flex gap-2">
-        <Link
-          href="/expenses/claims/new"
-          className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
-        >
-          New Claim
-        </Link>
-      )}
-      />
-
-      {/* View toggle */}
-      <div className="mb-4 flex gap-2">
         <button
           onClick={() => setView('my')}
           className={`rounded-md px-4 py-2 text-sm font-medium ${
