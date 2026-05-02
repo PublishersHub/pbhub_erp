@@ -199,7 +199,16 @@ export class InvitationsService {
     const invitation = await this.prisma.invitation.findUnique({
       where: { tokenHash },
       include: {
-        organization: { select: { name: true } },
+        organization: {
+          select: {
+            name: true,
+            slug: true,
+            brandName: true,
+            brandLogoUrl: true,
+            brandPrimary: true,
+            brandTagline: true,
+          },
+        },
       },
     });
 
@@ -216,6 +225,11 @@ export class InvitationsService {
       firstName: invitation.firstName,
       lastName: invitation.lastName,
       organizationName: invitation.organization.name,
+      organizationSlug: invitation.organization.slug,
+      organizationBrandName: invitation.organization.brandName,
+      organizationBrandLogoUrl: invitation.organization.brandLogoUrl,
+      organizationBrandPrimary: invitation.organization.brandPrimary,
+      organizationBrandTagline: invitation.organization.brandTagline,
       expiresAt: invitation.expiresAt,
     };
   }

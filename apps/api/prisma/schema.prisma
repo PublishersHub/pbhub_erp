@@ -38,12 +38,18 @@ enum EmploymentStatus {
 // ============================================
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // White-label branding (all optional)
+  brandName    String? @map("brand_name")
+  brandLogoUrl String? @map("brand_logo_url")
+  brandPrimary String? @map("brand_primary")
+  brandTagline String? @map("brand_tagline")
 
   users        User[]
   roles        Role[]

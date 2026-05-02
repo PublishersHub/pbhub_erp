@@ -163,6 +163,22 @@ export class AuthService {
     const memberships = await this.usersService.findActiveMembershipsForAccount(
       authenticatedUser.accountId,
     );
+
+    const activeOrganization = authenticatedUser.organizationId
+      ? await this.prisma.organization.findUnique({
+          where: { id: authenticatedUser.organizationId },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            brandName: true,
+            brandLogoUrl: true,
+            brandPrimary: true,
+            brandTagline: true,
+          },
+        })
+      : null;
+
     return {
       account: {
         id: authenticatedUser.accountId,
@@ -171,6 +187,7 @@ export class AuthService {
         lastName: authenticatedUser.lastName,
       },
       activeOrganizationId: authenticatedUser.organizationId,
+      activeOrganization,
       user: {
         id: authenticatedUser.userId,
         organizationId: authenticatedUser.organizationId,
@@ -277,13 +294,26 @@ export class AuthService {
       organizationId,
     );
 
-    const memberships = await this.usersService.findActiveMembershipsForAccount(
-      accountId,
-    );
+    const [memberships, activeOrganization] = await Promise.all([
+      this.usersService.findActiveMembershipsForAccount(accountId),
+      this.prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          brandName: true,
+          brandLogoUrl: true,
+          brandPrimary: true,
+          brandTagline: true,
+        },
+      }),
+    ]);
 
     return {
       accessToken,
       activeOrganizationId: organizationId,
+      activeOrganization,
       memberships,
       user: {
         id: profile.userId,
