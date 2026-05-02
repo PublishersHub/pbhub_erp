@@ -1,4 +1,6 @@
 import { get, post, patch, del } from './api';
+import { API_BASE_URL } from './utils';
+import { getToken } from './auth';
 import type {
   SalaryComponent,
   CreateSalaryComponentPayload,
@@ -100,4 +102,23 @@ export function addPayrollAdjustment(payrollId: string, payload: AddPayrollAdjus
 
 export function removePayrollAdjustment(adjustmentId: string) {
   return del<Payroll>(`/api/payrolls/adjustments/${adjustmentId}`);
+}
+
+// ─── PDF Download ──────────────────────────
+
+export async function downloadPayslipPdf(payrollId: string, filename: string) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/payrolls/${payrollId}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

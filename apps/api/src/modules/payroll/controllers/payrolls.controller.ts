@@ -2,13 +2,18 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Response } from 'express';
 import { PayrollsService } from '../services/payrolls.service';
+import { PayslipPdfService } from '../services/payslip-pdf.service';
 import { AddPayrollAdjustmentDto } from '../dto/add-payroll-adjustment.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -18,7 +23,10 @@ import { AuthenticatedUser } from '../../../common/types';
 @ApiBearerAuth()
 @Controller('payrolls')
 export class PayrollsController {
-  constructor(private readonly service: PayrollsService) {}
+  constructor(
+    private readonly service: PayrollsService,
+    private readonly payslipPdfService: PayslipPdfService,
+  ) {}
 
   // ─── Employee self-service ──────────────
 
@@ -44,6 +52,31 @@ export class PayrollsController {
     @Param('cycleId') cycleId: string,
   ) {
     return this.service.getMyPayslip(user.userId, user.organizationId, cycleId);
+  }
+
+  @Get(':id/pdf')
+  @RequirePermissions('payroll.read_own')
+  @ApiOperation({ summary: 'Download a payslip as PDF' })
+  async downloadPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    // Permission gate: own payslip OR has payroll.read
+    const payroll = await this.service.findOwnership(user.organizationId, id);
+    if (!payroll) throw new NotFoundException('Payslip not found');
+    const isOwn = payroll.employee.userId === user.userId;
+    if (!isOwn && !user.permissions.includes('payroll.read')) {
+      throw new ForbiddenException('You can only download your own payslip');
+    }
+
+    const buf = await this.payslipPdfService.generate(user.organizationId, id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="payslip-${payroll.payrollCycle.year}-${String(payroll.payrollCycle.month).padStart(2, '0')}.pdf"`,
+    );
+    res.send(buf);
   }
 
   // ─── Admin views ────────────────────────

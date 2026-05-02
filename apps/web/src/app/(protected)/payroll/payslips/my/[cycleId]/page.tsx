@@ -1,12 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
-import { getMyPayslipDetail } from '@/lib/payroll-api';
+import { getMyPayslipDetail, downloadPayslipPdf } from '@/lib/payroll-api';
 import { formatCurrency, formatDate } from '@/lib/format';
 
 const MONTHS = [
@@ -20,6 +22,24 @@ export default function MyPayslipDetailPage() {
     () => getMyPayslipDetail(cycleId),
     [cycleId],
   );
+  const toast = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (!payslip) return;
+    setDownloading(true);
+    try {
+      const cycle = payslip.payrollCycle;
+      const filename = cycle
+        ? `payslip-${cycle.year}-${String(cycle.month).padStart(2, '0')}.pdf`
+        : 'payslip.pdf';
+      await downloadPayslipPdf(payslip.id, filename);
+    } catch (err) {
+      toast.error('Download failed', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} onRetry={refetch} />;
@@ -38,7 +58,16 @@ export default function MyPayslipDetailPage() {
         title={title}
         backHref="/payroll/payslips/my"
         actions={
-          cycle ? <StatusBadge status={cycle.status} /> : undefined
+          <div className="flex items-center gap-3">
+            {cycle && <StatusBadge status={cycle.status} />}
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="motion-press rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-glow-primary transition-all hover:bg-primary/90 disabled:opacity-60"
+            >
+              {downloading ? 'Generating…' : 'Download PDF'}
+            </button>
+          </div>
         }
       />
 

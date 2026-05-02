@@ -163,6 +163,27 @@ export class PayrollsService {
     });
   }
 
+  // ─── PDF / ownership ────────────────────
+
+  /**
+   * Lightweight ownership query used by the PDF endpoint to check
+   * whether the requesting user owns this payslip (without pulling
+   * all line-item data twice).
+   */
+  async findOwnership(
+    organizationId: string,
+    payrollId: string,
+  ) {
+    return this.prisma.payroll.findFirst({
+      where: { id: payrollId, organizationId },
+      select: {
+        id: true,
+        employee: { select: { userId: true } },
+        payrollCycle: { select: { year: true, month: true } },
+      },
+    });
+  }
+
   // ─── Helpers ────────────────────────────
 
   private async findEmployeeByUserId(userId: string, organizationId: string) {

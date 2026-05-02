@@ -9,6 +9,7 @@ import { SalaryStructuresService } from './services/salary-structures.service';
 import { PayrollCyclesService } from './services/payroll-cycles.service';
 import { PayrollGenerationService } from './services/payroll-generation.service';
 import { PayrollsService } from './services/payrolls.service';
+import { PayslipPdfService } from './services/payslip-pdf.service';
 
 @Module({
   imports: [PrismaModule],
@@ -24,6 +25,7 @@ import { PayrollsService } from './services/payrolls.service';
     PayrollCyclesService,
     PayrollGenerationService,
     PayrollsService,
+    PayslipPdfService,
   ],
 })
 export class PayrollModule {}
