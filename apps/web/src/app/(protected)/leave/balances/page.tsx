@@ -26,12 +26,12 @@ export default function LeaveBalancesPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [viewMode, setViewMode] = useState<'my' | 'employee'>(canManage ? 'my' : 'my');
 
-  const { data: myBalances, error: myErr, loading: myLoading, refetch: refetchMy } = useAsync(
+  const { data: myBalances, error: myErr, errorStatus: myErrStatus, loading: myLoading, refetch: refetchMy } = useAsync(
     () => (viewMode === 'my' ? getMyBalances(year) : Promise.resolve(null)),
     [viewMode, year],
   );
 
-  const { data: empBalances, error: empErr, loading: empLoading, refetch: refetchEmp } = useAsync(
+  const { data: empBalances, error: empErr, errorStatus: empErrStatus, loading: empLoading, refetch: refetchEmp } = useAsync(
     () => (viewMode === 'employee' && employeeId ? getEmployeeBalances(employeeId, year) : Promise.resolve(null)),
     [viewMode, employeeId, year],
   );
@@ -48,6 +48,7 @@ export default function LeaveBalancesPage() {
 
   const balances: LeaveBalance[] | null = viewMode === 'my' ? myBalances : empBalances;
   const balError = viewMode === 'my' ? myErr : empErr;
+  const balErrorStatus = viewMode === 'my' ? myErrStatus : empErrStatus;
   const balLoading = viewMode === 'my' ? myLoading : empLoading;
 
   function refetch() {
@@ -200,7 +201,7 @@ export default function LeaveBalancesPage() {
       )}
 
       {balLoading && <Loading />}
-      {balError && <ErrorMessage message={balError} onRetry={refetch} />}
+      {balError && <ErrorMessage message={balError} status={balErrorStatus} onRetry={refetch} />}
       {!balLoading && !balError && balances && balances.length === 0 && (
         <EmptyState
           title="No leave balances"

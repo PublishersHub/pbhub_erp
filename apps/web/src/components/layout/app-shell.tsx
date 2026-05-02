@@ -66,11 +66,18 @@ const Icon = {
   ),
 };
 
+interface NavChild {
+  href: string;
+  label: string;
+  permissions?: string[];
+}
+
 interface NavItem {
   href: string;
   label: string;
   icon: (p: IconProps) => JSX.Element;
-  children?: { href: string; label: string }[];
+  permissions?: string[];
+  children?: NavChild[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -79,10 +86,11 @@ const NAV_ITEMS: NavItem[] = [
     href: '/employees',
     label: 'Employees',
     icon: Icon.Users,
+    permissions: ['employee.read'],
     children: [
-      { href: '/employees', label: 'All Employees' },
-      { href: '/employees/departments', label: 'Departments' },
-      { href: '/employees/designations', label: 'Designations' },
+      { href: '/employees', label: 'All Employees', permissions: ['employee.read'] },
+      { href: '/employees/departments', label: 'Departments', permissions: ['employee.read'] },
+      { href: '/employees/designations', label: 'Designations', permissions: ['employee.read'] },
     ],
   },
   {
@@ -90,10 +98,10 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Leave',
     icon: Icon.Calendar,
     children: [
-      { href: '/leave/requests', label: 'Requests' },
-      { href: '/leave/balances', label: 'Balances' },
-      { href: '/leave/policies', label: 'Policies' },
-      { href: '/leave/holidays', label: 'Holidays' },
+      { href: '/leave/requests', label: 'Requests', permissions: ['leave.read_own'] },
+      { href: '/leave/balances', label: 'Balances', permissions: ['leave.read_own'] },
+      { href: '/leave/policies', label: 'Policies', permissions: ['leave.manage', 'leave.read'] },
+      { href: '/leave/holidays', label: 'Holidays', permissions: ['leave.read_own'] },
     ],
   },
   {
@@ -101,11 +109,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Attendance',
     icon: Icon.Clock,
     children: [
-      { href: '/attendance', label: 'Check In / Out' },
-      { href: '/attendance/daily', label: 'Daily Summary' },
-      { href: '/attendance/corrections', label: 'Corrections' },
-      { href: '/attendance/policies', label: 'Policies' },
-      { href: '/attendance/reports', label: 'Reports' },
+      { href: '/attendance', label: 'Check In / Out', permissions: ['attendance.checkin', 'attendance.read_own'] },
+      { href: '/attendance/daily', label: 'Daily Summary', permissions: ['attendance.read'] },
+      { href: '/attendance/corrections', label: 'Corrections', permissions: ['attendance.correct', 'attendance.read_own'] },
+      { href: '/attendance/policies', label: 'Policies', permissions: ['attendance.manage'] },
+      { href: '/attendance/reports', label: 'Reports', permissions: ['attendance.read'] },
     ],
   },
   {
@@ -113,10 +121,10 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Payroll',
     icon: Icon.Banknote,
     children: [
-      { href: '/payroll/components', label: 'Components' },
-      { href: '/payroll/structures', label: 'Structures' },
-      { href: '/payroll/cycles', label: 'Cycles' },
-      { href: '/payroll/payslips/my', label: 'My Payslips' },
+      { href: '/payroll/components', label: 'Components', permissions: ['payroll.read'] },
+      { href: '/payroll/structures', label: 'Structures', permissions: ['payroll.read'] },
+      { href: '/payroll/cycles', label: 'Cycles', permissions: ['payroll.read'] },
+      { href: '/payroll/payslips/my', label: 'My Payslips', permissions: ['payroll.read_own'] },
     ],
   },
   {
@@ -124,9 +132,9 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Expenses',
     icon: Icon.Receipt,
     children: [
-      { href: '/expenses/claims', label: 'Claims' },
-      { href: '/expenses/categories', label: 'Categories' },
-      { href: '/expenses/policies', label: 'Policies' },
+      { href: '/expenses/claims', label: 'Claims', permissions: ['expense.read_own'] },
+      { href: '/expenses/categories', label: 'Categories', permissions: ['expense.manage'] },
+      { href: '/expenses/policies', label: 'Policies', permissions: ['expense.manage'] },
     ],
   },
   {
@@ -134,21 +142,22 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Performance',
     icon: Icon.Chart,
     children: [
-      { href: '/performance/cycles', label: 'Cycles' },
-      { href: '/performance/goals', label: 'Goals' },
-      { href: '/performance/reviews', label: 'Reviews' },
+      { href: '/performance/cycles', label: 'Cycles', permissions: ['performance.read', 'performance.manage'] },
+      { href: '/performance/goals', label: 'Goals', permissions: ['performance.read_own'] },
+      { href: '/performance/reviews', label: 'Reviews', permissions: ['performance.read_own'] },
     ],
   },
   {
     href: '/recruitment',
     label: 'Recruitment',
     icon: Icon.Briefcase,
+    permissions: ['recruitment.read', 'recruitment.read_own'],
     children: [
-      { href: '/recruitment/requisitions', label: 'Requisitions' },
-      { href: '/recruitment/candidates', label: 'Candidates' },
-      { href: '/recruitment/applications', label: 'Applications' },
-      { href: '/recruitment/interviews', label: 'Interviews' },
-      { href: '/recruitment/offers', label: 'Offers' },
+      { href: '/recruitment/requisitions', label: 'Requisitions', permissions: ['recruitment.read', 'recruitment.read_own'] },
+      { href: '/recruitment/candidates', label: 'Candidates', permissions: ['recruitment.read', 'recruitment.read_own'] },
+      { href: '/recruitment/applications', label: 'Applications', permissions: ['recruitment.read', 'recruitment.read_own'] },
+      { href: '/recruitment/interviews', label: 'Interviews', permissions: ['recruitment.read', 'recruitment.read_own'] },
+      { href: '/recruitment/offers', label: 'Offers', permissions: ['recruitment.read', 'recruitment.read_own'] },
     ],
   },
   {
@@ -156,17 +165,22 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Onboarding',
     icon: Icon.Rocket,
     children: [
-      { href: '/onboarding', label: 'Instances' },
-      { href: '/onboarding/my', label: 'My Onboarding' },
-      { href: '/onboarding/tasks/my', label: 'My Tasks' },
-      { href: '/onboarding/templates', label: 'Templates' },
+      { href: '/onboarding', label: 'Instances', permissions: ['onboarding.read'] },
+      { href: '/onboarding/my', label: 'My Onboarding', permissions: ['onboarding.read_own'] },
+      { href: '/onboarding/tasks/my', label: 'My Tasks', permissions: ['onboarding.read_own', 'onboarding.task.update'] },
+      { href: '/onboarding/templates', label: 'Templates', permissions: ['onboarding.template.manage'] },
     ],
   },
-  { href: '/notifications', label: 'Notifications', icon: Icon.Bell },
+  { href: '/notifications', label: 'Notifications', icon: Icon.Bell, permissions: ['notification.read_own'] },
 ];
 
 function initials(first?: string, last?: string) {
   return ((first?.[0] ?? '') + (last?.[0] ?? '')).toUpperCase() || '?';
+}
+
+function allowedByPerms(permissions: string[] | undefined, perms: Set<string>): boolean {
+  if (!permissions || permissions.length === 0) return true;
+  return permissions.some((p) => perms.has(p));
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -174,6 +188,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { data: unreadData } = useAsync(() => getUnreadCount(), []);
   const unreadCount = unreadData?.count ?? 0;
+  const perms = new Set(user?.user?.permissions ?? []);
+
+  const visibleNavItems = NAV_ITEMS.flatMap((item) => {
+    if (!allowedByPerms(item.permissions, perms)) return [];
+    if (!item.children) return [item];
+    const visibleChildren = item.children.filter((c) => allowedByPerms(c.permissions, perms));
+    if (item.children.length > 0 && visibleChildren.length === 0) return [];
+    return [{ ...item, children: visibleChildren }];
+  });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -246,7 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const IconComp = item.icon;
             return (

@@ -39,7 +39,7 @@ export default function DailySummaryPage() {
   const toFilter = searchParams.get('to') || today.toISOString().slice(0, 10);
   const statusFilter = searchParams.get('status') || '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
       view === 'all' && canReadAll
         ? getAllSummaries({ from: fromFilter, to: toFilter })
@@ -144,7 +144,7 @@ export default function DailySummaryPage() {
       </FilterBar>
 
       {loading && <Loading />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState title="No records found" description="Adjust filters or check back later." />
       )}

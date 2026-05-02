@@ -41,7 +41,7 @@ export default function LeaveRequestsPage() {
     (searchParams.get('view') as ViewMode) || 'my',
   );
 
-  const { data, error, loading, refetch } = useAsync(() => {
+  const { data, error, errorStatus, loading, refetch } = useAsync(() => {
     if (view === 'all' && canViewAll) return getAllLeaveRequests(status || undefined);
     if (view === 'pending' && canApprove) return getPendingApprovals();
     return getMyLeaveRequests(status || undefined);
@@ -128,7 +128,14 @@ export default function LeaveRequestsPage() {
       </FilterBar>
 
       {loading && <SkeletonTable rows={6} cols={6} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && (
+        <ErrorMessage
+          message={error}
+          status={errorStatus}
+          onRetry={refetch}
+          fallback={errorStatus === 403 && view !== 'my' ? { label: 'View my requests', href: '/leave/requests?view=my' } : undefined}
+        />
+      )}
       {data && total === 0 && (
         <EmptyState
           title="No leave requests found"

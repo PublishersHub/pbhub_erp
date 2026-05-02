@@ -35,7 +35,7 @@ export default function EmployeesListPage() {
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebouncedValue(searchInput, 300);
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
       listEmployees({
         ...(departmentId && { departmentId }),
@@ -144,7 +144,7 @@ export default function EmployeesListPage() {
       </FilterBar>
 
       {loading && <SkeletonTable rows={6} cols={6} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
         <EmptyState
           title="No employees found"

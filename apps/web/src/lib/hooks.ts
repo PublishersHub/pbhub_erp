@@ -7,6 +7,7 @@ import { useAuth } from '@/context/auth-context';
 interface UseAsyncResult<T> {
   data: T | null;
   error: string | null;
+  errorStatus: number | undefined;
   loading: boolean;
   refetch: () => void;
 }
@@ -14,6 +15,7 @@ interface UseAsyncResult<T> {
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): UseAsyncResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
@@ -23,12 +25,16 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): UseAsyn
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setErrorStatus(undefined);
     fn()
       .then((result) => {
         if (!cancelled) setData(result);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Something went wrong');
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Something went wrong');
+          setErrorStatus((err as any)?.status);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -39,7 +45,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): UseAsyn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, ...deps]);
 
-  return { data, error, loading, refetch };
+  return { data, error, errorStatus, loading, refetch };
 }
 
 export function useDebouncedValue<T>(value: T, delay = 300): T {

@@ -39,7 +39,7 @@ export default function ExpenseClaimsPage() {
   const [view, setView] = useState<ViewMode>('my');
   const statusFilter = (searchParams.get('status') || '') as ExpenseClaimStatus | '';
 
-  const { data, error, loading, refetch } = useAsync(
+  const { data, error, errorStatus, loading, refetch } = useAsync(
     () => {
       if (view === 'pending' && canApprove) return getPendingClaims();
       if (view === 'all' && canReadAll) return getAllClaims(statusFilter || undefined);
@@ -146,7 +146,14 @@ export default function ExpenseClaimsPage() {
       )}
 
       {loading && <SkeletonTable rows={6} cols={7} />}
-      {error && <ErrorMessage message={error} onRetry={refetch} />}
+      {error && (
+        <ErrorMessage
+          message={error}
+          status={errorStatus}
+          onRetry={refetch}
+          fallback={errorStatus === 403 && view !== 'my' ? { label: 'View my claims', href: '/expenses/claims' } : undefined}
+        />
+      )}
       {data && total === 0 && (
         <EmptyState
           title={view === 'pending' ? 'No pending approvals' : 'No expense claims'}
