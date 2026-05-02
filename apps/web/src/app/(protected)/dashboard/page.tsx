@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
 import { listEmployees } from '@/lib/employee-api';
-import { getTodayReport, getMyToday, checkIn, checkOut } from '@/lib/attendance-api';
+import { getTodayReport, getMyToday, checkIn, checkOut, getAllSummaries } from '@/lib/attendance-api';
 import {
   getAllLeaveRequests,
   getMyLeaveRequests,
@@ -260,6 +260,321 @@ function PulsePill({
   );
 }
 
+// ─── Relative time helper ────────────────────
+
+function relativeTime(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 5) return `${diffWeeks}w ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths}mo ago`;
+}
+
+// ─── Attendance Heatmap ──────────────────────
+
+function AttendanceHeatmap({ activeEmployees }: { activeEmployees: number }) {
+  const now = new Date();
+  const fromDate = new Date(now);
+  fromDate.setDate(fromDate.getDate() - 29);
+  const fromStr = fromDate.toISOString().slice(0, 10);
+  const toStr = now.toISOString().slice(0, 10);
+
+  const summaries = useAsync(safe(() => getAllSummaries({ from: fromStr, to: toStr })), []);
+
+  // Build array of the past 30 days
+  const days = useMemo(() => {
+    const result: { date: string; presentCount: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      result.push({ date: d.toISOString().slice(0, 10), presentCount: 0 });
+    }
+    if (summaries.data) {
+      const byDate: Record<string, number> = {};
+      for (const s of summaries.data) {
+        if (s.status === 'PRESENT' || s.status === 'LATE' || s.status === 'HALF_DAY') {
+          byDate[s.date] = (byDate[s.date] ?? 0) + 1;
+        }
+      }
+      for (const day of result) {
+        day.presentCount = byDate[day.date] ?? 0;
+      }
+    }
+    return result;
+  }, [summaries.data]);
+
+  function cellColor(count: number): string {
+    if (count === 0 || activeEmployees === 0) return 'bg-muted';
+    const pct = count / activeEmployees;
+    if (pct < 0.25) return 'bg-primary/30';
+    if (pct < 0.6) return 'bg-primary/60';
+    return 'bg-primary';
+  }
+
+  const isEmpty = !summaries.loading && (!summaries.data || summaries.data.length === 0);
+
+  // Arrange 30 days into 6 cols × 5 rows
+  const cols = 6;
+  const rows = 5;
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Attendance over the past 30 days</span>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span>Less</span>
+          {['bg-muted', 'bg-primary/30', 'bg-primary/60', 'bg-primary'].map((cls) => (
+            <span key={cls} className={`inline-block h-3 w-3 rounded-sm ${cls}`} />
+          ))}
+          <span>More</span>
+        </div>
+      </div>
+      {summaries.loading ? (
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div key={i} className="h-4 w-4 animate-pulse rounded-sm bg-muted/60" />
+          ))}
+        </div>
+      ) : isEmpty ? (
+        <p className="text-xs text-muted-foreground">No attendance data yet for this window.</p>
+      ) : (
+        <div
+          className="grid gap-1"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+        >
+          {days.map((day) => (
+            <div
+              key={day.date}
+              className={`group relative h-4 w-4 rounded-sm transition-opacity hover:opacity-80 ${cellColor(day.presentCount)}`}
+              title={`${day.date}: ${day.presentCount} present`}
+            >
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded bg-popover px-2 py-1 text-[10px] whitespace-nowrap text-popover-foreground shadow-md ring-1 ring-border group-hover:block">
+                {day.date} · {day.presentCount} present
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Activity Feed ───────────────────────────
+
+interface ActivityEvent {
+  id: string;
+  timestamp: string;
+  type: string;
+  title: string;
+  subtitle?: string;
+  href?: string;
+  variant: 'leave' | 'expense' | 'onboarding';
+}
+
+const ActivityIcon = {
+  leave: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+    </svg>
+  ),
+  expense: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 3h6m-6 3h6M5.25 4.5a2.25 2.25 0 012.25-2.25h9a2.25 2.25 0 012.25 2.25V21l-4.5-1.5L9 21l-3-1.5L5.25 21V4.5z" />
+    </svg>
+  ),
+  onboarding: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  ),
+};
+
+const variantIconBg: Record<ActivityEvent['variant'], string> = {
+  leave: 'bg-violet/15 text-violet',
+  expense: 'bg-pink/15 text-pink',
+  onboarding: 'bg-cyan/15 text-cyan',
+};
+
+function ActivityFeed() {
+  const allLeaves = useAsync(safe(() => getAllLeaveRequests()), []);
+  const allClaims = useAsync(safe(() => getAllClaims()), []);
+  const allInstances = useAsync(safe(() => listInstances({})), []);
+
+  const events = useMemo<ActivityEvent[]>(() => {
+    const out: ActivityEvent[] = [];
+
+    // Leave events
+    for (const lr of allLeaves.data ?? []) {
+      out.push({
+        id: `leave-submitted-${lr.id}`,
+        timestamp: lr.submittedAt,
+        type: 'leave.submitted',
+        title: `${employeeName(lr.employee)} submitted a leave request`,
+        subtitle: `${lr.totalDays}d · ${lr.leavePolicy?.name ?? 'Leave'}`,
+        href: `/leave/requests/${lr.id}`,
+        variant: 'leave',
+      });
+      if ((lr.status === 'APPROVED' || lr.status === 'REJECTED') && lr.finalDecisionAt) {
+        out.push({
+          id: `leave-${lr.status.toLowerCase()}-${lr.id}`,
+          timestamp: lr.finalDecisionAt,
+          type: `leave.${lr.status.toLowerCase()}`,
+          title: `${employeeName(lr.employee)}'s leave was ${lr.status.toLowerCase()}`,
+          subtitle: `${lr.totalDays}d · ${lr.leavePolicy?.name ?? 'Leave'}`,
+          href: `/leave/requests/${lr.id}`,
+          variant: 'leave',
+        });
+      }
+    }
+
+    // Expense events
+    for (const c of allClaims.data ?? []) {
+      if (c.submittedAt) {
+        out.push({
+          id: `expense-submitted-${c.id}`,
+          timestamp: c.submittedAt,
+          type: 'expense.submitted',
+          title: `${employeeName(c.employee)} submitted an expense claim`,
+          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
+          href: `/expenses/claims/${c.id}`,
+          variant: 'expense',
+        });
+      }
+      if (c.status === 'REIMBURSED' && c.reimbursedAt) {
+        out.push({
+          id: `expense-reimbursed-${c.id}`,
+          timestamp: c.reimbursedAt,
+          type: 'expense.reimbursed',
+          title: `${employeeName(c.employee)}'s expense was reimbursed`,
+          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
+          href: `/expenses/claims/${c.id}`,
+          variant: 'expense',
+        });
+      }
+      if (c.status === 'REJECTED' && c.finalDecisionAt) {
+        out.push({
+          id: `expense-rejected-${c.id}`,
+          timestamp: c.finalDecisionAt,
+          type: 'expense.rejected',
+          title: `${employeeName(c.employee)}'s expense was rejected`,
+          subtitle: `${c.title} · ${formatCurrency(c.totalAmount)}`,
+          href: `/expenses/claims/${c.id}`,
+          variant: 'expense',
+        });
+      }
+    }
+
+    // Onboarding events
+    for (const inst of (allInstances.data ?? []) as any[]) {
+      const startTs = inst.startedAt ?? inst.createdAt;
+      if (startTs) {
+        out.push({
+          id: `onboarding-started-${inst.id}`,
+          timestamp: startTs,
+          type: 'onboarding.started',
+          title: `${employeeName(inst.employee)} started onboarding`,
+          subtitle: `Joined ${formatDate(inst.joiningDate)}`,
+          href: `/onboarding/${inst.id}`,
+          variant: 'onboarding',
+        });
+      }
+      if (inst.status === 'COMPLETED' && inst.completedAt) {
+        out.push({
+          id: `onboarding-completed-${inst.id}`,
+          timestamp: inst.completedAt,
+          type: 'onboarding.completed',
+          title: `${employeeName(inst.employee)} completed onboarding`,
+          subtitle: `Joined ${formatDate(inst.joiningDate)}`,
+          href: `/onboarding/${inst.id}`,
+          variant: 'onboarding',
+        });
+      }
+    }
+
+    return out.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
+  }, [allLeaves.data, allClaims.data, allInstances.data]);
+
+  const isLoading = allLeaves.loading || allClaims.loading || allInstances.loading;
+
+  return (
+    <div>
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="h-9 w-9 animate-pulse rounded-lg bg-muted/60" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-2/3 animate-pulse rounded bg-muted/60" />
+                <div className="h-2.5 w-1/3 animate-pulse rounded bg-muted/40" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : events.length === 0 ? (
+        <EmptyState title="No recent activity" description="Events from leave, expenses, and onboarding will appear here." />
+      ) : (
+        <div className="-mx-2 space-y-0.5">
+          {events.map((ev) => (
+            ev.href ? (
+              <Link
+                key={ev.id}
+                href={ev.href}
+                className="flex items-center justify-between rounded-xl px-2 py-2.5 transition-colors hover:bg-secondary/60"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variantIconBg[ev.variant]}`}>
+                    {ActivityIcon[ev.variant]}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{ev.title}</p>
+                    {ev.subtitle && (
+                      <p className="truncate text-xs text-muted-foreground">{ev.subtitle}</p>
+                    )}
+                  </div>
+                </div>
+                <span className="ml-3 shrink-0 text-xs text-muted-foreground tabular-nums">
+                  {relativeTime(ev.timestamp)}
+                </span>
+              </Link>
+            ) : (
+              <div
+                key={ev.id}
+                className="flex items-center justify-between rounded-xl px-2 py-2.5"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${variantIconBg[ev.variant]}`}>
+                    {ActivityIcon[ev.variant]}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{ev.title}</p>
+                    {ev.subtitle && (
+                      <p className="truncate text-xs text-muted-foreground">{ev.subtitle}</p>
+                    )}
+                  </div>
+                </div>
+                <span className="ml-3 shrink-0 text-xs text-muted-foreground tabular-nums">
+                  {relativeTime(ev.timestamp)}
+                </span>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Role variant picker ─────────────────────
 
 type DashVariant = 'company' | 'finance' | 'recruiter' | 'manager' | 'employee';
@@ -420,6 +735,11 @@ function CompanyDashboard() {
             </div>
           </div>
         )}
+      </SectionCard>
+
+      {/* Attendance heatmap */}
+      <SectionCard title="Attendance heatmap" subtitle="Past 30 days">
+        <AttendanceHeatmap activeEmployees={activeEmployees} />
       </SectionCard>
 
       {/* Pending approvals + Who's on leave */}
@@ -662,6 +982,11 @@ function CompanyDashboard() {
             })}
           </div>
         )}
+      </SectionCard>
+
+      {/* Activity feed */}
+      <SectionCard title="Activity" subtitle="Recent events across the company">
+        <ActivityFeed />
       </SectionCard>
     </div>
   );
