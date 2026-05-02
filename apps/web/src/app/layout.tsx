@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AuthProvider } from '@/context/auth-context';
 import { ThemeProvider, themeInitScript } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast';
+import { CommandPaletteProvider } from '@/components/command-palette';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-foreground">
         <ThemeProvider>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <CommandPaletteProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </CommandPaletteProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>
