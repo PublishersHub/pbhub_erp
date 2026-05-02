@@ -19,13 +19,16 @@ import {
   sortLocal,
   paginateLocal,
 } from '@/lib/hooks';
-import { listEmployees, listDepartments, listDesignations } from '@/lib/employee-api';
+import { listEmployees, listMyTeam, listDepartments, listDesignations } from '@/lib/employee-api';
 import { employeeName } from '@/lib/format';
 import type { Department, Designation } from '@/types/employee';
 import { useState } from 'react';
 
 export default function EmployeesListPage() {
   const { can } = usePermission();
+  // Admin view = HR/super-admin level (can create or read sensitive data).
+  // Otherwise (managers, recruiters, etc.) only see themselves + direct reports.
+  const isAdminView = can('employee.create') || can('employee.read_sensitive');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
 
@@ -37,13 +40,15 @@ export default function EmployeesListPage() {
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
-      listEmployees({
-        ...(departmentId && { departmentId }),
-        ...(designationId && { designationId }),
-        ...(isActive && { isActive }),
-        ...(debouncedSearch && { search: debouncedSearch }),
-      }),
-    [departmentId, designationId, isActive, debouncedSearch],
+      isAdminView
+        ? listEmployees({
+            ...(departmentId && { departmentId }),
+            ...(designationId && { designationId }),
+            ...(isActive && { isActive }),
+            ...(debouncedSearch && { search: debouncedSearch }),
+          })
+        : listMyTeam(),
+    [isAdminView, departmentId, designationId, isActive, debouncedSearch],
   );
 
   const { data: departments } = useAsync(() => listDepartments(), []);
@@ -78,7 +83,8 @@ export default function EmployeesListPage() {
   return (
     <div>
       <PageHeader
-        title="Employees"
+        title={isAdminView ? 'Employees' : 'My team'}
+        description={isAdminView ? undefined : 'You and your direct reports.'}
         actions={
           can('employee.create') ? (
             <Link
@@ -91,7 +97,7 @@ export default function EmployeesListPage() {
         }
       />
 
-      <FilterBar
+      {isAdminView && <FilterBar
         onClear={() => {
           setSearchInput('');
           setParams({ departmentId: null, designationId: null, isActive: null, search: null, page: null });
@@ -141,7 +147,7 @@ export default function EmployeesListPage() {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-      </FilterBar>
+      </FilterBar>}
 
       {loading && <SkeletonTable rows={6} cols={6} />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
