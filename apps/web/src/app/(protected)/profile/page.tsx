@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { InlineEdit } from '@/components/ui/inline-edit';
 import { LoadingButton } from '@/components/ui/loading-button';
+import { EmployeeAvatar } from '@/components/ui/employee-avatar';
+import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -13,6 +15,8 @@ import {
   changeMyPassword,
   type AccountProfile,
 } from '@/lib/account-api';
+import { getMyEmployee, updateMyEmployee } from '@/lib/employee-api';
+import type { Employee } from '@/types/employee';
 
 const inputCls =
   'mt-1 block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
@@ -46,6 +50,11 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  // Employee row in the active org. May be null for accounts with no employee
+  // profile (e.g. an org admin who isn't an employee). The avatar still renders
+  // initials in that case; the upload affordance is hidden.
+  const [employee, setEmployee] = useState<Employee | null>(null);
+
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -58,8 +67,15 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const data = await getMyAccount();
-      setProfile(data);
+      const [account, emp] = await Promise.all([
+        getMyAccount(),
+        // /api/employees/me may 403 for accounts without `employee.read_own`
+        // (rare, but possible for super-admin without an employee row). Fall
+        // back to null so the page still renders.
+        getMyEmployee().catch(() => null),
+      ]);
+      setProfile(account);
+      setEmployee(emp);
     } catch {
       toast.error('Failed to load profile');
     } finally {
@@ -71,6 +87,19 @@ export default function ProfilePage() {
     void loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handlePhotoUploaded(key: string) {
+    try {
+      const updated = await updateMyEmployee({ profileImageUrl: key });
+      setEmployee(updated);
+      toast.success('Profile photo updated');
+    } catch (err) {
+      toast.error(
+        'Failed to update photo',
+        err instanceof Error ? err.message : 'Please try again',
+      );
+    }
+  }
 
   // InlineEdit save wrapper — patches a single field, refreshes auth-context.
   async function saveField(field: 'firstName' | 'lastName' | 'email', next: string) {
@@ -121,6 +150,40 @@ export default function ProfilePage() {
       <PageHeader title="My Profile" description="Manage your account details and password." />
 
       <div className="grid gap-6 max-w-2xl">
+        {/* Avatar + identity header */}
+        <div className="flex items-center gap-5 rounded-2xl border border-hairline bg-card p-5 shadow-soft">
+          {employee ? (
+            <AvatarUploader
+              firstName={profile?.firstName}
+              lastName={profile?.lastName}
+              imageUrl={employee.profileImageUrl}
+              seed={employee.id}
+              employeeId={employee.id}
+              onUploaded={handlePhotoUploaded}
+              onError={(msg) => toast.error('Upload failed', msg)}
+            />
+          ) : (
+            <EmployeeAvatar
+              size={96}
+              firstName={profile?.firstName}
+              lastName={profile?.lastName}
+              seed={profile?.id ?? 'me'}
+              imageUrl={null}
+            />
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold text-foreground">
+              {`${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Your account'}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">{profile?.email}</p>
+            {!employee && (
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                No employee profile in this organization — photo cannot be set here.
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Completeness meter */}
         <div className="rounded-2xl border border-hairline bg-card p-4">
           <div className="flex items-center justify-between mb-2">

@@ -142,6 +142,16 @@ export interface UpdateEmployeePayload {
   designationId?: string;
   reportingManagerId?: string;
   userId?: string;
+  /** Storage key from /api/uploads (purpose=profile-photo), or a legacy URL. */
+  profileImageUrl?: string | null;
+}
+
+/**
+ * Self-service patch payload — only fields a regular employee
+ * (with `employee.read_own`) is allowed to mutate on themselves.
+ */
+export interface UpdateSelfEmployeePayload {
+  profileImageUrl?: string | null;
 }
 
 export interface CreateEmploymentDetailPayload {

@@ -11,6 +11,7 @@ import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
 import { listExpenseCategories, listExpensePolicies, createExpenseClaim } from '@/lib/expense-api';
 import { formatCurrency } from '@/lib/format';
+import { uploadFile } from '@/lib/upload-api';
 
 interface ItemRow {
   expenseCategoryId: string;
@@ -19,7 +20,8 @@ interface ItemRow {
   expenseDate: string;
   receiptUrl: string;
   receiptFileName: string;
-  receiptFiles: File[];
+  receiptUploading: boolean;
+  receiptError: string;
   notes: string;
 }
 
@@ -31,7 +33,8 @@ function emptyItem(): ItemRow {
     expenseDate: '',
     receiptUrl: '',
     receiptFileName: '',
-    receiptFiles: [],
+    receiptUploading: false,
+    receiptError: '',
     notes: '',
   };
 }
@@ -68,20 +71,61 @@ export default function NewExpenseClaimPage() {
     setItems((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
   }
 
-  function updateReceiptFiles(idx: number, files: File[]) {
-    setItems((prev) =>
-      prev.map((r, i) => {
-        if (i !== idx) return r;
-        const file = files[0];
-        return {
-          ...r,
-          receiptFiles: files,
-          // Auto-fill receiptFileName from the picked file
-          receiptFileName: file ? file.name : r.receiptFileName,
-        };
-      }),
-    );
+  function patchItem(idx: number, patch: Partial<ItemRow>) {
+    setItems((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   }
+
+  async function handleReceiptFiles(idx: number, files: File[]) {
+    const file = files[0];
+    if (!file) {
+      // User cleared the file — drop the receipt info for this row
+      patchItem(idx, {
+        receiptUrl: '',
+        receiptFileName: '',
+        receiptUploading: false,
+        receiptError: '',
+      });
+      return;
+    }
+
+    // Optimistically show "Uploading…" and clear any prior error / stored key
+    patchItem(idx, {
+      receiptUploading: true,
+      receiptError: '',
+      receiptUrl: '',
+      receiptFileName: file.name,
+    });
+
+    try {
+      const { key, filename } = await uploadFile(file, 'expense-receipt');
+      patchItem(idx, {
+        receiptUrl: key,
+        receiptFileName: filename || file.name,
+        receiptUploading: false,
+        receiptError: '',
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      patchItem(idx, {
+        receiptUploading: false,
+        receiptError: msg,
+        receiptUrl: '',
+        receiptFileName: '',
+      });
+      toast.error('Receipt upload failed', msg);
+    }
+  }
+
+  function clearReceipt(idx: number) {
+    patchItem(idx, {
+      receiptUrl: '',
+      receiptFileName: '',
+      receiptUploading: false,
+      receiptError: '',
+    });
+  }
+
+  const anyUploading = items.some((i) => i.receiptUploading);
 
   const totalAmount = items.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
@@ -90,6 +134,11 @@ export default function NewExpenseClaimPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (submitting) return;
+
+    if (anyUploading) {
+      setFormError('Please wait for receipt uploads to finish');
+      return;
+    }
 
     const validItems = items.filter((r) => r.expenseCategoryId && r.description.trim() && r.amount && r.expenseDate);
     if (validItems.length === 0) {
@@ -213,30 +262,48 @@ export default function NewExpenseClaimPage() {
                 </div>
                 <div>
                   <label className={labelCls}>Receipt</label>
-                  <FileUpload
-                    accept="image/*,application/pdf"
-                    multiple={false}
-                    maxSizeMb={10}
-                    value={item.receiptFiles}
-                    onChange={(files) => updateReceiptFiles(idx, files)}
-                    hint="Image or PDF, up to 10 MB"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className={labelCls}>Receipt URL</label>
-                    <input
-                      value={item.receiptUrl}
-                      onChange={(e) => updateItem(idx, 'receiptUrl', e.target.value)}
-                      className={inputCls}
-                      placeholder="https://… (if hosted)"
+                  {item.receiptUploading ? (
+                    <div className="mt-1 flex items-center gap-2 rounded-md border border-input bg-card px-3 py-2 text-sm text-muted-foreground">
+                      <svg className="h-4 w-4 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <span>Uploading {item.receiptFileName || 'file'}…</span>
+                    </div>
+                  ) : item.receiptUrl ? (
+                    <div className="mt-1 flex items-center gap-2 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-sm">
+                      <svg className="h-4 w-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="flex-1 truncate text-success">
+                        Uploaded <span className="font-medium">{item.receiptFileName}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => clearReceipt(idx)}
+                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-destructive"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <FileUpload
+                      accept="image/*,application/pdf"
+                      multiple={false}
+                      maxSizeMb={10}
+                      value={[]}
+                      onChange={(files) => handleReceiptFiles(idx, files)}
+                      hint="Image or PDF, up to 10 MB"
+                      className="mt-1"
                     />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Notes</label>
-                    <input value={item.notes} onChange={(e) => updateItem(idx, 'notes', e.target.value)} className={inputCls} placeholder="Optional" />
-                  </div>
+                  )}
+                  {item.receiptError && (
+                    <p className="mt-1 text-xs text-destructive">{item.receiptError}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelCls}>Notes</label>
+                  <input value={item.notes} onChange={(e) => updateItem(idx, 'notes', e.target.value)} className={inputCls} placeholder="Optional" />
                 </div>
               </div>
             ))}

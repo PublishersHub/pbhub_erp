@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { EmployeeAvatar } from '@/components/ui/employee-avatar';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/toast';
 import { useAsync, usePermission } from '@/lib/hooks';
@@ -79,6 +80,29 @@ export default function EmployeeDetailPage() {
           </div>
         }
       />
+
+      {/* Identity row — avatar + headline */}
+      <div className="mb-6 flex items-center gap-4 rounded-lg border border-border bg-card p-5 shadow-soft">
+        <EmployeeAvatar
+          size={64}
+          firstName={emp.firstName}
+          lastName={emp.lastName}
+          imageUrl={emp.profileImageUrl}
+          seed={emp.id}
+        />
+        <div className="min-w-0">
+          <p className="truncate text-lg font-semibold text-foreground">
+            {emp.firstName} {emp.lastName}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">
+            {emp.designation?.name ?? 'No designation'}
+            {emp.department?.name ? ` · ${emp.department.name}` : ''}
+          </p>
+          {emp.employeeCode && (
+            <p className="mt-0.5 text-xs text-muted-foreground/70">{emp.employeeCode}</p>
+          )}
+        </div>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}

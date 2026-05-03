@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Loading } from '@/components/ui/loading';
 import { LoadingButton } from '@/components/ui/loading-button';
+import { AvatarUploader } from '@/components/ui/avatar-uploader';
+import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
 import {
   getEmployee,
@@ -15,7 +17,7 @@ import {
   listDesignations,
   listEmployees,
 } from '@/lib/employee-api';
-import type { Gender, EmploymentType, EmploymentStatus } from '@/types/employee';
+import type { Gender, EmploymentType, EmploymentStatus, Employee } from '@/types/employee';
 
 const GENDERS: Gender[] = ['MALE', 'FEMALE', 'OTHER'];
 const EMPLOYMENT_TYPES: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
@@ -30,6 +32,7 @@ const EMPLOYMENT_STATUSES: EmploymentStatus[] = [
 export default function EditEmployeePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,7 +40,11 @@ export default function EditEmployeePage() {
     document.title = 'Edit Employee · PbHub';
   }, []);
 
-  const { data: emp, loading: empLoading } = useAsync(() => getEmployee(id), [id]);
+  // We treat the photo as locally mutable on this page (separate from the
+  // form submit) so the uploader can show the new image immediately without
+  // requiring the user to also click "Save Changes".
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const { data: emp, loading: empLoading } = useAsync<Employee>(() => getEmployee(id), [id]);
   const { data: departments, loading: deptLoading } = useAsync(() => listDepartments(), []);
   const { data: designations, loading: desigLoading } = useAsync(() => listDesignations(), []);
   const { data: employees, loading: empListLoading } = useAsync(() => listEmployees(), []);
@@ -65,6 +72,7 @@ export default function EditEmployeePage() {
 
   useEffect(() => {
     if (emp && !initialized) {
+      setPhotoUrl(emp.profileImageUrl);
       setFirstName(emp.firstName);
       setLastName(emp.lastName);
       setDateOfBirth(emp.dateOfBirth ? emp.dateOfBirth.substring(0, 10) : '');
@@ -96,6 +104,21 @@ export default function EditEmployeePage() {
   }, [emp, initialized]);
 
   const refsLoading = empLoading || deptLoading || desigLoading || empListLoading;
+
+  async function handlePhotoUploaded(key: string) {
+    try {
+      const updated = await updateEmployee(id, { profileImageUrl: key });
+      // The API enriches `profileImageUrl` to a fresh signed URL, so `updated`
+      // is renderable straight away.
+      setPhotoUrl(updated.profileImageUrl);
+      toast.success('Profile photo updated');
+    } catch (err) {
+      toast.error(
+        'Failed to save photo',
+        err instanceof Error ? err.message : 'Please try again',
+      );
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -154,6 +177,24 @@ export default function EditEmployeePage() {
         onSubmit={handleSubmit}
         className="max-w-2xl space-y-5 rounded-lg border border-border bg-card p-6 shadow-soft"
       >
+        {/* Profile photo — saved immediately on upload, separate from form submit */}
+        <div className="flex items-center gap-4">
+          <AvatarUploader
+            firstName={firstName}
+            lastName={lastName}
+            imageUrl={photoUrl}
+            seed={id}
+            employeeId={id}
+            onUploaded={handlePhotoUploaded}
+            onError={(msg) => toast.error('Upload failed', msg)}
+          />
+          <div className="text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Profile photo</p>
+            <p className="mt-0.5">PNG, JPG or WebP up to 5 MB.</p>
+            <p className="mt-0.5">Saved immediately — no need to submit the form.</p>
+          </div>
+        </div>
+
         <h3 className="text-sm font-semibold uppercase text-foreground">Basic Information</h3>
 
         <div>

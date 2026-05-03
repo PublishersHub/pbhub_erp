@@ -6,7 +6,9 @@ import { useToast } from '@/components/toast';
 import { usePermission } from '@/lib/hooks';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { FileUpload } from '@/components/ui/file-upload';
 import { updateBranding } from '@/lib/organizations-api';
+import { uploadFile, type UploadPurpose } from '@/lib/upload-api';
 
 // ─── Hex validation ───────────────────────────
 
@@ -146,6 +148,135 @@ function PreviewCard({
   );
 }
 
+// ─── Brand asset uploader ─────────────────────
+
+interface BrandAssetFieldProps {
+  label: string;
+  helper: string;
+  url: string;
+  onChange: (url: string) => void;
+  purpose: UploadPurpose;
+  accept: string;
+  maxSizeMb: number;
+  thumbClassName?: string;
+  thumbAlt: string;
+}
+
+function BrandAssetField({
+  label,
+  helper,
+  url,
+  onChange,
+  purpose,
+  accept,
+  maxSizeMb,
+  thumbClassName = 'h-12 w-12 rounded-md object-cover',
+  thumbAlt,
+}: BrandAssetFieldProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const toast = useToast();
+
+  async function handleFiles(files: File[]) {
+    const file = files[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const res = await uploadFile(file, purpose);
+      onChange(res.url);
+      toast.success(`${label} uploaded`, file.name);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setUploadError(msg);
+      toast.error(`${label} upload failed`, msg);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleRemove() {
+    onChange('');
+    setUploadError(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+
+      {url && (
+        <div className="flex items-center gap-3 rounded-lg border border-hairline bg-card p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={thumbAlt}
+            className={`shrink-0 ${thumbClassName}`}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-muted-foreground" title={url}>
+              {url}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Pick a new file below to replace, or remove to clear.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={uploading}
+            className="motion-press rounded-md border border-hairline bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
+      <FileUpload
+        accept={accept}
+        multiple={false}
+        maxSizeMb={maxSizeMb}
+        value={[]}
+        onChange={handleFiles}
+        hint={url ? 'Drop a new file to replace the current one' : undefined}
+      />
+
+      {uploading && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <svg
+            className="h-3.5 w-3.5 animate-spin text-primary"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
+          </svg>
+          Uploading…
+        </div>
+      )}
+
+      {uploadError && (
+        <p className="text-xs text-destructive">{uploadError}</p>
+      )}
+
+      <p className="text-xs text-muted-foreground">{helper}</p>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────
 
 export default function BrandingSettingsPage() {
@@ -276,7 +407,15 @@ export default function BrandingSettingsPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ── Identity card (text + color) ── */}
           <div className="surface-elevated rounded-2xl border border-hairline p-6 shadow-soft space-y-5">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Identity</h2>
+              <p className="text-xs text-muted-foreground">
+                Name, accent color, and tagline shown across the app.
+              </p>
+            </div>
+
             {/* Brand name */}
             <div className="space-y-1.5">
               <label
@@ -295,27 +434,6 @@ export default function BrandingSettingsPage() {
               />
               <p className="text-xs text-muted-foreground">
                 Shown in the sidebar and browser tab. Leave blank to use the organization name.
-              </p>
-            </div>
-
-            {/* Logo URL */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="logo-url"
-                className="block text-sm font-medium text-foreground"
-              >
-                Logo URL
-              </label>
-              <input
-                id="logo-url"
-                type="url"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
-              />
-              <p className="text-xs text-muted-foreground">
-                Public URL to your logo image. Square works best (e.g., 200×200).
               </p>
             </div>
 
@@ -429,48 +547,53 @@ export default function BrandingSettingsPage() {
                 Optional short subline under the brand name.
               </p>
             </div>
+          </div>
 
-            {/* Favicon URL */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="favicon-url"
-                className="block text-sm font-medium text-foreground"
-              >
-                Favicon URL
-              </label>
-              <input
-                id="favicon-url"
-                type="url"
-                value={faviconUrl}
-                onChange={(e) => setFaviconUrl(e.target.value)}
-                placeholder="https://example.com/favicon.png"
-                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
-              />
+          {/* ── Brand assets card (file uploads) ── */}
+          <div className="surface-elevated rounded-2xl border border-hairline p-6 shadow-soft space-y-6">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Brand assets</h2>
               <p className="text-xs text-muted-foreground">
-                Public URL to your favicon (32×32 or 64×64 PNG/ICO recommended).
+                Upload images for your logo, favicon, and login background. Files are stored
+                publicly and served directly.
               </p>
             </div>
 
-            {/* Login background image */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="login-bg"
-                className="block text-sm font-medium text-foreground"
-              >
-                Login background image
-              </label>
-              <input
-                id="login-bg"
-                type="url"
-                value={loginBg}
-                onChange={(e) => setLoginBg(e.target.value)}
-                placeholder="https://example.com/background.jpg"
-                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional. Public URL to the image shown behind the sign-in form. Landscape works best.
-              </p>
-            </div>
+            <BrandAssetField
+              label="Brand logo"
+              helper="Recommended 200×200, PNG/SVG/WebP/JPEG, up to 2 MB."
+              url={logoUrl}
+              onChange={setLogoUrl}
+              purpose="org-logo"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              maxSizeMb={2}
+              thumbClassName="h-12 w-12 rounded-md object-cover bg-muted"
+              thumbAlt="Brand logo"
+            />
+
+            <BrandAssetField
+              label="Favicon"
+              helper="32×32 or 64×64, PNG or ICO, up to 256 KB."
+              url={faviconUrl}
+              onChange={setFaviconUrl}
+              purpose="org-favicon"
+              accept="image/png,image/x-icon,image/vnd.microsoft.icon"
+              maxSizeMb={0.25}
+              thumbClassName="h-8 w-8 rounded object-contain bg-muted"
+              thumbAlt="Favicon"
+            />
+
+            <BrandAssetField
+              label="Login background"
+              helper="Landscape orientation works best, PNG/JPEG/WebP, up to 5 MB."
+              url={loginBg}
+              onChange={setLoginBg}
+              purpose="org-login-bg"
+              accept="image/png,image/jpeg,image/webp"
+              maxSizeMb={5}
+              thumbClassName="h-12 w-20 rounded-md object-cover bg-muted"
+              thumbAlt="Login background"
+            />
           </div>
 
           {error && <ErrorMessage message={error} />}

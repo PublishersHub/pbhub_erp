@@ -3,6 +3,7 @@ import type {
   Employee,
   CreateEmployeePayload,
   UpdateEmployeePayload,
+  UpdateSelfEmployeePayload,
   CreateEmploymentDetailPayload,
   EmploymentDetail,
   EmployeeFilters,
@@ -40,6 +41,22 @@ export function listEmployees(filters?: EmployeeFilters) {
  */
 export function listMyTeam() {
   return get<Employee[]>('/api/employees/my-team');
+}
+
+/**
+ * Get the calling user's own employee profile, or null if no employee row
+ * is linked to their account. Requires `employee.read_own`.
+ */
+export function getMyEmployee() {
+  return get<Employee | null>('/api/employees/me');
+}
+
+/**
+ * Self-service patch on the caller's own employee record. Currently only
+ * supports `profileImageUrl`. Requires `employee.read_own`.
+ */
+export function updateMyEmployee(payload: UpdateSelfEmployeePayload) {
+  return patch<Employee>('/api/employees/me', payload);
 }
 
 export function getEmployee(id: string) {

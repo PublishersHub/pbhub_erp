@@ -11,6 +11,7 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { EmployeeAvatar } from '@/components/ui/employee-avatar';
 import {
   useAsync,
   usePermission,
@@ -23,31 +24,6 @@ import { listEmployees, listMyTeam, listDepartments, listDesignations } from '@/
 import { employeeName } from '@/lib/format';
 import type { Department, Designation, Employee } from '@/types/employee';
 import { useState } from 'react';
-
-// ─── Avatar helpers ───────────────────────────
-
-const GRADIENT_CLASSES = [
-  'from-violet-500 to-purple-600',
-  'from-blue-500 to-cyan-500',
-  'from-emerald-500 to-teal-500',
-  'from-orange-500 to-amber-500',
-  'from-rose-500 to-pink-500',
-  'from-indigo-500 to-blue-600',
-  'from-teal-500 to-emerald-600',
-  'from-fuchsia-500 to-violet-500',
-];
-
-function gradientFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  return GRADIENT_CLASSES[hash % GRADIENT_CLASSES.length];
-}
-
-function initials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-}
 
 // ─── CSV helpers ──────────────────────────────
 
@@ -348,7 +324,18 @@ export default function EmployeesListPage() {
                         </Link>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
-                        {emp.firstName} {emp.lastName}
+                        <span className="flex items-center gap-2">
+                          <EmployeeAvatar
+                            size={32}
+                            firstName={emp.firstName}
+                            lastName={emp.lastName}
+                            imageUrl={emp.profileImageUrl}
+                            seed={emp.id}
+                          />
+                          <span className="truncate">
+                            {emp.firstName} {emp.lastName}
+                          </span>
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                         {emp.department?.name ?? '—'}
@@ -410,7 +397,6 @@ export default function EmployeesListPage() {
           {/* Mobile card list */}
           <div className="block md:hidden space-y-3">
             {items.map((emp) => {
-              const gradient = gradientFor(emp.id);
               return (
                 <div
                   key={emp.id}
@@ -430,11 +416,13 @@ export default function EmployeesListPage() {
                     }}
                     className="h-4 w-4 shrink-0 rounded border-input"
                   />
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${gradient} text-xs font-bold text-white shadow-sm`}
-                  >
-                    {initials(emp.firstName, emp.lastName)}
-                  </div>
+                  <EmployeeAvatar
+                    size={40}
+                    firstName={emp.firstName}
+                    lastName={emp.lastName}
+                    imageUrl={emp.profileImageUrl}
+                    seed={emp.id}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-foreground">

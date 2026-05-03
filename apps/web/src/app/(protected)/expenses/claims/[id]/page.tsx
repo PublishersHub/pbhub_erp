@@ -18,9 +18,71 @@ import {
   reviewExpenseClaim,
   reimburseExpenseClaim,
 } from '@/lib/expense-api';
+import { resolveStorageUrl } from '@/lib/upload-api';
 import { formatCurrency, formatDate, formatDateTime, employeeName } from '@/lib/format';
 import { useToast } from '@/components/toast';
 import type { ExpenseClaim, ExpenseApprovalDecision } from '@/types/expense';
+
+function isImageReceipt(filename: string | null | undefined, key: string): boolean {
+  const target = (filename || key).toLowerCase();
+  return /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(target);
+}
+
+function isPdfReceipt(filename: string | null | undefined, key: string): boolean {
+  const target = (filename || key).toLowerCase();
+  return /\.pdf(\?|$)/i.test(target);
+}
+
+function ReceiptLink({ keyOrUrl, filename }: { keyOrUrl: string; filename?: string | null }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setUrl(null);
+    setError(null);
+    resolveStorageUrl(keyOrUrl)
+      .then((u) => { if (!cancelled) setUrl(u); })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load'); });
+    return () => { cancelled = true; };
+  }, [keyOrUrl]);
+
+  const display = filename || 'View receipt';
+  const isImage = isImageReceipt(filename, keyOrUrl);
+  const isPdf = isPdfReceipt(filename, keyOrUrl);
+
+  if (error) {
+    return <span className="text-xs text-destructive" title={error}>Unavailable</span>;
+  }
+  if (!url) {
+    return <span className="text-xs text-muted-foreground/70">Loading…</span>;
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 text-primary hover:underline text-xs font-medium"
+      title={display}
+    >
+      {isImage ? (
+        <img
+          src={url}
+          alt={display}
+          className="h-[60px] w-[60px] shrink-0 rounded border border-border object-cover"
+        />
+      ) : isPdf ? (
+        <span className="text-base leading-none" aria-hidden>📄</span>
+      ) : (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V20a2 2 0 01-2 2z" />
+        </svg>
+      )}
+      <span className="truncate max-w-[160px]">{display}</span>
+    </a>
+  );
+}
 
 export default function ExpenseClaimDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -298,9 +360,7 @@ export default function ExpenseClaimDetailPage() {
                         <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-foreground">{formatCurrency(item.amount)}</td>
                         <td className="px-4 py-2">
                           {item.receiptUrl ? (
-                            <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs font-medium">
-                              {item.receiptFileName || 'View'}
-                            </a>
+                            <ReceiptLink keyOrUrl={item.receiptUrl} filename={item.receiptFileName} />
                           ) : (
                             <span className="text-xs text-muted-foreground/70">None</span>
                           )}
