@@ -61,6 +61,13 @@ export interface AttendanceLog {
   ipAddress: string | null;
   source: AttendanceLogSource;
   notes: string | null;
+  // Device + location metadata captured at the moment of check-in/out
+  userAgent: string | null;
+  deviceType: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  accuracyMeters: string | null;
+  locationLabel: string | null;
   createdAt: string;
   employee?: EmployeeRef;
 }
@@ -144,6 +151,14 @@ export interface MonthlyReport {
 export interface CheckInPayload {
   notes?: string;
   source?: AttendanceLogSource;
+  // Device metadata
+  userAgent?: string;
+  deviceType?: string;
+  // Location metadata (opt-in client-side via navigator.geolocation)
+  latitude?: number;
+  longitude?: number;
+  accuracyMeters?: number;
+  locationLabel?: string;
 }
 
 export interface CreateAttendancePolicyPayload {

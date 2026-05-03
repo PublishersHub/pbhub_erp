@@ -49,6 +49,10 @@ export function getMySummaries(from: string, to: string) {
   return get<AttendanceDailySummary[]>(`/api/attendance/my/summaries?from=${from}&to=${to}`);
 }
 
+export function getMyPolicy() {
+  return get<AttendancePolicy | null>('/api/attendance/my-policy');
+}
+
 // ─── Admin Attendance ───────────────────────
 
 export function getAllSummaries(filters?: { employeeId?: string; from?: string; to?: string }) {

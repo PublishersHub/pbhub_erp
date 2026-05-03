@@ -9,6 +9,7 @@ import { useAsync } from '@/lib/hooks';
 import { getUnreadCount } from '@/lib/notification-api';
 import { OrgSwitcher } from './org-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { QuickActionsWidget } from '@/components/quick-actions-widget';
 
 // ─── Icons ────────────────────────────────────
 
@@ -71,6 +72,11 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  Inbox: (p: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className={p.className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    </svg>
+  ),
 };
 
 interface NavChild {
@@ -89,6 +95,12 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Icon.Dashboard },
+  {
+    href: '/inbox',
+    label: 'Inbox',
+    icon: Icon.Inbox,
+    permissions: ['leave.approve', 'expense.approve', 'onboarding.task.update', 'attendance.manage'],
+  },
   {
     href: '/employees',
     label: 'Employees',
@@ -436,6 +448,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Content */}
         <main className="flex-1 p-6">{children}</main>
       </div>
+
+      {/* Floating quick-actions widget */}
+      <QuickActionsWidget />
     </div>
   );
 }

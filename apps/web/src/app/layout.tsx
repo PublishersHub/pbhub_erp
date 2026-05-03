@@ -4,6 +4,7 @@ import { ThemeProvider, themeInitScript } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/toast';
 import { CommandPaletteProvider } from '@/components/command-palette';
 import { BrandingProvider } from '@/components/branding-provider';
+import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToastProvider>
             <AuthProvider>
               <BrandingProvider>
-                <CommandPaletteProvider>{children}</CommandPaletteProvider>
+                <ConfirmProvider>
+                  <CommandPaletteProvider>{children}</CommandPaletteProvider>
+                </ConfirmProvider>
               </BrandingProvider>
             </AuthProvider>
           </ToastProvider>

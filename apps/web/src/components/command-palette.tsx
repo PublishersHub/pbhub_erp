@@ -17,14 +17,19 @@ import { useToast } from '@/components/toast';
 import { listEmployees } from '@/lib/employee-api';
 import { listCandidates } from '@/lib/recruitment-api';
 import { checkIn, checkOut } from '@/lib/attendance-api';
+import { gatherCheckInMetadata, metaHasLocation } from '@/lib/attendance-metadata';
+import { getAllLeaveRequests, getPendingApprovals, getMyLeaveRequests } from '@/lib/leave-api';
+import { getAllClaims, getMyClaims, getPendingClaims } from '@/lib/expense-api';
 import type { Employee } from '@/types/employee';
 import type { Candidate } from '@/types/recruitment';
+import type { LeaveRequest } from '@/types/leave';
+import type { ExpenseClaim } from '@/types/expense';
 
 // ─── Types ────────────────────────────────────
 
 interface CommandItem {
   id: string;
-  group: 'navigation' | 'employees' | 'candidates' | 'actions';
+  group: 'navigation' | 'employees' | 'candidates' | 'actions' | 'leave' | 'expense';
   title: string;
   subtitle?: string;
   icon?: JSX.Element;
@@ -150,6 +155,22 @@ function IconGrid() {
   );
 }
 
+function IconCalendar() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+    </svg>
+  );
+}
+
+function IconReceipt() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 3h6m-6 3h6M5.25 4.5a2.25 2.25 0 012.25-2.25h9a2.25 2.25 0 012.25 2.25V21l-4.5-1.5L9 21l-3-1.5L5.25 21V4.5z" />
+    </svg>
+  );
+}
+
 // ─── Initials Avatar ──────────────────────────
 
 function InitialsAvatar({ name }: { name: string }) {
@@ -228,6 +249,13 @@ function scoreItem(item: CommandItem, query: string): number {
   return 0;
 }
 
+function formatShortDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function filterAndSort(items: CommandItem[], query: string): CommandItem[] {
   return items
     .map((item) => ({ item, score: scoreItem(item, query) }))
@@ -236,26 +264,45 @@ function filterAndSort(items: CommandItem[], query: string): CommandItem[] {
     .map(({ item }) => item);
 }
 
-const GROUP_ORDER: CommandItem['group'][] = ['actions', 'navigation', 'employees', 'candidates'];
+const GROUP_ORDER: CommandItem['group'][] = [
+  'actions',
+  'navigation',
+  'employees',
+  'candidates',
+  'leave',
+  'expense',
+];
 
 const GROUP_LABELS: Record<CommandItem['group'], string> = {
   actions: 'Actions',
   navigation: 'Navigation',
   employees: 'Employees',
   candidates: 'Candidates',
+  leave: 'Leave Requests',
+  expense: 'Expense Claims',
 };
 
 // ─── Palette component ────────────────────────
 
 function Palette({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { setTheme } = useTheme();
   const { success, error } = useToast();
+
+  const perms = new Set(user?.user?.permissions ?? []);
+  const canReadLeaveAll = perms.has('leave.read');
+  const canApproveLeave = perms.has('leave.approve');
+  const canReadLeaveOwn = perms.has('leave.read_own');
+  const canReadExpenseAll = perms.has('expense.read');
+  const canApproveExpense = perms.has('expense.approve');
+  const canReadExpenseOwn = perms.has('expense.read_own');
 
   const [query, setQuery] = useState('');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -266,14 +313,41 @@ function Palette({ onClose }: { onClose: () => void }) {
     inputRef.current?.focus();
   }, []);
 
-  // Load employees + candidates once
+  // Load employees + candidates + leave + expense once
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-    Promise.allSettled([listEmployees(), listCandidates()]).then(([empRes, candRes]) => {
+
+    // Pick the broadest leave loader available; skip if no permission
+    const leavePromise: Promise<LeaveRequest[]> | null = canReadLeaveAll
+      ? getAllLeaveRequests()
+      : canApproveLeave
+      ? getPendingApprovals()
+      : canReadLeaveOwn
+      ? getMyLeaveRequests()
+      : null;
+
+    // Same for expense
+    const expensePromise: Promise<ExpenseClaim[]> | null = canReadExpenseAll
+      ? getAllClaims()
+      : canApproveExpense
+      ? getPendingClaims()
+      : canReadExpenseOwn
+      ? getMyClaims()
+      : null;
+
+    Promise.allSettled([
+      listEmployees(),
+      listCandidates(),
+      leavePromise ?? Promise.resolve([] as LeaveRequest[]),
+      expensePromise ?? Promise.resolve([] as ExpenseClaim[]),
+    ]).then(([empRes, candRes, leaveRes, expenseRes]) => {
       if (empRes.status === 'fulfilled') setEmployees(empRes.value);
       if (candRes.status === 'fulfilled') setCandidates(candRes.value);
+      if (leaveRes.status === 'fulfilled') setLeaveRequests(leaveRes.value);
+      if (expenseRes.status === 'fulfilled') setExpenseClaims(expenseRes.value);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Build action items (inside component to capture callbacks)
@@ -320,11 +394,16 @@ function Palette({ onClose }: { onClose: () => void }) {
       keywords: ['attendance', 'arrive', 'start work'],
       action: async () => {
         try {
-          await checkIn();
-          success('Checked in', 'Your attendance has been recorded.');
+          const meta = await gatherCheckInMetadata();
+          await checkIn(meta);
+          if (metaHasLocation(meta)) {
+            success('Checked in', 'Your attendance has been recorded.');
+          } else {
+            success('Checked in', 'Location not shared');
+          }
           onClose();
-        } catch {
-          error('Check-in failed', 'Please try again.');
+        } catch (e) {
+          error('Check-in failed', e instanceof Error ? e.message : 'Please try again.');
         }
       },
     },
@@ -337,11 +416,16 @@ function Palette({ onClose }: { onClose: () => void }) {
       keywords: ['attendance', 'leave', 'end work'],
       action: async () => {
         try {
-          await checkOut();
-          success('Checked out', 'Your departure has been recorded.');
+          const meta = await gatherCheckInMetadata();
+          await checkOut(meta);
+          if (metaHasLocation(meta)) {
+            success('Checked out', 'Your departure has been recorded.');
+          } else {
+            success('Checked out', 'Location not shared');
+          }
           onClose();
-        } catch {
-          error('Check-out failed', 'Please try again.');
+        } catch (e) {
+          error('Check-out failed', e instanceof Error ? e.message : 'Please try again.');
         }
       },
     },
@@ -365,6 +449,57 @@ function Palette({ onClose }: { onClose: () => void }) {
     href: `/recruitment/candidates/${c.id}`,
   }));
 
+  const leaveItems: CommandItem[] = leaveRequests.map((req) => {
+    const empName = req.employee
+      ? `${req.employee.firstName} ${req.employee.lastName}`
+      : 'Unknown';
+    const policyName = req.leavePolicy?.name ?? 'Leave';
+    return {
+      id: `leave-${req.id}`,
+      group: 'leave',
+      title: `${empName} · ${policyName}`,
+      subtitle: `${formatShortDate(req.startDate)} → ${formatShortDate(req.endDate)} · ${req.status.toLowerCase()}`,
+      href: `/leave/requests/${req.id}`,
+      icon: <IconCalendar />,
+      keywords: [
+        empName,
+        policyName,
+        req.status.toLowerCase(),
+        req.employee?.employeeCode ?? '',
+        'leave',
+        'request',
+      ],
+    };
+  });
+
+  const expenseItems: CommandItem[] = expenseClaims.map((claim) => {
+    const amount = (() => {
+      const n = parseFloat(claim.totalAmount);
+      if (isNaN(n)) return claim.totalAmount;
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+    })();
+    const empName = claim.employee
+      ? `${claim.employee.firstName} ${claim.employee.lastName}`
+      : '';
+    return {
+      id: `expense-${claim.id}`,
+      group: 'expense',
+      title: `${claim.claimNumber} · ${claim.title}`,
+      subtitle: `${amount} · ${claim.status.toLowerCase().replace(/_/g, ' ')}${empName ? ` · ${empName}` : ''}`,
+      href: `/expenses/claims/${claim.id}`,
+      icon: <IconReceipt />,
+      keywords: [
+        claim.claimNumber,
+        claim.title,
+        empName,
+        claim.status.toLowerCase(),
+        'expense',
+        'claim',
+        'reimburse',
+      ],
+    };
+  });
+
   // Build visible grouped list
   const isEmpty = query.trim() === '';
   const CAP_EMPTY = 6;
@@ -375,6 +510,8 @@ function Palette({ onClose }: { onClose: () => void }) {
     navigation: navItems,
     employees: employeeItems,
     candidates: candidateItems,
+    leave: leaveItems,
+    expense: expenseItems,
   };
 
   const visibleGroups: Array<{ group: CommandItem['group']; items: CommandItem[] }> = [];
@@ -480,7 +617,7 @@ function Palette({ onClose }: { onClose: () => void }) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search pages, employees, candidates…"
+            placeholder="Search pages, employees, leave, expenses…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-lg text-foreground outline-none placeholder:text-muted-foreground/60"
