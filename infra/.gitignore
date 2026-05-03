@@ -1,0 +1,11 @@
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# CDK context cache (contains regional AMI lookups etc; check in or skip per team pref)
+cdk.context.json
