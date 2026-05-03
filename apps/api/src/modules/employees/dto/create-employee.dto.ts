@@ -68,6 +68,14 @@ export class CreateEmployeeDto {
   @IsString()
   userId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Storage key (or legacy absolute URL) for the profile photo. Uploaded via /api/uploads with purpose=profile-photo.',
+  })
+  @IsOptional()
+  @IsString()
+  profileImageUrl?: string;
+
   @ApiPropertyOptional({ description: 'Employment details (optional inline creation)' })
   @IsOptional()
   @ValidateNested()

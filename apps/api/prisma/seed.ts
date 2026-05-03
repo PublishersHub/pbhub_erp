@@ -25,6 +25,7 @@ const PERMISSIONS = [
 
   // Employee
   { code: 'employee.read', name: 'View Employees', module: 'employee' },
+  { code: 'employee.read_own', name: 'View Own Employee Profile', module: 'employee' },
   { code: 'employee.create', name: 'Create Employees', module: 'employee' },
   { code: 'employee.update', name: 'Update Employees', module: 'employee' },
   { code: 'employee.delete', name: 'Delete Employees', module: 'employee' },
@@ -130,7 +131,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'organization.read',
     'user.read', 'user.create', 'user.update', 'user.manage_roles',
     'role.read',
-    'employee.read', 'employee.create', 'employee.update', 'employee.delete', 'employee.read_sensitive',
+    'employee.read', 'employee.read_own', 'employee.create', 'employee.update', 'employee.delete', 'employee.read_sensitive',
     'attendance.read', 'attendance.manage', 'attendance.correct',
     'attendance.checkin', 'attendance.read_own',
     'leave.read', 'leave.approve', 'leave.manage',
@@ -157,7 +158,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   manager: [
-    'employee.read',
+    'employee.read', 'employee.read_own',
     'attendance.read',
     'attendance.checkin', 'attendance.read_own',
     'leave.read', 'leave.approve',
@@ -178,6 +179,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   employee: [
+    'employee.read_own',
     'attendance.checkin', 'attendance.read_own',
     'leave.request', 'leave.read_own',
     'performance.read_own', 'performance.create_goals',
@@ -191,7 +193,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   finance_admin: [
-    'employee.read', 'employee.read_sensitive',
+    'employee.read', 'employee.read_own', 'employee.read_sensitive',
     'attendance.read',
     'attendance.checkin', 'attendance.read_own',
     'leave.request', 'leave.read_own',
@@ -210,7 +212,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   recruiter: [
-    'employee.read',
+    'employee.read', 'employee.read_own',
     'role.read',
     'attendance.checkin', 'attendance.read_own',
     'leave.request', 'leave.read_own',

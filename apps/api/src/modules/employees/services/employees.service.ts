@@ -1,18 +1,28 @@
 import {
   Injectable,
+  Inject,
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateEmployeeDto } from '../dto/create-employee.dto';
 import { UpdateEmployeeDto } from '../dto/update-employee.dto';
+import { UpdateSelfEmployeeDto } from '../dto/update-self-employee.dto';
 import { CreateEmploymentDetailDto } from '../dto/create-employment-detail.dto';
 import { UpdateEmploymentDetailDto } from '../dto/update-employment-detail.dto';
+import { STORAGE_SERVICE } from '../../storage/storage.module';
+import type { StorageService } from '../../storage/storage.types';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EmployeesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
+  ) {}
 
   // ─── Employee CRUD ──────────────────────────
 
@@ -32,7 +42,7 @@ export class EmployeesService {
     }
 
     try {
-      return await this.prisma.employee.create({
+      const created = await this.prisma.employee.create({
         data: {
           organizationId,
           employeeCode: dto.employeeCode,
@@ -46,6 +56,7 @@ export class EmployeesService {
           designationId: dto.designationId ?? null,
           reportingManagerId: dto.reportingManagerId ?? null,
           userId: dto.userId ?? null,
+          profileImageUrl: dto.profileImageUrl ?? null,
           ...(dto.employmentDetail && {
             employmentDetail: {
               create: {
@@ -64,6 +75,7 @@ export class EmployeesService {
         },
         include: this.defaultInclude(),
       });
+      return this.withPhoto(created);
     } catch (error: any) {
       if (error.code === 'P2002') {
         throw new ConflictException('Employee code already exists in this organization');
@@ -81,7 +93,7 @@ export class EmployeesService {
       search?: string;
     },
   ) {
-    return this.prisma.employee.findMany({
+    const rows = await this.prisma.employee.findMany({
       where: {
         organizationId,
         ...(filters?.departmentId && { departmentId: filters.departmentId }),
@@ -98,6 +110,7 @@ export class EmployeesService {
       include: this.defaultInclude(),
       orderBy: { createdAt: 'desc' },
     });
+    return this.withPhotoMany(rows);
   }
 
   async findById(organizationId: string, id: string) {
@@ -113,7 +126,7 @@ export class EmployeesService {
       },
     });
     if (!employee) throw new NotFoundException('Employee not found');
-    return employee;
+    return this.withPhoto(employee);
   }
 
   async update(organizationId: string, id: string, dto: UpdateEmployeeDto) {
@@ -135,7 +148,7 @@ export class EmployeesService {
       await this.validateUserLink(dto.userId, organizationId, id);
     }
 
-    return this.prisma.employee.update({
+    const updated = await this.prisma.employee.update({
       where: { id },
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
@@ -152,9 +165,52 @@ export class EmployeesService {
           reportingManagerId: dto.reportingManagerId,
         }),
         ...(dto.userId !== undefined && { userId: dto.userId }),
+        ...(dto.profileImageUrl !== undefined && { profileImageUrl: dto.profileImageUrl }),
       },
       include: this.defaultInclude(),
     });
+    return this.withPhoto(updated);
+  }
+
+  // ─── Self-service ───────────────────────────
+
+  /**
+   * Get the calling user's employee record. Returns null if no employee row
+   * is linked to this user/org pair (e.g. the user is an org admin without
+   * an employee profile).
+   */
+  async findMe(organizationId: string, userId: string) {
+    const me = await this.prisma.employee.findFirst({
+      where: { userId, organizationId },
+      include: this.defaultInclude(),
+    });
+    return this.withPhoto(me);
+  }
+
+  /**
+   * Self-service update. Used for the "change my photo" flow on /profile —
+   * narrowly scoped (UpdateSelfEmployeeDto) so users with only
+   * `employee.read_own` can't escalate.
+   */
+  async updateMe(organizationId: string, userId: string, dto: UpdateSelfEmployeeDto) {
+    const me = await this.prisma.employee.findFirst({
+      where: { userId, organizationId },
+      select: { id: true },
+    });
+    if (!me) {
+      throw new NotFoundException(
+        'No employee profile is linked to your account in this organization.',
+      );
+    }
+
+    const updated = await this.prisma.employee.update({
+      where: { id: me.id },
+      data: {
+        ...(dto.profileImageUrl !== undefined && { profileImageUrl: dto.profileImageUrl }),
+      },
+      include: this.defaultInclude(),
+    });
+    return this.withPhoto(updated);
   }
 
   /**
@@ -180,7 +236,7 @@ export class EmployeesService {
       orderBy: { firstName: 'asc' },
     });
 
-    return [me, ...reports];
+    return this.withPhotoMany([me, ...reports]);
   }
 
   async deactivate(organizationId: string, id: string) {
@@ -256,6 +312,39 @@ export class EmployeesService {
   }
 
   // ─── Helpers ────────────────────────────────
+
+  /**
+   * Resolve `profileImageUrl` on an employee shape: if it's a storage key,
+   * mint a fresh signed URL so the browser can render it without a follow-up
+   * round-trip. Legacy absolute URLs pass through unchanged. Failures are
+   * swallowed (key missing in storage, etc.) — we just null out the field.
+   */
+  private async resolvePhotoUrl(value: string | null): Promise<string | null> {
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+    try {
+      return await this.storage.getDownloadUrl(value);
+    } catch (err) {
+      this.logger.warn(`Failed to resolve profile photo url for key ${value}: ${err}`);
+      return null;
+    }
+  }
+
+  /**
+   * Wrap a single employee row, replacing `profileImageUrl` with a renderable URL.
+   */
+  private async withPhoto<T extends { profileImageUrl: string | null } | null>(employee: T): Promise<T> {
+    if (!employee) return employee;
+    const url = await this.resolvePhotoUrl(employee.profileImageUrl);
+    return { ...employee, profileImageUrl: url } as T;
+  }
+
+  /**
+   * Wrap a list of employees, resolving photo URLs in parallel.
+   */
+  private async withPhotoMany<T extends { profileImageUrl: string | null }>(rows: T[]): Promise<T[]> {
+    return Promise.all(rows.map((r) => this.withPhoto(r)));
+  }
 
   private defaultInclude() {
     return {

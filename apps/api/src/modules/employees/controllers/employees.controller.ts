@@ -13,6 +13,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger'
 import { EmployeesService } from '../services/employees.service';
 import { CreateEmployeeDto } from '../dto/create-employee.dto';
 import { UpdateEmployeeDto } from '../dto/update-employee.dto';
+import { UpdateSelfEmployeeDto } from '../dto/update-self-employee.dto';
 import { CreateEmploymentDetailDto } from '../dto/create-employment-detail.dto';
 import { UpdateEmploymentDetailDto } from '../dto/update-employment-detail.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -60,6 +61,27 @@ export class EmployeesController {
   })
   async findMyTeam(@CurrentUser() user: AuthenticatedUser) {
     return this.employeesService.findMyTeam(user.organizationId, user.userId);
+  }
+
+  @Get('me')
+  @RequirePermissions('employee.read_own')
+  @ApiOperation({
+    summary: "Get the calling user's own employee profile (or null if none)",
+  })
+  async findMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.employeesService.findMe(user.organizationId, user.userId);
+  }
+
+  @Patch('me')
+  @RequirePermissions('employee.read_own')
+  @ApiOperation({
+    summary: "Update fields of the calling user's own employee profile (currently profile photo only)",
+  })
+  async updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateSelfEmployeeDto,
+  ) {
+    return this.employeesService.updateMe(user.organizationId, user.userId, dto);
   }
 
   @Get(':id')
