@@ -169,6 +169,47 @@ export class AttendancePoliciesService {
     });
   }
 
+  // ─── Effective Policy For Current User ───
+  /**
+   * Returns the AttendancePolicy that applies to the given user today.
+   * Resolution order:
+   *   1. Active EmployeeAttendancePolicyAssignment covering today (effectiveFrom <= today <= effectiveTo|null)
+   *   2. Org's most-recent active policy (fallback)
+   *   3. null
+   * Used by the UI to know if today is a working day for the current user.
+   */
+  async getEffectivePolicyForUser(userId: string, organizationId: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { userId, organizationId, isActive: true },
+      select: { id: true },
+    });
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (employee) {
+      const assignment = await this.prisma.employeeAttendancePolicyAssignment.findFirst({
+        where: {
+          employeeId: employee.id,
+          effectiveFrom: { lte: today },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }],
+          attendancePolicy: { organizationId },
+        },
+        include: { attendancePolicy: true },
+        orderBy: { effectiveFrom: 'desc' },
+      });
+      if (assignment?.attendancePolicy) {
+        return assignment.attendancePolicy;
+      }
+    }
+
+    // Fallback: org's most-recent active policy
+    return this.prisma.attendancePolicy.findFirst({
+      where: { organizationId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   // ─── Helpers ─────────────────────────────
 
   private validatePolicyFields(dto: CreateAttendancePolicyDto) {

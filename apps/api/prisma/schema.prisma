@@ -41,6 +41,7 @@ model Organization {
   id           String   @id @default(uuid())
   name         String
   slug         String   @unique
+  timezone     String   @default("UTC")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -661,15 +662,22 @@ model EmployeeAttendanceOverride {
 // ============================================
 
 model AttendanceLog {
-  id             String              @id @default(uuid())
-  organizationId String              @map("organization_id")
-  employeeId     String              @map("employee_id")
-  logType        AttendanceLogType   @map("log_type")
-  timestamp      DateTime
-  ipAddress      String?             @map("ip_address")
-  source         AttendanceLogSource @default(WEB)
-  notes          String?
-  createdAt      DateTime            @default(now()) @map("created_at")
+  id              String              @id @default(uuid())
+  organizationId  String              @map("organization_id")
+  employeeId      String              @map("employee_id")
+  logType         AttendanceLogType   @map("log_type")
+  timestamp       DateTime
+  ipAddress       String?             @map("ip_address")
+  source          AttendanceLogSource @default(WEB)
+  notes           String?
+  // Device + location metadata captured at the moment of check-in/out
+  userAgent       String?             @map("user_agent")
+  deviceType      String?             @map("device_type")
+  latitude        Decimal?            @db.Decimal(10, 7)
+  longitude       Decimal?            @db.Decimal(10, 7)
+  accuracyMeters  Decimal?            @map("accuracy_meters") @db.Decimal(10, 2)
+  locationLabel   String?             @map("location_label")
+  createdAt       DateTime            @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)

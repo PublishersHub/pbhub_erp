@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
@@ -39,6 +40,9 @@ import appConfig from './config/app.config';
 
     // Event bus (in-process, used by notification dispatcher)
     EventEmitterModule.forRoot(),
+
+    // Cron jobs (nightly attendance reconciliation, etc.)
+    ScheduleModule.forRoot(),
 
     // Infrastructure
     PrismaModule,

@@ -12,6 +12,7 @@ import { IpRestrictionService } from './services/ip-restriction.service';
 import { AttendanceCorrectionsService } from './services/attendance-corrections.service';
 import { AttendanceReportsService } from './services/attendance-reports.service';
 import { AttendanceExportService } from './services/attendance-export.service';
+import { AttendanceReconciliationService } from './services/attendance-reconciliation.service';
 
 @Module({
   imports: [PrismaModule],
@@ -30,7 +31,8 @@ import { AttendanceExportService } from './services/attendance-export.service';
     AttendanceCorrectionsService,
     AttendanceReportsService,
     AttendanceExportService,
+    AttendanceReconciliationService,
   ],
-  exports: [AttendanceService],
+  exports: [AttendanceService, AttendanceReconciliationService],
 })
 export class AttendanceModule {}
