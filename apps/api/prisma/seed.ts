@@ -132,11 +132,16 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'role.read',
     'employee.read', 'employee.create', 'employee.update', 'employee.delete', 'employee.read_sensitive',
     'attendance.read', 'attendance.manage', 'attendance.correct',
+    'attendance.checkin', 'attendance.read_own',
     'leave.read', 'leave.approve', 'leave.manage',
+    'leave.request', 'leave.read_own',
     'performance.read', 'performance.manage', 'performance.approve_goals', 'performance.review',
+    'performance.read_own', 'performance.create_goals',
     'payroll.read', 'payroll.run',
+    'payroll.read_own',
     'expense.read_own', 'expense.create', 'expense.read', 'expense.manage',
-    'policy.read', 'policy.create', 'policy.publish', 'policy.manage',
+    'loan.request', 'loan.read_own',
+    'policy.read', 'policy.acknowledge', 'policy.create', 'policy.publish', 'policy.manage',
     'report.read', 'report.manage',
     'audit.read',
     'settings.read', 'settings.manage',
@@ -154,11 +159,16 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   manager: [
     'employee.read',
     'attendance.read',
+    'attendance.checkin', 'attendance.read_own',
     'leave.read', 'leave.approve',
+    'leave.request', 'leave.read_own',
     'performance.read', 'performance.create_goals', 'performance.approve_goals', 'performance.review',
+    'performance.read_own',
+    'payroll.read_own',
     'expense.read_own', 'expense.create', 'expense.read', 'expense.approve',
+    'loan.request', 'loan.read_own',
     'report.read',
-    'policy.read',
+    'policy.read', 'policy.acknowledge',
     'role.read',
     'notification.read_own',
     'recruitment.read_own', 'recruitment.read',
@@ -183,12 +193,18 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   finance_admin: [
     'employee.read', 'employee.read_sensitive',
     'attendance.read',
+    'attendance.checkin', 'attendance.read_own',
+    'leave.request', 'leave.read_own',
+    'performance.read_own', 'performance.create_goals',
     'payroll.read', 'payroll.read_sensitive', 'payroll.run', 'payroll.approve',
+    'payroll.read_own',
     'expense.read_own', 'expense.create', 'expense.read', 'expense.approve', 'expense.reimburse',
     'loan.read', 'loan.manage', 'loan.approve',
+    'loan.request',
     'report.read',
     'audit.read',
     'role.read',
+    'policy.read', 'policy.acknowledge',
     'notification.read_own',
     'onboarding.read_own',
   ],
@@ -196,6 +212,13 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   recruiter: [
     'employee.read',
     'role.read',
+    'attendance.checkin', 'attendance.read_own',
+    'leave.request', 'leave.read_own',
+    'performance.read_own', 'performance.create_goals',
+    'payroll.read_own',
+    'expense.read_own', 'expense.create',
+    'loan.request', 'loan.read_own',
+    'policy.read', 'policy.acknowledge',
     'notification.read_own',
     'recruitment.read_own', 'recruitment.read',
     'recruitment.requisition.create',
@@ -205,7 +228,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'recruitment.interview.manage',
     'recruitment.offer.manage',
     'recruitment.hire',
-    'onboarding.read_own', 'onboarding.read',
+    'onboarding.read_own', 'onboarding.read', 'onboarding.task.update',
   ],
 };
 
@@ -302,10 +325,11 @@ async function main() {
   // 1. Organization
   const org = await prisma.organization.upsert({
     where: { slug: 'pbhub' },
-    update: {},
+    update: { timezone: 'Asia/Karachi' },
     create: {
       name: 'PbHub',
       slug: 'pbhub',
+      timezone: 'Asia/Karachi',
       isActive: true,
     },
   });
@@ -1003,9 +1027,11 @@ async function main() {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Section D: Attendance logs + daily summaries for today
+  // All timestamps are RELATIVE TO NOW so re-seeding never produces future logs.
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
   const todayDate = new Date(todayStr + 'T00:00:00Z');
 
   const todayLogsExist = await prisma.attendanceLog.findFirst({
@@ -1013,73 +1039,84 @@ async function main() {
   });
 
   if (!todayLogsExist) {
-    const ts = (hh: number, mm: number) => new Date(todayStr + `T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
+    // Anchor the demo workday so the latest CHECK_OUT is ~30 min ago and
+    // CHECK_INs are ~9 hours before that. Strictly past, regardless of run time.
+    const minsAgo = (n: number) => new Date(now.getTime() - n * 60 * 1000);
 
-    // EMP001 Sara: CHECK_IN 08:55, CHECK_OUT 18:10 → PRESENT, 555 min
+    // EMP001 Sara: closed shift → PRESENT, ~555 min
     const saraId = empById.get('EMP001')!;
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_IN', timestamp: ts(8, 55), source: 'WEB' } });
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_OUT', timestamp: ts(18, 10), source: 'WEB' } });
+    const saraIn = minsAgo(585);
+    const saraOut = minsAgo(30);
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_IN', timestamp: saraIn, source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: saraId, logType: 'CHECK_OUT', timestamp: saraOut, source: 'WEB' } });
     await prisma.attendanceDailySummary.upsert({
       where: { employeeId_date: { employeeId: saraId, date: todayDate } },
       update: {},
       create: {
         organizationId: org.id, employeeId: saraId, date: todayDate,
-        status: 'PRESENT', firstCheckIn: ts(8, 55), lastCheckOut: ts(18, 10),
+        status: 'PRESENT', firstCheckIn: saraIn, lastCheckOut: saraOut,
         totalWorkedMinutes: 555, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
       },
     });
 
-    // EMP003 Ayesha: CHECK_IN 09:42, no checkout → LATE (lateMinutes = max(0, 42-15) = 27)
+    // EMP003 Ayesha: still working (open CHECK_IN ~4h ago, late arrival in seed-narrative) → LATE
     const ayeshaId2 = empById.get('EMP003')!;
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: ayeshaId2, logType: 'CHECK_IN', timestamp: ts(9, 42), source: 'WEB' } });
+    const ayeshaIn = minsAgo(240);
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: ayeshaId2, logType: 'CHECK_IN', timestamp: ayeshaIn, source: 'WEB' } });
     await prisma.attendanceDailySummary.upsert({
       where: { employeeId_date: { employeeId: ayeshaId2, date: todayDate } },
       update: {},
       create: {
         organizationId: org.id, employeeId: ayeshaId2, date: todayDate,
-        status: 'LATE', firstCheckIn: ts(9, 42), lastCheckOut: null,
+        status: 'LATE', firstCheckIn: ayeshaIn, lastCheckOut: null,
         totalWorkedMinutes: 0, lateMinutes: 27, earlyDepartureMinutes: 0, overtimeMinutes: 0,
       },
     });
 
-    // EMP004 Hamza: CHECK_IN 09:08 (within grace), CHECK_OUT 17:30 → PRESENT, 502 min
+    // EMP004 Hamza: closed shift → PRESENT, ~502 min
     const hamzaId2 = empById.get('EMP004')!;
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_IN', timestamp: ts(9, 8), source: 'WEB' } });
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_OUT', timestamp: ts(17, 30), source: 'WEB' } });
+    const hamzaIn = minsAgo(540);
+    const hamzaOut = minsAgo(38);
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_IN', timestamp: hamzaIn, source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: hamzaId2, logType: 'CHECK_OUT', timestamp: hamzaOut, source: 'WEB' } });
     await prisma.attendanceDailySummary.upsert({
       where: { employeeId_date: { employeeId: hamzaId2, date: todayDate } },
       update: {},
       create: {
         organizationId: org.id, employeeId: hamzaId2, date: todayDate,
-        status: 'PRESENT', firstCheckIn: ts(9, 8), lastCheckOut: ts(17, 30),
+        status: 'PRESENT', firstCheckIn: hamzaIn, lastCheckOut: hamzaOut,
         totalWorkedMinutes: 502, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
       },
     });
 
-    // EMP005 Fatima: CHECK_IN 08:50, CHECK_OUT 18:00 → PRESENT, 550 min
+    // EMP005 Fatima: closed shift → PRESENT, ~550 min
     const fatimaId2 = empById.get('EMP005')!;
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_IN', timestamp: ts(8, 50), source: 'WEB' } });
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_OUT', timestamp: ts(18, 0), source: 'WEB' } });
+    const fatimaIn = minsAgo(580);
+    const fatimaOut = minsAgo(30);
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_IN', timestamp: fatimaIn, source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: fatimaId2, logType: 'CHECK_OUT', timestamp: fatimaOut, source: 'WEB' } });
     await prisma.attendanceDailySummary.upsert({
       where: { employeeId_date: { employeeId: fatimaId2, date: todayDate } },
       update: {},
       create: {
         organizationId: org.id, employeeId: fatimaId2, date: todayDate,
-        status: 'PRESENT', firstCheckIn: ts(8, 50), lastCheckOut: ts(18, 0),
+        status: 'PRESENT', firstCheckIn: fatimaIn, lastCheckOut: fatimaOut,
         totalWorkedMinutes: 550, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
       },
     });
 
-    // EMP006 Bilal: CHECK_IN 09:00, CHECK_OUT 18:30 → PRESENT, 570 min
+    // EMP006 Bilal: closed shift → PRESENT, ~570 min
     const bilalId2 = empById.get('EMP006')!;
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_IN', timestamp: ts(9, 0), source: 'WEB' } });
-    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_OUT', timestamp: ts(18, 30), source: 'WEB' } });
+    const bilalIn = minsAgo(600);
+    const bilalOut = minsAgo(30);
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_IN', timestamp: bilalIn, source: 'WEB' } });
+    await prisma.attendanceLog.create({ data: { organizationId: org.id, employeeId: bilalId2, logType: 'CHECK_OUT', timestamp: bilalOut, source: 'WEB' } });
     await prisma.attendanceDailySummary.upsert({
       where: { employeeId_date: { employeeId: bilalId2, date: todayDate } },
       update: {},
       create: {
         organizationId: org.id, employeeId: bilalId2, date: todayDate,
-        status: 'PRESENT', firstCheckIn: ts(9, 0), lastCheckOut: ts(18, 30),
+        status: 'PRESENT', firstCheckIn: bilalIn, lastCheckOut: bilalOut,
         totalWorkedMinutes: 570, lateMinutes: 0, earlyDepartureMinutes: 0, overtimeMinutes: 0,
       },
     });
