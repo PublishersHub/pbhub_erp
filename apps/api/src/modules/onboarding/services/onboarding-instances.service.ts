@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -317,7 +318,12 @@ export class OnboardingInstancesService {
     return instances;
   }
 
-  async findById(organizationId: string, id: string) {
+  async findById(
+    organizationId: string,
+    id: string,
+    callerUserId?: string,
+    callerPermissions?: string[],
+  ) {
     const instance = await this.prisma.onboardingInstance.findFirst({
       where: { id, organizationId },
       include: {
@@ -328,6 +334,7 @@ export class OnboardingInstancesService {
             lastName: true,
             employeeCode: true,
             reportingManagerId: true,
+            userId: true,
           },
         },
         template: { select: { id: true, name: true, isActive: true } },
@@ -346,6 +353,19 @@ export class OnboardingInstancesService {
       throw new NotFoundException(
         `Onboarding instance ${id} not found in your organization`,
       );
+    }
+
+    if (callerUserId && callerPermissions) {
+      const isOwner = instance.employee?.userId === callerUserId;
+      const canReadAll =
+        callerPermissions.includes('onboarding.read') ||
+        callerPermissions.includes('onboarding.template.manage') ||
+        callerPermissions.includes('onboarding.instance.manage');
+      if (!isOwner && !canReadAll) {
+        throw new ForbiddenException(
+          'You do not have permission to view this onboarding instance',
+        );
+      }
     }
 
     return this.decorateInstance(instance);

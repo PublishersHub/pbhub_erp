@@ -69,13 +69,18 @@ export class OnboardingTasksController {
   }
 
   @Get(':id/documents')
-  @RequirePermissions('onboarding.read')
-  @ApiOperation({ summary: 'List task documents' })
+  @RequirePermissions('onboarding.read_own')
+  @ApiOperation({ summary: 'List task documents (assignee, new hire, or HR)' })
   async listDocuments(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.service.listDocuments(user.organizationId, id);
+    return this.service.listDocuments(
+      user.organizationId,
+      id,
+      user.userId,
+      user.permissions,
+    );
   }
 
   @Delete(':id/documents/:docId')

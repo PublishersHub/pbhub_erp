@@ -58,13 +58,18 @@ export class PerformanceReviewsController {
   // ─── Single review ───────────────────
 
   @Get(':id')
-  @RequirePermissions('performance.read')
-  @ApiOperation({ summary: 'Get review by ID' })
+  @RequirePermissions('performance.read_own')
+  @ApiOperation({ summary: 'Get review by ID (reviewee, reviewer, or HR)' })
   async findById(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.reviewsService.findById(user.organizationId, id);
+    return this.reviewsService.findById(
+      user.organizationId,
+      id,
+      user.userId,
+      user.permissions,
+    );
   }
 
   // ─── Self review ─────────────────────

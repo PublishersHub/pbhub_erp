@@ -603,15 +603,44 @@ export class ExpenseClaimsService {
     });
   }
 
-  // ─── Admin: get single claim ────────────
+  // ─── Get single claim (owner, approver, finance, or HR) ─
 
-  async findById(organizationId: string, claimId: string) {
+  async findById(
+    organizationId: string,
+    claimId: string,
+    callerUserId?: string,
+    callerPermissions?: string[],
+  ) {
     const claim = await this.prisma.expenseClaim.findFirst({
       where: { id: claimId, organizationId },
       include: this.claimDetailInclude(),
     });
     if (!claim) throw new NotFoundException('Expense claim not found');
+
+    if (callerUserId && callerPermissions) {
+      const isOwner = await this.isOwner(callerUserId, organizationId, claim.employeeId);
+      const canReadAll =
+        callerPermissions.includes('expense.read') ||
+        callerPermissions.includes('expense.approve') ||
+        callerPermissions.includes('expense.manage');
+      if (!isOwner && !canReadAll) {
+        throw new ForbiddenException('You do not have permission to view this expense claim');
+      }
+    }
+
     return claim;
+  }
+
+  private async isOwner(
+    userId: string,
+    organizationId: string,
+    resourceEmployeeId: string,
+  ): Promise<boolean> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { userId, organizationId, isActive: true },
+      select: { id: true },
+    });
+    return !!employee && employee.id === resourceEmployeeId;
   }
 
   // ─── Helpers ────────────────────────────

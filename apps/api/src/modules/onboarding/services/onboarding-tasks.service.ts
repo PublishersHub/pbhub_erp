@@ -428,18 +428,44 @@ export class OnboardingTasksService {
     });
   }
 
-  async listDocuments(organizationId: string, taskId: string) {
+  async listDocuments(
+    organizationId: string,
+    taskId: string,
+    callerUserId?: string,
+    callerPermissions?: string[],
+  ) {
     const task = await this.prisma.onboardingTask.findFirst({
       where: {
         id: taskId,
         onboardingInstance: { organizationId },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        assigneeEmployee: { select: { userId: true } },
+        onboardingInstance: {
+          select: { employee: { select: { userId: true } } },
+        },
+      },
     });
     if (!task) {
       throw new NotFoundException(
         `Task ${taskId} not found in your organization`,
       );
+    }
+
+    if (callerUserId && callerPermissions) {
+      const isAssignee = task.assigneeEmployee?.userId === callerUserId;
+      const isNewHire =
+        task.onboardingInstance?.employee?.userId === callerUserId;
+      const canReadAll =
+        callerPermissions.includes('onboarding.read') ||
+        callerPermissions.includes('onboarding.template.manage') ||
+        callerPermissions.includes('onboarding.instance.manage');
+      if (!isAssignee && !isNewHire && !canReadAll) {
+        throw new ForbiddenException(
+          'You do not have permission to view documents for this task',
+        );
+      }
     }
 
     return this.prisma.onboardingTaskDocument.findMany({

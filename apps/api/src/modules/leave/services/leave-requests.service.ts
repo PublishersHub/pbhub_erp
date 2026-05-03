@@ -282,7 +282,12 @@ export class LeaveRequestsService {
 
   // ─── Admin: get single request ────────
 
-  async findById(organizationId: string, requestId: string) {
+  async findById(
+    organizationId: string,
+    requestId: string,
+    callerUserId?: string,
+    callerPermissions?: string[],
+  ) {
     const request = await this.prisma.leaveRequest.findFirst({
       where: { id: requestId, organizationId },
       include: {
@@ -293,6 +298,7 @@ export class LeaveRequestsService {
             firstName: true,
             lastName: true,
             reportingManagerId: true,
+            userId: true,
           },
         },
         leavePolicy: { select: { id: true, name: true, code: true, requiresApproval: true } },
@@ -311,6 +317,18 @@ export class LeaveRequestsService {
       },
     });
     if (!request) throw new NotFoundException('Leave request not found');
+
+    if (callerUserId && callerPermissions) {
+      const isOwner = request.employee?.userId === callerUserId;
+      const canReadAll =
+        callerPermissions.includes('leave.read') ||
+        callerPermissions.includes('leave.approve') ||
+        callerPermissions.includes('leave.manage');
+      if (!isOwner && !canReadAll) {
+        throw new ForbiddenException('You do not have permission to view this leave request');
+      }
+    }
+
     return request;
   }
 

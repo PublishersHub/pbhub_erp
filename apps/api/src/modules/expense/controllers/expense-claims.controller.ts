@@ -155,12 +155,17 @@ export class ExpenseClaimsController {
   }
 
   @Get(':id')
-  @RequirePermissions('expense.read')
-  @ApiOperation({ summary: 'Get expense claim detail (admin)' })
+  @RequirePermissions('expense.read_own')
+  @ApiOperation({ summary: 'Get expense claim detail (owner, approver, finance, or HR)' })
   async findById(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.claimsService.findById(user.organizationId, id);
+    return this.claimsService.findById(
+      user.organizationId,
+      id,
+      user.userId,
+      user.permissions,
+    );
   }
 }

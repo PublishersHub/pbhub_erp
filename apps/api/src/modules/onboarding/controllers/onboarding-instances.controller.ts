@@ -53,13 +53,18 @@ export class OnboardingInstancesController {
   }
 
   @Get(':id')
-  @RequirePermissions('onboarding.read')
-  @ApiOperation({ summary: 'Get instance detail with tasks' })
+  @RequirePermissions('onboarding.read_own')
+  @ApiOperation({ summary: 'Get instance detail with tasks (owner or HR)' })
   async findById(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.service.findById(user.organizationId, id);
+    return this.service.findById(
+      user.organizationId,
+      id,
+      user.userId,
+      user.permissions,
+    );
   }
 
   @Patch(':id/cancel')

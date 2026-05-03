@@ -89,15 +89,20 @@ export class PerformanceReviewsService {
 
   // ─── Single review ───────────────────
 
-  async findById(organizationId: string, reviewId: string) {
+  async findById(
+    organizationId: string,
+    reviewId: string,
+    callerUserId?: string,
+    callerPermissions?: string[],
+  ) {
     const review = await this.prisma.performanceReview.findFirst({
       where: { id: reviewId, organizationId },
       include: {
         employee: {
-          select: { id: true, employeeCode: true, firstName: true, lastName: true },
+          select: { id: true, employeeCode: true, firstName: true, lastName: true, userId: true },
         },
         cycle: { select: { id: true, name: true, year: true, quarter: true, status: true } },
-        reviewerEmployee: { select: { id: true, firstName: true, lastName: true } },
+        reviewerEmployee: { select: { id: true, firstName: true, lastName: true, userId: true } },
         calibratedByEmployee: { select: { id: true, firstName: true, lastName: true } },
         goalReviews: {
           include: {
@@ -112,6 +117,21 @@ export class PerformanceReviewsService {
       },
     });
     if (!review) throw new NotFoundException('Review not found');
+
+    if (callerUserId && callerPermissions) {
+      const isOwner = review.employee?.userId === callerUserId;
+      const isReviewer = review.reviewerEmployee?.userId === callerUserId;
+      const canReadAll =
+        callerPermissions.includes('performance.read') ||
+        callerPermissions.includes('performance.manage') ||
+        callerPermissions.includes('performance.review');
+      if (!isOwner && !isReviewer && !canReadAll) {
+        throw new ForbiddenException(
+          'You do not have permission to view this performance review',
+        );
+      }
+    }
+
     return review;
   }
 

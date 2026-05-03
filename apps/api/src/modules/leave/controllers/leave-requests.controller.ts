@@ -100,12 +100,17 @@ export class LeaveRequestsController {
   }
 
   @Get(':id')
-  @RequirePermissions('leave.read')
-  @ApiOperation({ summary: 'Get leave request details' })
+  @RequirePermissions('leave.read_own')
+  @ApiOperation({ summary: 'Get leave request details (owner, approver, or HR)' })
   async findById(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.requestsService.findById(user.organizationId, id);
+    return this.requestsService.findById(
+      user.organizationId,
+      id,
+      user.userId,
+      user.permissions,
+    );
   }
 }
