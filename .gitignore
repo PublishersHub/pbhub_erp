@@ -40,3 +40,6 @@ coverage/
 
 # Storage (local uploads)
 uploads/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
