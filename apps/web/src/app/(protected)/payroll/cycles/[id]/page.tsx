@@ -10,6 +10,8 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission, useTableParams, sortLocal, paginateLocal } from '@/lib/hooks';
 import {
   getPayrollCycle,
@@ -34,6 +36,7 @@ const MONTHS = [
 
 export default function PayrollCycleDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canRun = can('payroll.run');
   const canApprove = can('payroll.approve');
@@ -102,6 +105,13 @@ export default function PayrollCycleDetailPage() {
   }
 
   async function handleRegenerate() {
+    const ok = await confirm({
+      title: 'Recalculate this payroll cycle?',
+      description: 'This will regenerate all employee payrolls for this cycle, replacing current calculations. Adjustments may need to be re-applied.',
+      confirmLabel: 'Recalculate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     setGenResult(null);
@@ -118,6 +128,13 @@ export default function PayrollCycleDetailPage() {
   }
 
   async function handleFinalize() {
+    const ok = await confirm({
+      title: 'Finalize this payroll cycle?',
+      description: 'Once finalized, the cycle is locked and payslips become available to employees. This cannot be undone.',
+      confirmLabel: 'Finalize',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     try {
@@ -180,31 +197,29 @@ export default function PayrollCycleDetailPage() {
           <div className="flex items-center gap-2">
             <StatusBadge status={cycle.status} />
             {canRun && isDraft && (
-              <button
-                onClick={handleGenerate}
-                disabled={actionLoading}
-                className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-              >
-                {actionLoading ? 'Generating...' : 'Generate Payroll'}
-              </button>
+              <LoadingButton onClick={handleGenerate} loading={actionLoading} loadingText="Generating...">
+                Generate Payroll
+              </LoadingButton>
             )}
             {canRun && isProcessed && (
-              <button
+              <LoadingButton
                 onClick={handleRegenerate}
-                disabled={actionLoading}
-                className="rounded-md bg-warning text-warning-foreground hover:bg-warning/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                loading={actionLoading}
+                loadingText="Regenerating..."
+                className="!bg-warning !text-warning-foreground hover:!bg-warning/90"
               >
-                {actionLoading ? 'Regenerating...' : 'Regenerate'}
-              </button>
+                Regenerate
+              </LoadingButton>
             )}
             {canApprove && isProcessed && (
-              <button
+              <LoadingButton
                 onClick={handleFinalize}
-                disabled={actionLoading}
-                className="rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                loading={actionLoading}
+                loadingText="Finalizing..."
+                className="!bg-success !text-success-foreground hover:!bg-success/90"
               >
-                {actionLoading ? 'Finalizing...' : 'Finalize'}
-              </button>
+                Finalize
+              </LoadingButton>
             )}
           </div>
         }

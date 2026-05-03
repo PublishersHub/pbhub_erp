@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
+import { InlineEdit } from '@/components/ui/inline-edit';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -16,18 +18,33 @@ const inputCls =
   'mt-1 block w-full rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors';
 const labelCls = 'block text-sm font-medium text-foreground/80';
 
+// Checklist of "ideal" profile fields. We only count fields that exist on the
+// AccountProfile model today; the rest stay as guidance for users.
+const COMPLETENESS_FIELDS: { key: keyof AccountProfile; label: string }[] = [
+  { key: 'firstName', label: 'First name' },
+  { key: 'lastName', label: 'Last name' },
+  { key: 'email', label: 'Email address' },
+];
+
+function computeCompleteness(profile: AccountProfile | null) {
+  if (!profile) return { percent: 0, missing: [] as string[] };
+  const missing: string[] = [];
+  let filled = 0;
+  for (const f of COMPLETENESS_FIELDS) {
+    const v = profile[f.key];
+    if (typeof v === 'string' && v.trim().length > 0) filled++;
+    else missing.push(f.label);
+  }
+  const percent = Math.round((filled / COMPLETENESS_FIELDS.length) * 100);
+  return { percent, missing };
+}
+
 export default function ProfilePage() {
   const toast = useToast();
   const { logout, refreshUser } = useAuth();
 
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-
-  // Profile form state
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -36,36 +53,35 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
-    getMyAccount()
-      .then((data) => {
-        setProfile(data);
-        setFirstName(data.firstName);
-        setLastName(data.lastName);
-        setEmail(data.email);
-      })
-      .catch(() => toast.error('Failed to load profile'))
-      .finally(() => setLoadingProfile(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    document.title = 'My Profile · PbHub';
   }, []);
 
-  async function handleProfileSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (savingProfile) return;
-    setSavingProfile(true);
+  const loadProfile = async () => {
     try {
-      const updated = await updateMyAccount({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-      });
-      setProfile(updated);
-      await refreshUser();
-      toast.success('Profile updated', 'Your name and email have been saved.');
-    } catch (err) {
-      toast.error('Update failed', err instanceof Error ? err.message : 'Something went wrong');
+      const data = await getMyAccount();
+      setProfile(data);
+    } catch {
+      toast.error('Failed to load profile');
     } finally {
-      setSavingProfile(false);
+      setLoadingProfile(false);
     }
+  };
+
+  useEffect(() => {
+    void loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // InlineEdit save wrapper — patches a single field, refreshes auth-context.
+  async function saveField(field: 'firstName' | 'lastName' | 'email', next: string) {
+    const trimmed = next.trim();
+    if (!trimmed) {
+      throw new Error(`${field === 'email' ? 'Email' : 'Name'} cannot be empty`);
+    }
+    const updated = await updateMyAccount({ [field]: trimmed });
+    setProfile(updated);
+    await refreshUser();
+    toast.success('Profile updated');
   }
 
   async function handlePasswordSubmit(e: FormEvent) {
@@ -89,6 +105,8 @@ export default function ProfilePage() {
     }
   }
 
+  const { percent, missing } = useMemo(() => computeCompleteness(profile), [profile]);
+
   if (loadingProfile) {
     return (
       <div>
@@ -103,74 +121,73 @@ export default function ProfilePage() {
       <PageHeader title="My Profile" description="Manage your account details and password." />
 
       <div className="grid gap-6 max-w-2xl">
+        {/* Completeness meter */}
+        <div className="rounded-2xl border border-hairline bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-foreground">Profile completeness</p>
+            <span className="text-sm font-semibold text-primary">{percent}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div className="h-full bg-primary transition-all" style={{ width: `${percent}%` }} />
+          </div>
+          {missing.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Missing: {missing.slice(0, 3).join(', ')}
+              {missing.length > 3 ? ` +${missing.length - 3} more` : ''}
+            </p>
+          )}
+        </div>
+
         {/* Profile card */}
         <div className="surface-elevated rounded-2xl border border-hairline shadow-soft p-6">
           <h3 className="text-base font-semibold text-foreground mb-4">Profile</h3>
-          <form onSubmit={handleProfileSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className={labelCls}>
-                  First name
-                </label>
-                <input
-                  id="firstName"
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  minLength={1}
-                  className={inputCls}
-                  disabled={savingProfile}
-                />
+                <label className={labelCls}>First name</label>
+                <div className="mt-1">
+                  <InlineEdit
+                    value={profile?.firstName ?? ''}
+                    placeholder="e.g. Jane"
+                    emptyText="Add first name"
+                    onSave={(next) => saveField('firstName', next)}
+                  />
+                </div>
               </div>
               <div>
-                <label htmlFor="lastName" className={labelCls}>
-                  Last name
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  minLength={1}
-                  className={inputCls}
-                  disabled={savingProfile}
-                />
+                <label className={labelCls}>Last name</label>
+                <div className="mt-1">
+                  <InlineEdit
+                    value={profile?.lastName ?? ''}
+                    placeholder="e.g. Doe"
+                    emptyText="Add last name"
+                    onSave={(next) => saveField('lastName', next)}
+                  />
+                </div>
               </div>
             </div>
             <div>
-              <label htmlFor="email" className={labelCls}>
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={inputCls}
-                disabled={savingProfile}
-              />
+              <label className={labelCls}>Email address</label>
+              <div className="mt-1">
+                <InlineEdit
+                  value={profile?.email ?? ''}
+                  type="email"
+                  placeholder="you@company.com"
+                  emptyText="Add email"
+                  onSave={(next) => saveField('email', next)}
+                />
+              </div>
             </div>
+
             {profile && (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground pt-1">
                 Account ID: {profile.id}
                 {profile.lastLoginAt && (
                   <> &middot; Last login: {new Date(profile.lastLoginAt).toLocaleString()}</>
                 )}
               </p>
             )}
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {savingProfile ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
 
         {/* Change password card */}
@@ -230,13 +247,13 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex justify-end pt-1">
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={savingPassword}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 motion-press disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                loading={savingPassword}
+                loadingText="Updating…"
               >
-                {savingPassword ? 'Updating…' : 'Update password'}
-              </button>
+                Update password
+              </LoadingButton>
             </div>
           </form>
         </div>

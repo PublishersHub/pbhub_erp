@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Loading } from '@/components/ui/loading';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync } from '@/lib/hooks';
 import { createEmployee, listDepartments, listDesignations, listEmployees } from '@/lib/employee-api';
 import type { Gender, EmploymentType, EmploymentStatus } from '@/types/employee';
@@ -17,6 +18,10 @@ export default function CreateEmployeePage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Add Employee · PbHub';
+  }, []);
 
   const { data: departments, loading: deptLoading } = useAsync(() => listDepartments(), []);
   const { data: designations, loading: desigLoading } = useAsync(() => listDesignations(), []);
@@ -320,13 +325,9 @@ export default function CreateEmployeePage() {
         {error && <ErrorMessage message={error} />}
 
         <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Creating...' : 'Add Employee'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+            Add Employee
+          </LoadingButton>
           <button
             type="button"
             onClick={() => router.back()}

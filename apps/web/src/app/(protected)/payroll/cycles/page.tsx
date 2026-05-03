@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -10,6 +10,8 @@ import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
 import {
   useAsync,
   usePermission,
@@ -26,21 +28,41 @@ const MONTHS = [
 ];
 
 export default function PayrollCyclesPage() {
+  useEffect(() => {
+    document.title = 'Payroll Cycles · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canRun = can('payroll.run');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
 
   const yearFilter = searchParams.get('year') || '';
+  const [search, setSearch] = useState('');
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () => listPayrollCycles(yearFilter ? parseInt(yearFilter, 10) : undefined),
     [yearFilter],
   );
 
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter((c) => {
+      const period = `${MONTHS[c.month - 1]} ${c.year}`.toLowerCase();
+      return (
+        period.includes(q) ||
+        String(c.year).includes(q) ||
+        c.status.toLowerCase().includes(q) ||
+        (c.notes ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'period':
             return `${item.year}-${String(item.month).padStart(2, '0')}`;
@@ -54,7 +76,7 @@ export default function PayrollCyclesPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -161,12 +183,12 @@ export default function PayrollCyclesPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
-            <button type="button" onClick={() => { setShowCreate(false); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating...">
+              Create
+            </LoadingButton>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowCreate(false); setFormError(''); }}>
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}
@@ -175,14 +197,26 @@ export default function PayrollCyclesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search cycles…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my payslips', href: '/payroll/payslips/my' }} />}
       {data && total === 0 && (
-        <EmptyState title="No payroll cycles" description="Create a payroll cycle to get started." />
+        <EmptyState
+          title={search ? 'No cycles match your search' : 'No payroll cycles'}
+          description={search ? 'Try a different search term.' : 'Create a payroll cycle to get started.'}
+          variant={search ? 'search' : 'default'}
+          {...(canRun && !search ? { cta: { label: 'Create Cycle', onClick: () => setShowCreate(true) } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
                 <tr>
@@ -216,6 +250,36 @@ export default function PayrollCyclesPage() {
               </tbody>
             </table>
           </div>
+          {/* Mobile card list */}
+          <ul className="block md:hidden divide-y divide-border">
+            {items.map((c) => (
+              <li key={c.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link href={`/payroll/cycles/${c.id}`} className="text-sm font-semibold text-primary hover:underline">
+                    {MONTHS[c.month - 1]} {c.year}
+                  </Link>
+                  <StatusBadge status={c.status} />
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatDate(c.periodStart)} — {formatDate(c.periodEnd)}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Employees</p>
+                    <p className="font-medium text-foreground">{c.employeeCount ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Gross</p>
+                    <p className="font-medium text-foreground">{c.totalGross ? formatCurrency(c.totalGross) : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Net</p>
+                    <p className="font-semibold text-foreground">{c.totalNet ? formatCurrency(c.totalNet) : '—'}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

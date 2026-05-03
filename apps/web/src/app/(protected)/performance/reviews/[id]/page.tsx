@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getReview,
@@ -25,6 +26,10 @@ interface GoalReviewFormItem {
 }
 
 export default function ReviewDetailPage() {
+  useEffect(() => {
+    document.title = 'Review · PbHub';
+  }, []);
+
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const canPerformReview = can('performance.review');

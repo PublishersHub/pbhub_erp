@@ -7,6 +7,8 @@ import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getMyClaimDetail,
@@ -24,10 +26,15 @@ export default function ExpenseClaimDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const toast = useToast();
+  const confirm = useConfirm();
   const canReadAll = can('expense.read');
   const canApprove = can('expense.approve');
   const canReimburse = can('expense.reimburse');
   const canCreate = can('expense.create');
+
+  useEffect(() => {
+    document.title = 'Expense Claims · PbHub';
+  }, []);
 
   const { data: remoteClaim, error, loading, refetch } = useAsync(
     () => (canReadAll ? getClaimDetail(id) : getMyClaimDetail(id)),
@@ -71,15 +78,26 @@ export default function ExpenseClaimDetailPage() {
   }
 
   async function handleCancel() {
+    const ok = await confirm({
+      title: 'Cancel this claim?',
+      description: 'Cancelled claims cannot be resubmitted.',
+      confirmLabel: 'Cancel claim',
+      cancelLabel: 'Keep',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     try {
       await cancelExpenseClaim(id, cancelReason.trim() ? { cancelReason: cancelReason.trim() } : undefined);
       setShowCancel(false);
       setCancelReason('');
+      toast.success('Claim cancelled');
       refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Cancel failed');
+      const msg = err instanceof Error ? err.message : 'Cancel failed';
+      setActionError(msg);
+      toast.error('Cancel failed', msg);
     } finally {
       setActionLoading(false);
     }
@@ -87,6 +105,16 @@ export default function ExpenseClaimDetailPage() {
 
   async function handleReview(action: ExpenseApprovalDecision) {
     if (!claim) return;
+
+    if (action === 'REJECTED') {
+      const ok = await confirm({
+        title: 'Reject this claim?',
+        description: 'The submitter will be notified with your remarks.',
+        confirmLabel: 'Reject',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
 
     const prev = claim;
     const trimmedRemarks = reviewRemarks.trim() || null;
@@ -162,15 +190,24 @@ export default function ExpenseClaimDetailPage() {
       setActionError('Payroll ID is required');
       return;
     }
+    const ok = await confirm({
+      title: 'Mark claim as reimbursed?',
+      description: 'A payroll adjustment will be created against the selected payroll.',
+      confirmLabel: 'Reimburse',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     try {
       await reimburseExpenseClaim(id, { payrollId: payrollId.trim() });
       setShowReimburse(false);
       setPayrollId('');
+      toast.success('Claim reimbursed');
       refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Reimbursement failed');
+      const msg = err instanceof Error ? err.message : 'Reimbursement failed';
+      setActionError(msg);
+      toast.error('Reimbursement failed', msg);
     } finally {
       setActionLoading(false);
     }
@@ -322,13 +359,14 @@ export default function ExpenseClaimDetailPage() {
             <h3 className="text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
 
             {canSubmitClaim && (
-              <button
+              <LoadingButton
                 onClick={handleSubmit}
-                disabled={actionLoading}
-                className="w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                loading={actionLoading}
+                loadingText="Submitting…"
+                className="w-full"
               >
-                {actionLoading ? 'Submitting...' : 'Submit Claim'}
-              </button>
+                Submit Claim
+              </LoadingButton>
             )}
 
             {canReviewClaim && !showReview && (

@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import {
   useAsync,
   usePermission,
@@ -23,7 +26,13 @@ import {
 import type { Designation } from '@/types/employee';
 
 export default function DesignationsPage() {
+  useEffect(() => {
+    document.title = 'Designations · PbHub';
+  }, []);
+
   const { can } = usePermission();
+  const confirm = useConfirm();
+  const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
   const { data, error, loading, refetch } = useAsync(() => listDesignations(), []);
 
@@ -97,13 +106,23 @@ export default function DesignationsPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(desig: Designation) {
+    const ok = await confirm({
+      title: 'Deactivate designation?',
+      description: `This will deactivate "${desig.name}". Existing employees keep their assignment but the designation won't appear in pickers.`,
+      confirmLabel: 'Deactivate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setFormError('');
     try {
-      await deactivateDesignation(id);
+      await deactivateDesignation(desig.id);
+      toast.success('Designation deactivated', desig.name);
       refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to deactivate');
+      const msg = err instanceof Error ? err.message : 'Failed to deactivate';
+      setFormError(msg);
+      toast.error('Failed to deactivate', msg);
     }
   }
 
@@ -153,13 +172,9 @@ export default function DesignationsPage() {
               placeholder="0"
             />
           </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Creating...' : 'Create'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+            Create
+          </LoadingButton>
           <button
             type="button"
             onClick={() => {
@@ -186,6 +201,11 @@ export default function DesignationsPage() {
         <EmptyState
           title="No designations found"
           description="Create your first designation."
+          cta={
+            can('employee.create')
+              ? { label: 'Add designation', onClick: () => setShowCreate(true) }
+              : undefined
+          }
         />
       )}
       {data && total > 0 && (
@@ -288,7 +308,7 @@ export default function DesignationsPage() {
                             </button>
                             {can('employee.delete') && desig.isActive && (
                               <button
-                                onClick={() => handleDeactivate(desig.id)}
+                                onClick={() => handleDeactivate(desig)}
                                 className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                               >
                                 Deactivate

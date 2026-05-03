@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Loading } from '@/components/ui/loading';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync } from '@/lib/hooks';
 import { createLeaveRequest, getMyBalances } from '@/lib/leave-api';
 
@@ -12,6 +13,10 @@ export default function NewLeaveRequestPage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Apply Leave · PbHub';
+  }, []);
 
   const currentYear = new Date().getFullYear();
   const { data: balances, loading: balLoading } = useAsync(
@@ -165,13 +170,14 @@ export default function NewLeaveRequestPage() {
         {error && <ErrorMessage message={error} />}
 
         <div className="flex gap-3">
-          <button
+          <LoadingButton
             type="submit"
-            disabled={submitting || !balances || balances.length === 0}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+            loading={submitting}
+            loadingText="Submitting…"
+            disabled={!balances || balances.length === 0}
           >
-            {submitting ? 'Submitting...' : 'Submit Request'}
-          </button>
+            Submit Request
+          </LoadingButton>
           <button
             type="button"
             onClick={() => router.back()}

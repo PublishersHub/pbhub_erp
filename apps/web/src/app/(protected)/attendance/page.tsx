@@ -1,32 +1,72 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync } from '@/lib/hooks';
-import { checkIn, checkOut, getMyToday } from '@/lib/attendance-api';
+import { checkIn, checkOut, getMyToday, getMyPolicy } from '@/lib/attendance-api';
+import { listHolidays } from '@/lib/leave-api';
+import { gatherCheckInMetadata } from '@/lib/attendance-metadata';
 import { formatDateTime } from '@/lib/format';
+import { LogMetaChips } from '@/components/attendance/log-meta-chips';
+import { OffDayCard, getOffDayInfo } from '@/components/attendance/off-day-card';
+import type { AttendancePolicy } from '@/types/attendance';
+import type { Holiday } from '@/types/leave';
 
 export default function AttendancePage() {
+  useEffect(() => {
+    document.title = 'Attendance · PbHub';
+  }, []);
+
   const { data, error, loading, refetch } = useAsync(() => getMyToday(), []);
   const [actionError, setActionError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [policy, setPolicy] = useState<AttendancePolicy | null>(null);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [override, setOverride] = useState(false);
+
+  // Load effective policy + this year's holidays for off-day banner.
+  useEffect(() => {
+    void getMyPolicy().then(setPolicy).catch(() => setPolicy(null));
+    void listHolidays(new Date().getFullYear())
+      .then(setHolidays)
+      .catch(() => setHolidays([]));
+  }, []);
 
   const summary = data?.summary ?? null;
-  const logs = data?.logs ?? [];
+  const allLogs = data?.logs ?? [];
+  // Defensive: ignore future-dated logs (e.g. seed data, manual corrections)
+  const nowMs = Date.now();
+  const logs = allLogs.filter((l) => new Date(l.timestamp).getTime() <= nowMs);
 
-  const hasCheckedIn = logs.some((l) => l.logType === 'CHECK_IN');
   const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
   const isCheckedIn = lastLog?.logType === 'CHECK_IN';
+  // STRICT MODE: day is complete once a CHECK_OUT is recorded today.
+  const dayComplete = logs.some((l) => l.logType === 'CHECK_OUT');
+
+  // Off-day awareness — null policy falls back to Mon-Fri.
+  const offDay = useMemo(
+    () => getOffDayInfo(policy?.workingDays, holidays),
+    [policy?.workingDays, holidays],
+  );
+  // Banner shows when today is non-working AND user hasn't already begun their day.
+  // Day-complete and already-checked-in cases keep their normal UI.
+  const showOffDayBanner =
+    (!offDay.isWorkingDay || !!offDay.holiday) &&
+    !dayComplete &&
+    !isCheckedIn &&
+    !override;
 
   async function handleCheckIn() {
     if (submitting) return;
     setActionError('');
     setSubmitting(true);
     try {
-      await checkIn({ source: 'WEB' });
+      const meta = await gatherCheckInMetadata();
+      await checkIn({ source: 'WEB', ...meta });
       refetch();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Check-in failed');
@@ -40,7 +80,8 @@ export default function AttendancePage() {
     setActionError('');
     setSubmitting(true);
     try {
-      await checkOut({ source: 'WEB' });
+      const meta = await gatherCheckInMetadata();
+      await checkOut({ source: 'WEB', ...meta });
       refetch();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Check-out failed');
@@ -95,30 +136,55 @@ export default function AttendancePage() {
             })}
           </p>
 
-          {!hasCheckedIn ? (
-            <button
-              onClick={handleCheckIn}
-              disabled={submitting}
-              className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
-            >
-              {submitting ? 'Checking In...' : 'Check In'}
-            </button>
+          {showOffDayBanner ? (
+            <OffDayCard
+              holiday={offDay.holiday}
+              isWorkingDay={offDay.isWorkingDay}
+              isCheckedIn={isCheckedIn}
+              onOverride={() => setOverride(true)}
+            />
+          ) : dayComplete ? (
+            <div className="rounded-xl border border-hairline bg-muted/40 px-4 py-4 text-left">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-success/20 text-success">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <p className="text-base font-semibold text-foreground">Day complete</p>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{formatTime(summary?.firstCheckIn ?? null)}</span> →{' '}
+                <span className="font-medium text-foreground">{formatTime(summary?.lastCheckOut ?? null)}</span>
+              </p>
+              {summary?.totalWorkedMinutes ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{formatMinutes(summary.totalWorkedMinutes)}</span> worked
+                </p>
+              ) : null}
+              <p className="mt-3 text-xs text-muted-foreground">
+                Need a correction? Contact HR.
+              </p>
+            </div>
           ) : isCheckedIn ? (
-            <button
+            <LoadingButton
               onClick={handleCheckOut}
-              disabled={submitting}
-              className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
+              loading={submitting}
+              loadingText="Checking Out..."
+              variant="destructive"
+              className="w-full !py-3"
             >
-              {submitting ? 'Checking Out...' : 'Check Out'}
-            </button>
+              Check Out
+            </LoadingButton>
           ) : (
-            <button
+            <LoadingButton
               onClick={handleCheckIn}
-              disabled={submitting}
-              className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-6 py-3 text-sm font-medium disabled:opacity-50"
+              loading={submitting}
+              loadingText="Checking In..."
+              className="w-full !bg-success !text-success-foreground hover:!bg-success/90 !py-3"
             >
-              {submitting ? 'Checking In...' : 'Check In Again'}
-            </button>
+              Check In
+            </LoadingButton>
           )}
         </div>
 
@@ -169,19 +235,20 @@ export default function AttendancePage() {
           ) : (
             <div className="space-y-3">
               {logs.map((log) => (
-                <div key={log.id} className="flex items-center gap-3">
+                <div key={log.id} className="flex items-start gap-3">
                   <div
-                    className={`h-2.5 w-2.5 rounded-full ${
+                    className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
                       log.logType === 'CHECK_IN' ? 'bg-success' : 'bg-destructive'
                     }`}
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
                       {log.logType === 'CHECK_IN' ? 'Check In' : 'Check Out'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatDateTime(log.timestamp)} &middot; {log.source}
                     </p>
+                    <LogMetaChips log={log} className="mt-1.5" />
                   </div>
                 </div>
               ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -8,6 +8,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -19,9 +22,15 @@ import { listLeavePolicies, createLeavePolicy, deactivateLeavePolicy } from '@/l
 
 export default function LeavePoliciesPage() {
   const { can } = usePermission();
+  const confirm = useConfirm();
   const canManage = can('leave.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listLeavePolicies(), []);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    document.title = 'Leave Policies · PbHub';
+  }, []);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -37,9 +46,21 @@ export default function LeavePoliciesPage() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const filtered = useMemo(() => {
+    const arr = data ?? [];
+    if (!search.trim()) return arr;
+    const q = search.trim().toLowerCase();
+    return arr.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q),
+    );
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'name':
             return item.name;
@@ -51,7 +72,7 @@ export default function LeavePoliciesPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -98,7 +119,15 @@ export default function LeavePoliciesPage() {
     setIsPaid(true);
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, name: string) {
+    const ok = await confirm({
+      title: 'Deactivate this policy?',
+      description: `"${name}" will no longer be available to assign or use.`,
+      confirmLabel: 'Deactivate',
+      cancelLabel: 'Keep active',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deactivateLeavePolicy(id);
       refetch();
@@ -181,9 +210,9 @@ export default function LeavePoliciesPage() {
           {formError && <ErrorMessage message={formError} />}
 
           <div className="flex gap-3">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Creating...' : 'Create Policy'}
-            </button>
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+              Create Policy
+            </LoadingButton>
             <button type="button" onClick={resetForm} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
@@ -195,13 +224,33 @@ export default function LeavePoliciesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {!showCreate && (
+        <div className="mb-3">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search policies by name, code…"
+            className="max-w-sm"
+          />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my requests', href: '/leave/requests' }} />}
       {data && total === 0 && (
-        <EmptyState title="No leave policies" description="Create your first leave policy." />
+        <EmptyState
+          variant="leave"
+          title="No leave policies"
+          description={search ? 'No policies match your search.' : 'Create your first leave policy to start tracking time off.'}
+          cta={
+            canManage && !search
+              ? { label: 'Add Policy', onClick: () => setShowCreate(true) }
+              : undefined
+          }
+        />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+        <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-soft md:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
@@ -246,7 +295,7 @@ export default function LeavePoliciesPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {p.isActive && (
                           <button
-                            onClick={() => handleDeactivate(p.id)}
+                            onClick={() => handleDeactivate(p.id, p.name)}
                             className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                           >
                             Deactivate
@@ -259,6 +308,47 @@ export default function LeavePoliciesPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+
+      {/* Mobile cards */}
+      {data && total > 0 && (
+        <div className="block space-y-3 md:hidden">
+          {items.map((p) => (
+            <div key={p.id} className="rounded-lg border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <Link href={`/leave/policies/${p.id}`} className="font-medium text-primary hover:underline">
+                    {p.name}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{p.code}</p>
+                </div>
+                {p.isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Active</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">Inactive</span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>{p.annualQuotaDefault} days</span>
+                <span>·</span>
+                <span>Carry fwd {p.carryForwardLimit}</span>
+                <span>·</span>
+                <span>{p.isPaid ? 'Paid' : 'Unpaid'}</span>
+              </div>
+              {canManage && p.isActive && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => handleDeactivate(p.id, p.name)}
+                    className="rounded bg-destructive-soft px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
+                  >
+                    Deactivate
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

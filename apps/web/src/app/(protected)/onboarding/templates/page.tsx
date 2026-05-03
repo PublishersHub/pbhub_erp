@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -12,6 +12,9 @@ import { useAsync, usePermission, useTableParams, sortLocal, paginateLocal } fro
 import { listTemplates } from '@/lib/onboarding-api';
 
 export default function TemplatesListPage() {
+  useEffect(() => {
+    document.title = 'Onboarding Templates · PbHub';
+  }, []);
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 

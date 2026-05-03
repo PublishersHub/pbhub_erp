@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -10,6 +10,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableSearch } from '@/components/ui/table-search';
 import {
   useAsync,
   useTableParams,
@@ -25,20 +26,35 @@ const MONTHS = [
 ];
 
 export default function MyPayslipsPage() {
+  useEffect(() => {
+    document.title = 'Payslips · PbHub';
+  }, []);
+
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
 
   const yearFilter = searchParams.get('year') || '';
   const [year, setYear] = useState(yearFilter);
+  const [search, setSearch] = useState('');
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () => getMyPayslips(year ? parseInt(year, 10) : undefined),
     [year],
   );
 
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter((p) => {
+      const period = p.payrollCycle ? `${MONTHS[p.payrollCycle.month - 1]} ${p.payrollCycle.year}`.toLowerCase() : '';
+      return period.includes(q);
+    });
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'period':
             return item.payrollCycle
@@ -52,7 +68,7 @@ export default function MyPayslipsPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -87,14 +103,25 @@ export default function MyPayslipsPage() {
         </select>
       </FilterBar>
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search payslips by period…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
-        <EmptyState title="No payslips" description="Your payslips will appear here once payroll is processed." />
+        <EmptyState
+          title={search ? 'No payslips match your search' : 'No payslips'}
+          description={search ? 'Try a different search term.' : 'Your payslips will appear here once payroll is processed.'}
+          variant={search ? 'search' : 'default'}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
                 <tr>
@@ -137,6 +164,41 @@ export default function MyPayslipsPage() {
               </tbody>
             </table>
           </div>
+          {/* Mobile cards */}
+          <ul className="block md:hidden divide-y divide-border">
+            {items.map((p) => (
+              <li key={p.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/payroll/payslips/my/${p.payrollCycleId}`}
+                    className="text-sm font-semibold text-primary hover:underline"
+                  >
+                    {p.payrollCycle ? `${MONTHS[p.payrollCycle.month - 1]} ${p.payrollCycle.year}` : 'Payslip'}
+                  </Link>
+                  {p.payrollCycle && <StatusBadge status={p.payrollCycle.status} />}
+                </div>
+                {p.payrollCycle && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatDate(p.payrollCycle.periodStart)} — {formatDate(p.payrollCycle.periodEnd)}
+                  </p>
+                )}
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Gross</p>
+                    <p className="font-medium text-success">{formatCurrency(p.grossEarnings)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Deductions</p>
+                    <p className="font-medium text-destructive">{formatCurrency(p.totalDeductions)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Net</p>
+                    <p className="font-bold text-foreground">{formatCurrency(p.netPayable)}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

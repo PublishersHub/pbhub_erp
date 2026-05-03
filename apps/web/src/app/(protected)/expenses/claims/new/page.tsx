@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { FileUpload } from '@/components/ui/file-upload';
+import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
 import { listExpenseCategories, listExpensePolicies, createExpenseClaim } from '@/lib/expense-api';
 import { formatCurrency } from '@/lib/format';
@@ -16,6 +19,7 @@ interface ItemRow {
   expenseDate: string;
   receiptUrl: string;
   receiptFileName: string;
+  receiptFiles: File[];
   notes: string;
 }
 
@@ -27,17 +31,23 @@ function emptyItem(): ItemRow {
     expenseDate: '',
     receiptUrl: '',
     receiptFileName: '',
+    receiptFiles: [],
     notes: '',
   };
 }
 
 export default function NewExpenseClaimPage() {
   const router = useRouter();
+  const toast = useToast();
   const { data: categories } = useAsync(() => listExpenseCategories(), []);
   const { data: policies } = useAsync(() => listExpensePolicies(), []);
 
   const activeCategories = (categories ?? []).filter((c) => c.isActive);
   const activePolicies = (policies ?? []).filter((p) => p.isActive);
+
+  useEffect(() => {
+    document.title = 'Submit Claim · PbHub';
+  }, []);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -54,8 +64,23 @@ export default function NewExpenseClaimPage() {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateItem(idx: number, field: keyof ItemRow, value: string) {
+  function updateItem<K extends keyof ItemRow>(idx: number, field: K, value: ItemRow[K]) {
     setItems((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  }
+
+  function updateReceiptFiles(idx: number, files: File[]) {
+    setItems((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const file = files[0];
+        return {
+          ...r,
+          receiptFiles: files,
+          // Auto-fill receiptFileName from the picked file
+          receiptFileName: file ? file.name : r.receiptFileName,
+        };
+      }),
+    );
   }
 
   const totalAmount = items.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
@@ -89,9 +114,12 @@ export default function NewExpenseClaimPage() {
           ...(r.notes.trim() && { notes: r.notes.trim() }),
         })),
       });
+      toast.success('Draft created', 'Your expense claim was saved as a draft.');
       router.push('/expenses/claims');
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create claim');
+      const msg = err instanceof Error ? err.message : 'Failed to create claim';
+      setFormError(msg);
+      toast.error('Could not create claim', msg);
     } finally {
       setSubmitting(false);
     }
@@ -183,14 +211,27 @@ export default function NewExpenseClaimPage() {
                   <label className={labelCls}>Description *</label>
                   <input value={item.description} onChange={(e) => updateItem(idx, 'description', e.target.value)} className={inputCls} placeholder="What was the expense for?" />
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className={labelCls}>Receipt</label>
+                  <FileUpload
+                    accept="image/*,application/pdf"
+                    multiple={false}
+                    maxSizeMb={10}
+                    value={item.receiptFiles}
+                    onChange={(files) => updateReceiptFiles(idx, files)}
+                    hint="Image or PDF, up to 10 MB"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className={labelCls}>Receipt URL</label>
-                    <input value={item.receiptUrl} onChange={(e) => updateItem(idx, 'receiptUrl', e.target.value)} className={inputCls} placeholder="https://..." />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Receipt File Name</label>
-                    <input value={item.receiptFileName} onChange={(e) => updateItem(idx, 'receiptFileName', e.target.value)} className={inputCls} placeholder="receipt.pdf" />
+                    <input
+                      value={item.receiptUrl}
+                      onChange={(e) => updateItem(idx, 'receiptUrl', e.target.value)}
+                      className={inputCls}
+                      placeholder="https://… (if hosted)"
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Notes</label>
@@ -213,9 +254,9 @@ export default function NewExpenseClaimPage() {
         {formError && <ErrorMessage message={formError} />}
 
         <div className="flex gap-3">
-          <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-6 py-2 text-sm font-medium disabled:opacity-50">
-            {submitting ? 'Creating...' : 'Create Draft'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…" className="px-6">
+            Create Draft
+          </LoadingButton>
           <button type="button" onClick={() => router.push('/expenses/claims')} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-6 py-2 text-sm font-medium">
             Cancel
           </button>

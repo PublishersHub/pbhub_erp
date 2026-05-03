@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,6 +9,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker';
 import {
   useAsync,
   usePermission,
@@ -22,7 +23,15 @@ import { employeeName } from '@/lib/format';
 
 type ViewMode = 'my' | 'all';
 
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
 export default function DailySummaryPage() {
+  useEffect(() => {
+    document.title = 'Daily Attendance · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canReadAll = can('attendance.read');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
@@ -30,14 +39,18 @@ export default function DailySummaryPage() {
 
   const [view, setView] = useState<ViewMode>('my');
 
-  // Default date range: last 30 days
+  // Default date range: This month
   const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  const fromFilter = searchParams.get('from') || thirtyDaysAgo.toISOString().slice(0, 10);
-  const toFilter = searchParams.get('to') || today.toISOString().slice(0, 10);
+  const fromFilter = searchParams.get('from') || isoDate(monthStart);
+  const toFilter = searchParams.get('to') || isoDate(today);
   const statusFilter = searchParams.get('status') || '';
+
+  const range: DateRange = { from: fromFilter, to: toFilter };
+  const handleRangeChange = (r: DateRange) => {
+    setParams({ from: r.from || null, to: r.to || null, page: null });
+  };
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () =>
@@ -116,19 +129,7 @@ export default function DailySummaryPage() {
         onClear={() => setParams({ from: null, to: null, status: null, page: null })}
         hasActiveFilters={!!statusFilter || !!searchParams.get('from') || !!searchParams.get('to')}
       >
-        <input
-          type="date"
-          value={fromFilter}
-          onChange={(e) => setParams({ from: e.target.value || null, page: null })}
-          className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
-        />
-        <span className="text-sm text-muted-foreground">to</span>
-        <input
-          type="date"
-          value={toFilter}
-          onChange={(e) => setParams({ to: e.target.value || null, page: null })}
-          className="rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
-        />
+        <DateRangePicker value={range} onChange={handleRangeChange} />
         <select
           value={statusFilter}
           onChange={(e) => setParams({ status: e.target.value || null, page: null })}
@@ -146,11 +147,16 @@ export default function DailySummaryPage() {
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
-        <EmptyState title="No records found" description="Adjust filters or check back later." />
+        <EmptyState
+          title="No records found"
+          description="Adjust filters or check back later."
+          variant="attendance"
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
                 <tr>
@@ -204,6 +210,45 @@ export default function DailySummaryPage() {
               </tbody>
             </table>
           </div>
+          {/* Mobile cards */}
+          <ul className="block md:hidden divide-y divide-border">
+            {items.map((s) => (
+              <li key={s.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">{formatDate(s.date)}</p>
+                  <StatusBadge status={s.status} />
+                </div>
+                {view === 'all' && (
+                  <p className="mt-1 text-xs text-muted-foreground">{employeeName(s.employee)}</p>
+                )}
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">In</p>
+                    <p className="font-medium text-foreground">
+                      {s.firstCheckIn
+                        ? new Date(s.firstCheckIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                        : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Out</p>
+                    <p className="font-medium text-foreground">
+                      {s.lastCheckOut
+                        ? new Date(s.lastCheckOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                        : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Worked</p>
+                    <p className="font-medium text-foreground">{formatMinutes(s.totalWorkedMinutes)}</p>
+                  </div>
+                </div>
+                {s.lateMinutes > 0 && (
+                  <p className="mt-2 text-xs text-destructive">Late: {formatMinutes(s.lateMinutes)}</p>
+                )}
+              </li>
+            ))}
+          </ul>
           <Pagination
             page={page}
             totalPages={totalPages}

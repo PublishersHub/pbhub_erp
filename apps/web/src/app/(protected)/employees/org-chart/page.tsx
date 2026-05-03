@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useAsync } from '@/lib/hooks';
+import { useAsync, usePermission } from '@/lib/hooks';
 import { listEmployees } from '@/lib/employee-api';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -148,6 +148,11 @@ function OrgTreeNode({ node }: { node: TreeNode }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrgChartPage() {
+  useEffect(() => {
+    document.title = 'Org chart · PbHub';
+  }, []);
+
+  const { can } = usePermission();
   const { data, error, loading, refetch } = useAsync(() => listEmployees(), []);
 
   const forest = useMemo(() => (data ? buildForest(data) : []), [data]);
@@ -167,6 +172,11 @@ export default function OrgChartPage() {
           variant="default"
           title="No employees yet"
           description="Add employees to see the org chart."
+          cta={
+            can('employee.create')
+              ? { label: 'Add employee', href: '/employees/new' }
+              : undefined
+          }
         />
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -15,6 +15,9 @@ import { formatDateTime, employeeName } from '@/lib/format';
 import { useToast } from '@/components/toast';
 
 export default function InterviewsListPage() {
+  useEffect(() => {
+    document.title = 'Interviews · PbHub';
+  }, []);
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, searchParams } =
     useTableParams();

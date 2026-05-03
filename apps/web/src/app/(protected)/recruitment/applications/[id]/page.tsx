@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -28,6 +28,9 @@ const REJECTION_REASONS: ApplicationRejectionReason[] = [
 ];
 
 export default function ApplicationDetailPage() {
+  useEffect(() => {
+    document.title = 'Application · PbHub';
+  }, []);
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const { data: app, error, loading, refetch } = useAsync(() => getApplication(id), [id]);

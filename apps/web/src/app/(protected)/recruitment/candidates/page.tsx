@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -13,6 +13,9 @@ import { useAsync, useDebouncedValue, usePermission, useTableParams, sortLocal, 
 import { listCandidates } from '@/lib/recruitment-api';
 
 export default function CandidatesListPage() {
+  useEffect(() => {
+    document.title = 'Candidates · PbHub';
+  }, []);
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();

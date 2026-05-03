@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync } from '@/lib/hooks';
 import { listPerformanceCycles, createGoal } from '@/lib/performance-api';
 import type { GoalMeasurementType } from '@/types/performance';
 
 export default function NewGoalPage() {
+  useEffect(() => {
+    document.title = 'New Goal · PbHub';
+  }, []);
+
   const router = useRouter();
   const { data: cycles } = useAsync(() => listPerformanceCycles(), []);
 
@@ -125,20 +130,16 @@ export default function NewGoalPage() {
         {formError && <ErrorMessage message={formError} />}
 
         <div className="flex gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
-          >
-            {submitting ? 'Creating...' : 'Create Goal'}
-          </button>
-          <button
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating...">
+            Create Goal
+          </LoadingButton>
+          <LoadingButton
             type="button"
+            variant="secondary"
             onClick={() => router.push('/performance/goals')}
-            className="rounded-md bg-secondary text-secondary-foreground px-4 py-2 text-sm font-medium hover:bg-secondary/80 motion-press"
           >
             Cancel
-          </button>
+          </LoadingButton>
         </div>
       </form>
     </div>

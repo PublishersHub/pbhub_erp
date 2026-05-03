@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 
@@ -22,6 +23,9 @@ const SECTIONS = [
 ];
 
 export default function RecruitmentPage() {
+  useEffect(() => {
+    document.title = 'Recruitment · PbHub';
+  }, []);
   return (
     <div>
       <PageHeader title="Recruitment" description="Manage your hiring pipeline" />

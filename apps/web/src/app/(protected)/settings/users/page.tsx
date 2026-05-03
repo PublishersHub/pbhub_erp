@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { Loading } from '@/components/ui/loading';
+import { EmptyState } from '@/components/ui/empty-state';
+import { TableSearch } from '@/components/ui/table-search';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
 import { listMembers, assignUserRole, removeUserRole } from '@/lib/users-api';
@@ -250,11 +253,17 @@ function DetailPanel({
 // ─── Page ─────────────────────────────────────
 
 export default function UsersPage() {
+  useEffect(() => {
+    document.title = 'Members · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canManage = can('user.manage_roles');
   const canRead = can('user.read');
 
   const toast = useToast();
+  const confirm = useConfirm();
+  const [search, setSearch] = useState('');
 
   const {
     data: members,
@@ -277,6 +286,19 @@ export default function UsersPage() {
   const [pending, setPending] = useState<Set<string>>(new Set());
 
   async function toggleRole(userId: string, roleId: string, currentlyAssigned: boolean) {
+    if (currentlyAssigned) {
+      const member = members?.find((m) => m.id === userId);
+      const role = roles?.find((r) => r.id === roleId);
+      const memberName = member ? displayName(member) : 'this user';
+      const roleName = role?.name ?? 'this role';
+      const ok = await confirm({
+        title: 'Remove role?',
+        description: `Remove "${roleName}" from ${memberName}? They will lose any permissions granted by that role.`,
+        confirmLabel: 'Remove',
+        tone: 'warning',
+      });
+      if (!ok) return;
+    }
     const key = `${userId}:${roleId}`;
     setPending((p) => new Set(p).add(key));
     try {
@@ -301,6 +323,20 @@ export default function UsersPage() {
       });
     }
   }
+
+  const filteredMembers = useMemo(() => {
+    if (!members) return members;
+    if (!search) return members;
+    const q = search.toLowerCase();
+    return members.filter((m) => {
+      const name = displayName(m).toLowerCase();
+      return (
+        m.account.email.toLowerCase().includes(q) ||
+        name.includes(q) ||
+        (m.employee?.employeeCode ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [members, search]);
 
   // Permission gate
   if (!canRead) {
@@ -330,10 +366,15 @@ export default function UsersPage() {
         {/* Left: member list (320px) */}
         <div className="w-full lg:w-80 lg:shrink-0">
           <div className="rounded-xl border border-border bg-card shadow-soft">
-            <div className="border-b border-border px-3 py-2.5">
+            <div className="border-b border-border px-3 py-2.5 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Members
               </p>
+              <TableSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search members…"
+              />
             </div>
             <div className="p-2">
               {loading && <SkeletonTable rows={6} cols={3} />}
@@ -345,13 +386,21 @@ export default function UsersPage() {
                 />
               )}
               {!loading && !error && members && members.length === 0 && (
+                <EmptyState
+                  variant="search"
+                  title="No members yet"
+                  description="Invite teammates to your organization to get started."
+                  cta={{ label: 'Invite a user', href: '/settings/invitations' }}
+                />
+              )}
+              {!loading && !error && filteredMembers && filteredMembers.length === 0 && members && members.length > 0 && (
                 <p className="px-3 py-4 text-sm text-muted-foreground">
-                  No members found.
+                  No members match "{search}".
                 </p>
               )}
-              {!loading && !error && members && members.length > 0 && (
+              {!loading && !error && filteredMembers && filteredMembers.length > 0 && (
                 <div className="space-y-0.5">
-                  {members.map((member) => (
+                  {filteredMembers.map((member) => (
                     <MemberListItem
                       key={member.id}
                       member={member}

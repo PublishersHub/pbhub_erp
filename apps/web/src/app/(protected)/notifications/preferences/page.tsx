@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
 import { listPreferences, updatePreferences } from '@/lib/notification-api';
-import type { NotificationPreference } from '@/types/notification';
 
 // Group event types by module for display
 const EVENT_MODULES: { module: string; events: { type: string; label: string }[] }[] = [
@@ -84,11 +85,16 @@ const EVENT_MODULES: { module: string; events: { type: string; label: string }[]
 ];
 
 export default function NotificationPreferencesPage() {
+  const toast = useToast();
   const { data: prefs, error, loading, refetch } = useAsync(() => listPreferences());
   const [saving, setSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<
     Map<string, boolean>
   >(new Map());
+
+  useEffect(() => {
+    document.title = 'Notification Preferences · PbHub';
+  }, []);
 
   // Build a lookup: "eventType:channel" -> enabled
   const prefMap = useMemo(() => {
@@ -131,10 +137,16 @@ export default function NotificationPreferencesPage() {
       await updatePreferences({ preferences: items });
       setPendingChanges(new Map());
       refetch();
+      toast.success('Preferences saved', 'Your notification settings are up to date.');
+    } catch (err) {
+      toast.error(
+        'Save failed',
+        err instanceof Error ? err.message : 'Could not update preferences',
+      );
     } finally {
       setSaving(false);
     }
-  }, [pendingChanges, refetch]);
+  }, [pendingChanges, refetch, toast]);
 
   const handleDiscard = useCallback(() => {
     setPendingChanges(new Map());
@@ -160,13 +172,13 @@ export default function NotificationPreferencesPage() {
               >
                 Discard
               </button>
-              <button
+              <LoadingButton
                 onClick={handleSave}
-                disabled={saving}
-                className="rounded-md bg-primary text-primary-foreground px-3 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
+                loading={saving}
+                loadingText="Saving…"
               >
-                {saving ? 'Saving...' : 'Save changes'}
-              </button>
+                Save changes
+              </LoadingButton>
             </div>
           ) : undefined
         }

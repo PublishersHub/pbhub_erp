@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -23,6 +23,9 @@ const RECOMMENDATIONS: InterviewRecommendation[] = [
 ];
 
 export default function InterviewDetailPage() {
+  useEffect(() => {
+    document.title = 'Interview · PbHub';
+  }, []);
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const { data: interview, error, loading, refetch } = useAsync(() => getInterview(id), [id]);

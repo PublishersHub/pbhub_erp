@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -8,6 +8,9 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -24,15 +27,34 @@ import {
 import type { SalaryComponentType } from '@/types/payroll';
 
 export default function SalaryComponentsPage() {
+  useEffect(() => {
+    document.title = 'Salary Components · PbHub';
+  }, []);
+
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canManage = can('payroll.run');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
+  const [search, setSearch] = useState('');
+
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listSalaryComponents(), []);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        c.type.toLowerCase().includes(q),
+    );
+  }, [data, search]);
 
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'code':
             return item.code;
@@ -46,7 +68,7 @@ export default function SalaryComponentsPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -135,7 +157,14 @@ export default function SalaryComponentsPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, name: string) {
+    const ok = await confirm({
+      title: 'Deactivate this component?',
+      description: `"${name}" will be hidden from new salary structures, but existing structures and payrolls will keep referencing it.`,
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deactivateSalaryComponent(id);
       refetch();
@@ -205,12 +234,12 @@ export default function SalaryComponentsPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating...">
+              Create
+            </LoadingButton>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowCreate(false); resetForm(); }}>
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}
@@ -219,10 +248,21 @@ export default function SalaryComponentsPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search components…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
-        <EmptyState title="No salary components" description="Create salary components to define earnings and deductions." />
+        <EmptyState
+          title={search ? 'No components match your search' : 'No salary components'}
+          description={search ? 'Try a different search term.' : 'Create salary components to define earnings and deductions.'}
+          variant={search ? 'search' : 'default'}
+          {...(canManage && !search ? { cta: { label: 'Add Component', onClick: () => setShowCreate(true) } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
@@ -286,7 +326,7 @@ export default function SalaryComponentsPage() {
                           <div className="flex gap-1">
                             <button onClick={() => startEdit(c)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
                             {c.isActive && (
-                              <button onClick={() => handleDeactivate(c.id)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
+                              <button onClick={() => handleDeactivate(c.id, c.name)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
                             )}
                           </div>
                         </td>

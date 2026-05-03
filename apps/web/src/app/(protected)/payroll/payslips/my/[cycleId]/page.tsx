@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useToast } from '@/components/toast';
 import { useAsync } from '@/lib/hooks';
 import { getMyPayslipDetail, downloadPayslipPdf } from '@/lib/payroll-api';
@@ -17,6 +18,10 @@ const MONTHS = [
 ];
 
 export default function MyPayslipDetailPage() {
+  useEffect(() => {
+    document.title = 'Payslip · PbHub';
+  }, []);
+
   const { cycleId } = useParams<{ cycleId: string }>();
   const { data: payslip, error, loading, refetch } = useAsync(
     () => getMyPayslipDetail(cycleId),
@@ -60,13 +65,9 @@ export default function MyPayslipDetailPage() {
         actions={
           <div className="flex items-center gap-3">
             {cycle && <StatusBadge status={cycle.status} />}
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="motion-press rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-glow-primary transition-all hover:bg-primary/90 disabled:opacity-60"
-            >
-              {downloading ? 'Generating…' : 'Download PDF'}
-            </button>
+            <LoadingButton onClick={handleDownload} loading={downloading} loadingText="Generating…">
+              Download PDF
+            </LoadingButton>
           </div>
         }
       />

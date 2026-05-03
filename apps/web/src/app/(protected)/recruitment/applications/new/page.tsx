@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -15,6 +15,9 @@ const SOURCES: CandidateSource[] = [
 ];
 
 export default function CreateApplicationPage() {
+  useEffect(() => {
+    document.title = 'New Application · PbHub';
+  }, []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetCandidateId = searchParams.get('candidateId') || '';

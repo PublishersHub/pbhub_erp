@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { listEmployees } from '@/lib/employee-api';
 import {
@@ -17,6 +18,10 @@ import {
 import { formatDate, formatCurrency, employeeName } from '@/lib/format';
 
 export default function SalaryStructuresPage() {
+  useEffect(() => {
+    document.title = 'Salary Structures · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canManage = can('payroll.run');
   const canRead = can('payroll.read');
@@ -192,12 +197,12 @@ export default function SalaryStructuresPage() {
 
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Saving...' : 'Save Structure'}
-            </button>
-            <button type="button" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
+            <LoadingButton type="submit" loading={submitting} loadingText="Saving...">
+              Save Structure
+            </LoadingButton>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); }}>
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -8,6 +8,9 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -42,15 +45,34 @@ const TRANSITION_LABELS: Record<string, string> = {
 };
 
 export default function PerformanceCyclesPage() {
+  useEffect(() => {
+    document.title = 'Performance Cycles · PbHub';
+  }, []);
+
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canManage = can('performance.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
+  const [search, setSearch] = useState('');
+
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listPerformanceCycles(), []);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        String(c.year).includes(q) ||
+        c.status.toLowerCase().includes(q),
+    );
+  }, [data, search]);
 
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'name': return item.name;
           case 'year': return item.year;
@@ -59,7 +81,7 @@ export default function PerformanceCyclesPage() {
           default: return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -118,7 +140,17 @@ export default function PerformanceCyclesPage() {
     }
   }
 
-  async function handleTransition(id: string, nextStatus: PerformanceCycleStatus) {
+  async function handleTransition(id: string, nextStatus: PerformanceCycleStatus, label: string) {
+    const isClosing = nextStatus === 'CLOSED';
+    const ok = await confirm({
+      title: `${label}?`,
+      description: isClosing
+        ? 'Closing the cycle finalizes all reviews and locks ratings. This cannot be undone.'
+        : `Move this cycle to ${nextStatus.replace(/_/g, ' ').toLowerCase()}? Participants will see the new phase.`,
+      confirmLabel: label,
+      tone: isClosing ? 'warning' : 'default',
+    });
+    if (!ok) return;
     setTransitioning(id);
     try {
       await transitionCycle(id, { status: nextStatus });
@@ -195,12 +227,12 @@ export default function PerformanceCyclesPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press">
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground px-4 py-2 text-sm font-medium hover:bg-secondary/80 motion-press">
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating...">
+              Create
+            </LoadingButton>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowCreate(false); resetForm(); }}>
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}
@@ -209,10 +241,21 @@ export default function PerformanceCyclesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search cycles…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my goals', href: '/performance/goals' }} />}
       {data && total === 0 && (
-        <EmptyState title="No cycles" description="Create performance cycles to start reviews." />
+        <EmptyState
+          title={search ? 'No cycles match your search' : 'No cycles'}
+          description={search ? 'Try a different search term.' : 'Create performance cycles to start reviews.'}
+          variant={search ? 'search' : 'default'}
+          {...(canManage && !search ? { cta: { label: 'Create Cycle', onClick: () => setShowCreate(true) } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
@@ -247,7 +290,7 @@ export default function PerformanceCyclesPage() {
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                           {nextStatus && nextLabel && (
                             <button
-                              onClick={() => handleTransition(c.id, nextStatus)}
+                              onClick={() => handleTransition(c.id, nextStatus, nextLabel)}
                               disabled={transitioning === c.id}
                               className="rounded bg-primary-soft px-2 py-1 text-xs text-primary hover:bg-primary/20 disabled:opacity-50 motion-press"
                             >

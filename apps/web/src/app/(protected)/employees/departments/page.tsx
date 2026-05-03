@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import {
   useAsync,
   usePermission,
@@ -23,7 +26,13 @@ import {
 import type { Department } from '@/types/employee';
 
 export default function DepartmentsPage() {
+  useEffect(() => {
+    document.title = 'Departments · PbHub';
+  }, []);
+
   const { can } = usePermission();
+  const confirm = useConfirm();
+  const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
   const { data, error, loading, refetch } = useAsync(() => listDepartments(), []);
 
@@ -100,13 +109,23 @@ export default function DepartmentsPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(dept: Department) {
+    const ok = await confirm({
+      title: 'Deactivate department?',
+      description: `This will deactivate "${dept.name}". Existing employees keep their assignment but the department won't appear in pickers.`,
+      confirmLabel: 'Deactivate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setFormError('');
     try {
-      await deactivateDepartment(id);
+      await deactivateDepartment(dept.id);
+      toast.success('Department deactivated', dept.name);
       refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to deactivate');
+      const msg = err instanceof Error ? err.message : 'Failed to deactivate';
+      setFormError(msg);
+      toast.error('Failed to deactivate', msg);
     }
   }
 
@@ -171,13 +190,9 @@ export default function DepartmentsPage() {
               ))}
             </select>
           </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Creating...' : 'Create'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+            Create
+          </LoadingButton>
           <button
             type="button"
             onClick={() => {
@@ -202,7 +217,15 @@ export default function DepartmentsPage() {
       {loading && <Loading />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (
-        <EmptyState title="No departments found" description="Create your first department." />
+        <EmptyState
+          title="No departments found"
+          description="Create your first department."
+          cta={
+            can('employee.create')
+              ? { label: 'Add department', onClick: () => setShowCreate(true) }
+              : undefined
+          }
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
@@ -308,7 +331,7 @@ export default function DepartmentsPage() {
                             </button>
                             {can('employee.delete') && dept.isActive && (
                               <button
-                                onClick={() => handleDeactivate(dept.id)}
+                                onClick={() => handleDeactivate(dept)}
                                 className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                               >
                                 Deactivate

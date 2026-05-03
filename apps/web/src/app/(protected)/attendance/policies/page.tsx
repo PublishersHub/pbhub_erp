@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -9,6 +9,9 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -26,15 +29,29 @@ import type { AttendancePolicyType } from '@/types/attendance';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AttendancePoliciesPage() {
+  useEffect(() => {
+    document.title = 'Attendance Policies · PbHub';
+  }, []);
+
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canManage = can('attendance.manage');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
+  const [search, setSearch] = useState('');
+
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listAttendancePolicies(), []);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter((p) => p.name.toLowerCase().includes(q) || p.policyType.toLowerCase().includes(q));
+  }, [data, search]);
 
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'name':
             return item.name;
@@ -46,7 +63,7 @@ export default function AttendancePoliciesPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -119,7 +136,14 @@ export default function AttendancePoliciesPage() {
     setWorkingDays([1, 2, 3, 4, 5]);
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, policyName: string) {
+    const ok = await confirm({
+      title: 'Deactivate this policy?',
+      description: `"${policyName}" will be hidden from new assignments. Existing assignments are preserved.`,
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deactivateAttendancePolicy(id);
       refetch();
@@ -231,12 +255,12 @@ export default function AttendancePoliciesPage() {
 
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
-            <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating...">
+              Create
+            </LoadingButton>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowCreate(false); resetForm(); }}>
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}
@@ -245,10 +269,21 @@ export default function AttendancePoliciesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search policies…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View attendance', href: '/attendance' }} />}
       {data && total === 0 && (
-        <EmptyState title="No policies" description="Create an attendance policy to get started." />
+        <EmptyState
+          title={search ? 'No policies match your search' : 'No policies'}
+          description={search ? 'Try a different search term.' : 'Create an attendance policy to get started.'}
+          variant={search ? 'search' : 'attendance'}
+          {...(canManage && !search ? { cta: { label: 'Create Policy', onClick: () => setShowCreate(true) } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
@@ -306,7 +341,7 @@ export default function AttendancePoliciesPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {p.isActive && (
                           <button
-                            onClick={() => handleDeactivate(p.id)}
+                            onClick={() => handleDeactivate(p.id, p.name)}
                             className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                           >
                             Deactivate

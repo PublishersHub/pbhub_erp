@@ -8,6 +8,7 @@ import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getAttendancePolicy,
@@ -165,12 +166,12 @@ export default function AttendancePolicyDetailPage() {
                 </div>
                 {formError && <ErrorMessage message={formError} />}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-1.5 text-xs font-medium disabled:opacity-50">
-                    {submitting ? 'Assigning...' : 'Assign'}
-                  </button>
-                  <button type="button" onClick={() => { setShowAssign(false); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1.5 text-xs font-medium">
+                  <LoadingButton type="submit" loading={submitting} loadingText="Assigning..." className="!px-3 !py-1.5 !text-xs">
+                    Assign
+                  </LoadingButton>
+                  <LoadingButton type="button" variant="secondary" onClick={() => { setShowAssign(false); setFormError(''); }} className="!px-3 !py-1.5 !text-xs">
                     Cancel
-                  </button>
+                  </LoadingButton>
                 </div>
               </form>
             )}

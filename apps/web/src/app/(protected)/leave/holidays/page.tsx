@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -8,6 +8,9 @@ import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -20,8 +23,14 @@ import { formatDate } from '@/lib/format';
 
 export default function HolidaysPage() {
   const { can } = usePermission();
+  const confirm = useConfirm();
   const canManage = can('leave.manage');
   const currentYear = new Date().getFullYear();
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    document.title = 'Holidays · PbHub';
+  }, []);
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
   const yearFilter = searchParams.get('year') || '';
@@ -39,9 +48,16 @@ export default function HolidaysPage() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const filtered = useMemo(() => {
+    const arr = data ?? [];
+    if (!search.trim()) return arr;
+    const q = search.trim().toLowerCase();
+    return arr.filter((h) => h.name.toLowerCase().includes(q));
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'name':
             return item.name;
@@ -51,7 +67,7 @@ export default function HolidaysPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -82,7 +98,15 @@ export default function HolidaysPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, name: string) {
+    const ok = await confirm({
+      title: 'Deactivate holiday?',
+      description: `"${name}" will no longer be observed.`,
+      confirmLabel: 'Deactivate',
+      cancelLabel: 'Keep active',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deactivateHoliday(id);
       refetch();
@@ -117,8 +141,8 @@ export default function HolidaysPage() {
       />
 
       <FilterBar
-        onClear={() => setParams({ year: null, page: null })}
-        hasActiveFilters={!!yearFilter}
+        onClear={() => { setSearch(''); setParams({ year: null, page: null }); }}
+        hasActiveFilters={!!yearFilter || !!search}
       >
         <select
           value={yearFilter}
@@ -132,6 +156,12 @@ export default function HolidaysPage() {
             </option>
           ))}
         </select>
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search holiday name…"
+          className="min-w-[14rem] flex-1"
+        />
       </FilterBar>
 
       {showCreate && (
@@ -168,13 +198,9 @@ export default function HolidaysPage() {
             />
             Optional
           </label>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Creating...' : 'Create'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+            Create
+          </LoadingButton>
           <button
             type="button"
             onClick={() => {
@@ -199,10 +225,19 @@ export default function HolidaysPage() {
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my requests', href: '/leave/requests' }} />}
       {data && total === 0 && (
-        <EmptyState title="No holidays found" description="Add holidays for your organization." />
+        <EmptyState
+          variant="leave"
+          title="No holidays found"
+          description={search ? 'No holidays match your search.' : 'Add holidays so the leave calendar reflects them.'}
+          cta={
+            canManage && !search
+              ? { label: 'Add Holiday', onClick: () => setShowCreate(true) }
+              : undefined
+          }
+        />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+        <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-soft md:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
@@ -269,7 +304,7 @@ export default function HolidaysPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {h.isActive && (
                           <button
-                            onClick={() => handleDeactivate(h.id)}
+                            onClick={() => handleDeactivate(h.id, h.name)}
                             className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                           >
                             Deactivate
@@ -282,6 +317,49 @@ export default function HolidaysPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
+
+      {/* Mobile cards */}
+      {data && total > 0 && (
+        <div className="block space-y-3 md:hidden">
+          {items.map((h) => (
+            <div key={h.id} className="rounded-lg border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{h.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(h.date)}</p>
+                </div>
+                {h.isOptional ? (
+                  <span className="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">Optional</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">Mandatory</span>
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                {h.isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Active</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">Inactive</span>
+                )}
+                {canManage && h.isActive && (
+                  <button
+                    onClick={() => handleDeactivate(h.id, h.name)}
+                    className="rounded bg-destructive-soft px-2 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
+                  >
+                    Deactivate
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
           <Pagination
             page={page}
             totalPages={totalPages}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -17,6 +17,9 @@ import {
 import { formatDate, formatCurrency, employeeName } from '@/lib/format';
 
 export default function RequisitionDetailPage() {
+  useEffect(() => {
+    document.title = 'Requisition · PbHub';
+  }, []);
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { can } = usePermission();

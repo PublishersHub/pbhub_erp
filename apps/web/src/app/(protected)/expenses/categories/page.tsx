@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import {
   useAsync,
   usePermission,
@@ -23,13 +27,33 @@ import {
 export default function ExpenseCategoriesPage() {
   const { can } = usePermission();
   const canManage = can('expense.manage');
+  const confirm = useConfirm();
+  const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
+
+  useEffect(() => {
+    document.title = 'Expense Categories · PbHub';
+  }, []);
 
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listExpenseCategories(), []);
 
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        (c.description ?? '').toLowerCase().includes(q),
+    );
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'code':
             return item.code;
@@ -39,7 +63,7 @@ export default function ExpenseCategoriesPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -103,12 +127,22 @@ export default function ExpenseCategoriesPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, codeLabel: string) {
+    const ok = await confirm({
+      title: 'Deactivate this category?',
+      description: `Category "${codeLabel}" will no longer be selectable on new claims.`,
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await updateExpenseCategory(id, { isActive: false });
+      toast.success('Category deactivated', codeLabel);
       refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to deactivate');
+      const msg = err instanceof Error ? err.message : 'Failed to deactivate';
+      setFormError(msg);
+      toast.error('Failed to deactivate', msg);
     }
   }
 
@@ -145,9 +179,9 @@ export default function ExpenseCategoriesPage() {
             <label className="block text-xs font-medium text-foreground/80">Description</label>
             <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputCls} placeholder="Optional" />
           </div>
-          <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-            {submitting ? 'Creating...' : 'Create'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+            Create
+          </LoadingButton>
           <button type="button" onClick={() => { setShowCreate(false); setName(''); setCode(''); setDescription(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
             Cancel
           </button>
@@ -158,13 +192,31 @@ export default function ExpenseCategoriesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by code, name, or description…"
+            className="max-w-sm"
+          />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my claims', href: '/expenses/claims' }} />}
       {data && total === 0 && (
-        <EmptyState title="No categories" description="Create expense categories to classify expenses." />
+        <EmptyState
+          title={search ? 'No matching categories' : 'No categories'}
+          description={search ? 'Try a different search term.' : 'Create expense categories to classify expenses.'}
+          variant="expense"
+          {...(canManage && !search && !showCreate
+            ? { cta: { label: 'Add category', onClick: () => setShowCreate(true) } }
+            : {})}
+        />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+        <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
@@ -212,7 +264,7 @@ export default function ExpenseCategoriesPage() {
                           <div className="flex gap-1">
                             <button onClick={() => startEdit(c)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
                             {c.isActive && (
-                              <button onClick={() => handleDeactivate(c.id)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
+                              <button onClick={() => handleDeactivate(c.id, c.code)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
                             )}
                           </div>
                         </td>
@@ -223,6 +275,38 @@ export default function ExpenseCategoriesPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+
+      {data && total > 0 && (
+        <div className="block md:hidden space-y-3">
+          {items.map((c) => (
+            <div key={c.id} className="rounded-lg border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{c.code}</p>
+                  <p className="text-sm text-muted-foreground">{c.name}</p>
+                </div>
+                {c.isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">Active</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-xs font-medium">Inactive</span>
+                )}
+              </div>
+              {c.description && (
+                <p className="mt-2 text-xs text-muted-foreground">{c.description}</p>
+              )}
+              {canManage && (
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => startEdit(c)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
+                  {c.isActive && (
+                    <button onClick={() => handleDeactivate(c.id, c.code)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

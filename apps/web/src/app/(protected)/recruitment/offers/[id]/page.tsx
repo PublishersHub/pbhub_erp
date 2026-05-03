@@ -22,6 +22,9 @@ import { formatDate, formatDateTime, formatCurrency, employeeName } from '@/lib/
 import type { OnboardingInstance } from '@/types/onboarding';
 
 export default function OfferDetailPage() {
+  useEffect(() => {
+    document.title = 'Offer · PbHub';
+  }, []);
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { can } = usePermission();

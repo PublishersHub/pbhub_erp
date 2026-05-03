@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import {
   useAsync,
   usePermission,
@@ -24,13 +28,28 @@ import { formatCurrency } from '@/lib/format';
 export default function ExpensePoliciesPage() {
   const { can } = usePermission();
   const canManage = can('expense.manage');
+  const confirm = useConfirm();
+  const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
+
+  useEffect(() => {
+    document.title = 'Expense Policies · PbHub';
+  }, []);
 
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listExpensePolicies(), []);
 
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter((p) => p.name.toLowerCase().includes(q));
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'name':
             return item.name;
@@ -40,7 +59,7 @@ export default function ExpensePoliciesPage() {
             return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -123,12 +142,22 @@ export default function ExpensePoliciesPage() {
     }
   }
 
-  async function handleDeactivate(id: string) {
+  async function handleDeactivate(id: string, policyName: string) {
+    const ok = await confirm({
+      title: 'Deactivate this policy?',
+      description: `Policy "${policyName}" will no longer be selectable on new claims.`,
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await updateExpensePolicy(id, { isActive: false });
+      toast.success('Policy deactivated', policyName);
       refetch();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to deactivate');
+      const msg = err instanceof Error ? err.message : 'Failed to deactivate';
+      setFormError(msg);
+      toast.error('Failed to deactivate', msg);
     }
   }
 
@@ -178,9 +207,9 @@ export default function ExpensePoliciesPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50">
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
+            <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+              Create
+            </LoadingButton>
             <button type="button" onClick={() => { setShowCreate(false); resetForm(); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium">
               Cancel
             </button>
@@ -192,13 +221,31 @@ export default function ExpensePoliciesPage() {
         <div className="mb-4"><ErrorMessage message={formError} /></div>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by policy name…"
+            className="max-w-sm"
+          />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} fallback={{ label: 'View my claims', href: '/expenses/claims' }} />}
       {data && total === 0 && (
-        <EmptyState title="No policies" description="Create expense policies to define spending limits." />
+        <EmptyState
+          title={search ? 'No matching policies' : 'No policies'}
+          description={search ? 'Try a different search term.' : 'Create expense policies to define spending limits.'}
+          variant="expense"
+          {...(canManage && !search && !showCreate
+            ? { cta: { label: 'Create policy', onClick: () => setShowCreate(true) } }
+            : {})}
+        />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+        <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
@@ -258,7 +305,7 @@ export default function ExpensePoliciesPage() {
                           <div className="flex gap-1">
                             <button onClick={() => startEdit(p)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
                             {p.isActive && (
-                              <button onClick={() => handleDeactivate(p.id)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
+                              <button onClick={() => handleDeactivate(p.id, p.name)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
                             )}
                           </div>
                         </td>
@@ -269,6 +316,50 @@ export default function ExpensePoliciesPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+
+      {data && total > 0 && (
+        <div className="block md:hidden space-y-3">
+          {items.map((p) => (
+            <div key={p.id} className="rounded-lg border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">{p.name}</p>
+                {p.isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">Active</span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2.5 py-0.5 text-xs font-medium">Inactive</span>
+                )}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">Max Claim</dt>
+                  <dd className="text-foreground">{p.maxClaimAmount ? formatCurrency(p.maxClaimAmount) : '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Max Item</dt>
+                  <dd className="text-foreground">{p.maxItemAmount ? formatCurrency(p.maxItemAmount) : '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Receipt Above</dt>
+                  <dd className="text-foreground">{p.receiptRequiredAbove ? formatCurrency(p.receiptRequiredAbove) : '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Auto-approve Below</dt>
+                  <dd className="text-foreground">{p.autoApproveBelow ? formatCurrency(p.autoApproveBelow) : '—'}</dd>
+                </div>
+              </dl>
+              {canManage && (
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => startEdit(p)} className="rounded bg-primary-soft text-primary px-2 py-1 text-xs hover:bg-primary/20">Edit</button>
+                  {p.isActive && (
+                    <button onClick={() => handleDeactivate(p.id, p.name)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">Deactivate</button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

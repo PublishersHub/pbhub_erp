@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -18,6 +18,10 @@ import { getTodayReport, getMonthlyReport } from '@/lib/attendance-api';
 import { employeeName } from '@/lib/format';
 
 export default function AttendanceReportsPage() {
+  useEffect(() => {
+    document.title = 'Attendance Reports · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canRead = can('attendance.read');
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
@@ -125,7 +129,7 @@ export default function AttendanceReportsPage() {
         {monthlyLoading && <Loading />}
         {monthlyError && <ErrorMessage message={monthlyError} status={monthlyErrorStatus} onRetry={monthlyRefetch} fallback={{ label: 'View attendance', href: '/attendance' }} />}
         {monthlyData && total === 0 && (
-          <EmptyState title="No data" description="No attendance data for the selected month." />
+          <EmptyState title="No data" description="No attendance data for the selected month." variant="attendance" />
         )}
         {monthlyData && total > 0 && (
           <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">

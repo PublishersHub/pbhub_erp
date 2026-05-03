@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
 import {
   useAsync,
   usePermission,
@@ -29,12 +30,17 @@ import type { PerformanceReview } from '@/types/performance';
 type ViewMode = 'my' | 'team' | 'all';
 
 export default function ReviewsPage() {
+  useEffect(() => {
+    document.title = 'Reviews · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canReadAll = can('performance.read');
   const canReview = can('performance.review');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } = useTableParams();
 
   const [view, setView] = useState<ViewMode>('my');
+  const [search, setSearch] = useState('');
   const cycleFilter = searchParams.get('cycleId') || '';
 
   const { data: cycles } = useAsync(() => listPerformanceCycles(), []);
@@ -52,9 +58,20 @@ export default function ReviewsPage() {
     [view, cycleFilter],
   );
 
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter((r) => {
+      const empName = r.employee ? `${r.employee.firstName} ${r.employee.lastName}`.toLowerCase() : '';
+      const cycleName = r.cycle?.name?.toLowerCase() ?? '';
+      return empName.includes(q) || cycleName.includes(q) || r.status.toLowerCase().includes(q);
+    });
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'employee': return item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : '';
           case 'status': return item.status;
@@ -64,7 +81,7 @@ export default function ReviewsPage() {
           default: return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -120,10 +137,25 @@ export default function ReviewsPage() {
         </div>
       )}
 
+      {data && data.length > 0 && (view !== 'my' || cycleFilter) && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search reviews…" />
+        </div>
+      )}
+
       {(view !== 'my' || cycleFilter) && loading && <Loading />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
       {data && total === 0 && (view !== 'my' || cycleFilter) && (
-        <EmptyState title="No reviews" description="Reviews are created when a cycle transitions to self-review phase." />
+        <EmptyState
+          title={search ? 'No reviews match your search' : 'No reviews'}
+          description={
+            search
+              ? 'Try a different search term.'
+              : 'Reviews are created when a cycle transitions to the self-review phase. Check back once your cycle moves forward.'
+          }
+          variant={search ? 'search' : 'default'}
+          {...(!search ? { cta: { label: 'View cycles', href: '/performance/cycles' } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border bg-white shadow-sm">

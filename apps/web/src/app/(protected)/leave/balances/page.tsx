@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getMyBalances,
@@ -21,6 +22,10 @@ export default function LeaveBalancesPage() {
   const { can } = usePermission();
   const canManage = can('leave.manage');
   const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    document.title = 'My Leave · PbHub';
+  }, []);
 
   const [year, setYear] = useState(currentYear);
   const [employeeId, setEmployeeId] = useState('');
@@ -187,9 +192,14 @@ export default function LeaveBalancesPage() {
                 <label className="block text-xs text-muted-foreground">Adjustment *</label>
                 <input required type="number" step="0.5" value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)} className={inputCls} placeholder="+2 or -1" />
               </div>
-              <button type="submit" disabled={adjSubmitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-2 text-sm font-medium disabled:opacity-50">
-                {adjSubmitting ? 'Saving...' : 'Apply'}
-              </button>
+              <LoadingButton
+                type="submit"
+                loading={adjSubmitting}
+                loadingText="Saving…"
+                className="!px-3 !py-2"
+              >
+                Apply
+              </LoadingButton>
               <button type="button" onClick={() => { setShowAdjust(false); setAdjPolicyId(''); setAdjAmount(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-2 text-sm font-medium">
                 Cancel
               </button>
@@ -204,12 +214,14 @@ export default function LeaveBalancesPage() {
       {balError && <ErrorMessage message={balError} status={balErrorStatus} onRetry={refetch} />}
       {!balLoading && !balError && balances && balances.length === 0 && (
         <EmptyState
+          variant="leave"
           title="No leave balances"
           description={
             viewMode === 'employee'
               ? 'Initialize balances for this employee to get started.'
               : `No balances found for ${year}. Contact HR to initialize.`
           }
+          cta={viewMode === 'my' ? { label: 'Apply for leave', href: '/leave/requests/new' } : undefined}
         />
       )}
       {balances && balances.length > 0 && (

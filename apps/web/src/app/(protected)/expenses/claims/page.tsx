@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -11,6 +11,9 @@ import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableSearch } from '@/components/ui/table-search';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import {
   useAsync,
   usePermission,
@@ -18,7 +21,12 @@ import {
   sortLocal,
   paginateLocal,
 } from '@/lib/hooks';
-import { getMyClaims, getPendingClaims, getAllClaims } from '@/lib/expense-api';
+import {
+  getMyClaims,
+  getPendingClaims,
+  getAllClaims,
+  reviewExpenseClaim,
+} from '@/lib/expense-api';
 import { formatCurrency, formatDate, employeeName } from '@/lib/format';
 import type { ExpenseClaimStatus } from '@/types/expense';
 
@@ -33,11 +41,22 @@ export default function ExpenseClaimsPage() {
   const { can } = usePermission();
   const canApprove = can('expense.approve');
   const canReadAll = can('expense.read');
+  const confirm = useConfirm();
+  const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
 
   const [view, setView] = useState<ViewMode>('my');
   const statusFilter = (searchParams.get('status') || '') as ExpenseClaimStatus | '';
+
+  useEffect(() => {
+    const titleByView: Record<ViewMode, string> = {
+      my: 'My Claims · PbHub',
+      pending: 'Expense Claims · PbHub',
+      all: 'Expense Claims · PbHub',
+    };
+    document.title = titleByView[view];
+  }, [view]);
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () => {
@@ -48,12 +67,32 @@ export default function ExpenseClaimsPage() {
     [view, statusFilter],
   );
 
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Reset selection on view/data change
+  useEffect(() => {
+    setSelected(new Set());
+  }, [view, data]);
+
   // For "my" view, filter locally by status if pending view doesn't use it
   const filtered = useMemo(() => {
     if (!data) return [];
-    if (view === 'my' && statusFilter) return data.filter((c) => c.status === statusFilter);
-    return data;
-  }, [data, view, statusFilter]);
+    let arr = data;
+    if (view === 'my' && statusFilter) arr = arr.filter((c) => c.status === statusFilter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      arr = arr.filter(
+        (c) =>
+          c.claimNumber.toLowerCase().includes(q) ||
+          c.title.toLowerCase().includes(q) ||
+          c.status.toLowerCase().includes(q) ||
+          (c.employee ? employeeName(c.employee).toLowerCase().includes(q) : false),
+      );
+    }
+    return arr;
+  }, [data, view, statusFilter, search]);
 
   const sorted = useMemo(
     () =>
@@ -80,6 +119,74 @@ export default function ExpenseClaimsPage() {
     () => paginateLocal(sorted, page, pageSize),
     [sorted, page, pageSize],
   );
+
+  const showCheckboxes = view === 'pending' && canApprove;
+  const allSelected = items.length > 0 && items.every((c) => selected.has(c.id));
+  const someSelected = selected.size > 0;
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(items.map((c) => c.id)));
+    }
+  }
+
+  async function handleBulkReview(action: 'APPROVED' | 'REJECTED') {
+    const ids = items.filter((c) => selected.has(c.id)).map((c) => c.id);
+    if (ids.length === 0) return;
+
+    const isApprove = action === 'APPROVED';
+    const ok = await confirm({
+      title: isApprove
+        ? `Approve ${ids.length} claim${ids.length === 1 ? '' : 's'}?`
+        : `Reject ${ids.length} claim${ids.length === 1 ? '' : 's'}?`,
+      description: isApprove
+        ? 'Approved claims will progress to the next step.'
+        : 'Submitters will be notified that their claims were rejected.',
+      confirmLabel: isApprove ? 'Approve all' : 'Reject all',
+      tone: isApprove ? 'default' : 'danger',
+    });
+    if (!ok) return;
+
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await reviewExpenseClaim(id, { action });
+        success += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    setBulkLoading(false);
+    setSelected(new Set());
+
+    if (failed === 0) {
+      toast.success(
+        isApprove ? 'Claims approved' : 'Claims rejected',
+        `${success} claim${success === 1 ? '' : 's'} processed`,
+      );
+    } else if (success === 0) {
+      toast.error('Bulk action failed', `Could not ${isApprove ? 'approve' : 'reject'} any claims`);
+    } else {
+      toast.warning(
+        'Partial success',
+        `${success} succeeded, ${failed} failed`,
+      );
+    }
+    await refetch();
+  }
 
   return (
     <div>
@@ -145,6 +252,21 @@ export default function ExpenseClaimsPage() {
         </FilterBar>
       )}
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder={
+              view === 'my'
+                ? 'Search by claim #, title, or status…'
+                : 'Search by claim #, title, employee, or status…'
+            }
+            className="max-w-md"
+          />
+        </div>
+      )}
+
       {loading && <SkeletonTable rows={6} cols={7} />}
       {error && (
         <ErrorMessage
@@ -156,16 +278,47 @@ export default function ExpenseClaimsPage() {
       )}
       {data && total === 0 && (
         <EmptyState
-          title={view === 'pending' ? 'No pending approvals' : 'No expense claims'}
-          description={view === 'my' ? 'Create your first expense claim.' : 'No claims found.'}
+          title={
+            search
+              ? 'No matching claims'
+              : view === 'pending'
+              ? 'No pending approvals'
+              : view === 'my'
+              ? 'No claims yet'
+              : 'No expense claims'
+          }
+          description={
+            search
+              ? 'Try a different search term.'
+              : view === 'my'
+              ? 'Create your first expense claim.'
+              : view === 'pending'
+              ? 'You have no claims awaiting your decision.'
+              : 'No claims found.'
+          }
+          variant="expense"
+          {...(view === 'my' && !search
+            ? { cta: { label: 'Submit a claim', href: '/expenses/claims/new' } }
+            : {})}
         />
       )}
       {data && total > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+        <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card shadow-soft">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/60">
                 <tr>
+                  {showCheckboxes && (
+                    <th className="w-10 px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        aria-label="Select all"
+                        className="h-4 w-4 rounded border-input"
+                      />
+                    </th>
+                  )}
                   <SortableHeader label="Claim #" sortKey="claimNumber" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Title" sortKey="title" currentSort={sort} currentOrder={order} onSort={setSort} />
                   {view !== 'my' && (
@@ -180,7 +333,18 @@ export default function ExpenseClaimsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((c) => (
-                  <tr key={c.id} className="group hover:bg-muted/50 transition-colors">
+                  <tr key={c.id} className={`group hover:bg-muted/50 transition-colors ${selected.has(c.id) ? 'bg-primary/5' : ''}`}>
+                    {showCheckboxes && (
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(c.id)}
+                          onChange={() => toggleOne(c.id)}
+                          aria-label={`Select ${c.claimNumber}`}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                      </td>
+                    )}
                     <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.claimNumber}</td>
                     <td className="px-4 py-3 text-sm text-foreground max-w-[200px] truncate" title={c.title}>{c.title}</td>
                     {view !== 'my' && (
@@ -210,6 +374,87 @@ export default function ExpenseClaimsPage() {
             </table>
           </div>
           <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+
+      {/* Mobile card list */}
+      {data && total > 0 && (
+        <div className="block md:hidden space-y-3">
+          {items.map((c) => (
+            <div
+              key={c.id}
+              className={`rounded-lg border border-border bg-card p-4 shadow-soft ${selected.has(c.id) ? 'ring-2 ring-primary/40' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {showCheckboxes && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        aria-label={`Select ${c.claimNumber}`}
+                        className="h-4 w-4 shrink-0 rounded border-input"
+                      />
+                    )}
+                    <p className="text-sm font-semibold text-foreground">{c.claimNumber}</p>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-foreground" title={c.title}>{c.title}</p>
+                  {view !== 'my' && c.employee && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{employeeName(c.employee)}</p>
+                  )}
+                </div>
+                <StatusBadge status={c.status} />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-base font-semibold text-foreground">{formatCurrency(c.totalAmount)}</p>
+                <Link
+                  href={`/expenses/claims/${c.id}`}
+                  className="inline-flex h-8 items-center rounded-lg bg-secondary px-3 text-xs font-medium text-foreground hover:bg-secondary/80 motion-press"
+                >
+                  View
+                </Link>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground/70">{formatDate(c.createdAt)}</p>
+            </div>
+          ))}
+          <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+        </div>
+      )}
+
+      {/* Sticky bulk-action bar */}
+      {showCheckboxes && someSelected && (
+        <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 motion-fade-in">
+          <div className="flex items-center gap-3 rounded-2xl border border-hairline bg-card px-4 py-2.5 shadow-2xl">
+            <span className="text-sm font-medium text-foreground">
+              {selected.size} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              disabled={bulkLoading}
+              className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              Clear
+            </button>
+            <div className="h-5 w-px bg-border" />
+            <button
+              type="button"
+              onClick={() => handleBulkReview('APPROVED')}
+              disabled={bulkLoading}
+              className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-success-foreground hover:bg-success/90 motion-press disabled:opacity-60"
+            >
+              {bulkLoading ? 'Processing…' : 'Approve all'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkReview('REJECTED')}
+              disabled={bulkLoading}
+              className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90 motion-press disabled:opacity-60"
+            >
+              {bulkLoading ? 'Processing…' : 'Reject all'}
+            </button>
+          </div>
         </div>
       )}
     </div>

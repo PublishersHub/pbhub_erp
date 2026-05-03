@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { useAsync } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
+import { getMyAccount, type AccountProfile } from '@/lib/account-api';
 import { listEmployees } from '@/lib/employee-api';
 import { getTodayReport, getMyToday, checkIn, checkOut, getAllSummaries } from '@/lib/attendance-api';
 import {
@@ -1799,6 +1800,66 @@ function EmployeeDashboard() {
 
 // ─── Main page ───────────────────────────────
 
+// ─── Profile completeness (small dashboard card) ────────────────
+
+const PROFILE_COMPLETENESS_FIELDS: { key: keyof AccountProfile; label: string }[] = [
+  { key: 'firstName', label: 'First name' },
+  { key: 'lastName', label: 'Last name' },
+  { key: 'email', label: 'Email address' },
+];
+
+function computeProfileCompleteness(profile: AccountProfile | null) {
+  if (!profile) return { percent: 0, missing: [] as string[] };
+  const missing: string[] = [];
+  let filled = 0;
+  for (const f of PROFILE_COMPLETENESS_FIELDS) {
+    const v = profile[f.key];
+    if (typeof v === 'string' && v.trim().length > 0) filled++;
+    else missing.push(f.label);
+  }
+  const percent = Math.round((filled / PROFILE_COMPLETENESS_FIELDS.length) * 100);
+  return { percent, missing };
+}
+
+function ProfileCompletenessBanner() {
+  const { data: profile } = useAsync(() => getMyAccount().catch(() => null));
+  const { percent, missing } = useMemo(
+    () => computeProfileCompleteness(profile ?? null),
+    [profile],
+  );
+
+  if (!profile || percent >= 80) return null;
+
+  return (
+    <Link
+      href="/profile"
+      className="block rounded-2xl border border-hairline bg-card p-3 transition hover:bg-muted/40"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-medium text-foreground">Finish your profile</p>
+            <span className="text-xs font-semibold text-primary">{percent}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          {missing.length > 0 && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Missing: {missing.slice(0, 3).join(', ')}
+              {missing.length > 3 ? ` +${missing.length - 3} more` : ''}
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 text-xs font-medium text-primary">Update →</span>
+      </div>
+    </Link>
+  );
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
 
@@ -1837,6 +1898,9 @@ export default function DashboardPage() {
           </p>
         </div>
       </header>
+
+      {/* Profile completeness nudge (renders only when <80%) */}
+      <ProfileCompletenessBanner />
 
       {/* Variant body */}
       {variant === 'company' && <CompanyDashboard />}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
+import { TableSearch } from '@/components/ui/table-search';
 import {
   useAsync,
   usePermission,
@@ -24,6 +25,10 @@ import { employeeName } from '@/lib/format';
 type ViewMode = 'my' | 'team' | 'all';
 
 export default function GoalsPage() {
+  useEffect(() => {
+    document.title = 'Goals · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canReadAll = can('performance.read');
   const canApprove = can('performance.approve_goals');
@@ -31,6 +36,7 @@ export default function GoalsPage() {
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } = useTableParams();
 
   const [view, setView] = useState<ViewMode>('my');
+  const [search, setSearch] = useState('');
   const cycleFilter = searchParams.get('cycleId') || '';
 
   const { data: cycles } = useAsync(() => listPerformanceCycles(), []);
@@ -41,9 +47,23 @@ export default function GoalsPage() {
     [view, cycleFilter],
   );
 
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter((g) => {
+      const empName = g.employee ? `${g.employee.firstName} ${g.employee.lastName}`.toLowerCase() : '';
+      return (
+        g.title.toLowerCase().includes(q) ||
+        empName.includes(q) ||
+        g.status.toLowerCase().includes(q)
+      );
+    });
+  }, [data, search]);
+
   const sorted = useMemo(
     () =>
-      sortLocal(data ?? [], sort, order, (item, key) => {
+      sortLocal(filtered, sort, order, (item, key) => {
         switch (key) {
           case 'title': return item.title;
           case 'employee': return item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : '';
@@ -53,7 +73,7 @@ export default function GoalsPage() {
           default: return null;
         }
       }),
-    [data, sort, order],
+    [filtered, sort, order],
   );
 
   const { items, total, totalPages } = useMemo(
@@ -110,10 +130,21 @@ export default function GoalsPage() {
         </select>
       </FilterBar>
 
+      {data && data.length > 0 && (
+        <div className="mb-3">
+          <TableSearch value={search} onChange={setSearch} placeholder="Search goals…" />
+        </div>
+      )}
+
       {loading && <Loading />}
       {error && <ErrorMessage message={error} status={errorStatus} onRetry={refetch} />}
       {data && total === 0 && (
-        <EmptyState title="No goals" description="Create goals for your performance cycle." />
+        <EmptyState
+          title={search ? 'No goals match your search' : 'No goals'}
+          description={search ? 'Try a different search term.' : 'Set a goal to track progress against your performance cycle.'}
+          variant={search ? 'search' : 'default'}
+          {...(canCreate && !search ? { cta: { label: 'Set a goal', href: '/performance/goals/new' } } : {})}
+        />
       )}
       {data && total > 0 && (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">

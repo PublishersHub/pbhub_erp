@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -8,6 +8,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/toast';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { getEmployee, deactivateEmployee } from '@/lib/employee-api';
 import { formatDate, employeeName } from '@/lib/format';
@@ -16,20 +18,39 @@ export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { can } = usePermission();
+  const confirm = useConfirm();
+  const toast = useToast();
   const { data: emp, error, loading, refetch } = useAsync(() => getEmployee(id), [id]);
   const [actionError, setActionError] = useState('');
   const [acting, setActing] = useState(false);
-  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
-  async function doAction(fn: () => Promise<unknown>) {
+  useEffect(() => {
+    if (emp) {
+      document.title = `${emp.firstName} ${emp.lastName} · PbHub`;
+    } else {
+      document.title = 'Employee · PbHub';
+    }
+  }, [emp]);
+
+  async function handleDeactivate() {
+    if (!emp) return;
+    const ok = await confirm({
+      title: 'Deactivate employee?',
+      description: `This will mark ${emp.firstName} ${emp.lastName} as inactive. You can reactivate later.`,
+      confirmLabel: 'Deactivate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setActionError('');
     setActing(true);
     try {
-      await fn();
-      setShowDeactivateConfirm(false);
+      await deactivateEmployee(id);
+      toast.success('Employee deactivated', `${emp.firstName} ${emp.lastName}`);
       refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Action failed');
+      const msg = err instanceof Error ? err.message : 'Action failed';
+      setActionError(msg);
+      toast.error('Failed to deactivate', msg);
     } finally {
       setActing(false);
     }
@@ -175,37 +196,13 @@ export default function EmployeeDetailPage() {
               )}
 
               {can('employee.delete') && emp.isActive && (
-                <>
-                  {!showDeactivateConfirm ? (
-                    <button
-                      onClick={() => setShowDeactivateConfirm(true)}
-                      className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
-                    >
-                      Deactivate
-                    </button>
-                  ) : (
-                    <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
-                      <p className="text-xs text-destructive">
-                        Are you sure you want to deactivate this employee?
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          disabled={acting}
-                          onClick={() => doAction(() => deactivateEmployee(id))}
-                          className="rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
-                        >
-                          {acting ? 'Deactivating...' : 'Confirm'}
-                        </button>
-                        <button
-                          onClick={() => setShowDeactivateConfirm(false)}
-                          className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1 text-xs font-medium"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <button
+                  onClick={handleDeactivate}
+                  disabled={acting}
+                  className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {acting ? 'Deactivating...' : 'Deactivate'}
+                </button>
               )}
             </div>
             {actionError && (

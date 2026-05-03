@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { getLeavePolicy, assignLeavePolicy, removeAssignment } from '@/lib/leave-api';
 import { listEmployees } from '@/lib/employee-api';
@@ -15,7 +17,12 @@ import { formatDate, employeeName } from '@/lib/format';
 export default function LeavePolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const confirm = useConfirm();
   const canManage = can('leave.manage');
+
+  useEffect(() => {
+    document.title = 'Leave Policy · PbHub';
+  }, []);
   const { data: policy, error, loading, refetch } = useAsync(() => getLeavePolicy(id), [id]);
   const { data: employees } = useAsync(
     () => (canManage ? listEmployees() : Promise.resolve(null)),
@@ -56,7 +63,15 @@ export default function LeavePolicyDetailPage() {
     }
   }
 
-  async function handleRemoveAssignment(assignmentId: string) {
+  async function handleRemoveAssignment(assignmentId: string, name: string) {
+    const ok = await confirm({
+      title: 'Remove this assignment?',
+      description: `${name} will lose access to this leave policy.`,
+      confirmLabel: 'Remove',
+      cancelLabel: 'Keep',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await removeAssignment(id, assignmentId);
       refetch();
@@ -162,9 +177,14 @@ export default function LeavePolicyDetailPage() {
                 </div>
                 {formError && <ErrorMessage message={formError} />}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={submitting} className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-3 py-1.5 text-xs font-medium disabled:opacity-50">
-                    {submitting ? 'Assigning...' : 'Assign'}
-                  </button>
+                  <LoadingButton
+                    type="submit"
+                    loading={submitting}
+                    loadingText="Assigning…"
+                    className="!px-3 !py-1.5 !text-xs"
+                  >
+                    Assign
+                  </LoadingButton>
                   <button type="button" onClick={() => { setShowAssign(false); setFormError(''); }} className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-3 py-1.5 text-xs font-medium">
                     Cancel
                   </button>
@@ -204,7 +224,7 @@ export default function LeavePolicyDetailPage() {
                         {canManage && (
                           <td className="px-4 py-2">
                             <button
-                              onClick={() => handleRemoveAssignment(a.id)}
+                              onClick={() => handleRemoveAssignment(a.id, employeeName(a.employee))}
                               className="rounded bg-destructive-soft text-destructive hover:bg-destructive/20 transition-colors px-2 py-1 text-xs font-medium"
                             >
                               Remove

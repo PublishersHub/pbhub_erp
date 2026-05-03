@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,6 +9,8 @@ import { Pagination } from '@/components/ui/pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   useAsync,
   usePermission,
@@ -28,6 +30,11 @@ import type { CorrectionRequestStatus } from '@/types/attendance';
 type ViewMode = 'my' | 'all';
 
 export default function CorrectionsPage() {
+  useEffect(() => {
+    document.title = 'Attendance Corrections · PbHub';
+  }, []);
+
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canManage = can('attendance.manage');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
@@ -114,6 +121,15 @@ export default function CorrectionsPage() {
   }
 
   async function handleReview(id: string, status: 'APPROVED' | 'REJECTED') {
+    if (status === 'REJECTED') {
+      const ok = await confirm({
+        title: 'Reject this correction request?',
+        description: 'The employee will be notified that the request was rejected. Add remarks above to explain why.',
+        confirmLabel: 'Reject',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
     setFormError('');
     try {
       await reviewCorrection(id, { status, remarks: reviewRemarks || undefined });
@@ -230,15 +246,12 @@ export default function CorrectionsPage() {
           </div>
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {submitting ? 'Submitting...' : 'Submit'}
-            </button>
-            <button
+            <LoadingButton type="submit" loading={submitting} loadingText="Submitting...">
+              Submit
+            </LoadingButton>
+            <LoadingButton
               type="button"
+              variant="secondary"
               onClick={() => {
                 setShowCreate(false);
                 setCorrDate('');
@@ -246,10 +259,9 @@ export default function CorrectionsPage() {
                 setReqCheckOut('');
                 setReason('');
               }}
-              className="rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
             >
               Cancel
-            </button>
+            </LoadingButton>
           </div>
         </form>
       )}
@@ -266,6 +278,8 @@ export default function CorrectionsPage() {
         <EmptyState
           title="No correction requests"
           description="Submit a correction request if you need to fix attendance records."
+          variant="attendance"
+          cta={{ label: 'Request Correction', onClick: () => setShowCreate(true) }}
         />
       )}
       {data && total > 0 && (

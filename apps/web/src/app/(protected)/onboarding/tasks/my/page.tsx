@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -22,6 +22,9 @@ const SORT_OPTIONS = [
 ];
 
 export default function MyTasksPage() {
+  useEffect(() => {
+    document.title = 'My Onboarding Tasks · PbHub';
+  }, []);
   const { page, sort, order, pageSize, setPage, setSort, setParams } =
     useTableParams({ pageSize: 10 });
 

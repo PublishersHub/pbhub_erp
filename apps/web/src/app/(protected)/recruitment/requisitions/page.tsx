@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -21,6 +21,9 @@ const STATUSES: RequisitionStatus[] = [
 ];
 
 export default function RequisitionsListPage() {
+  useEffect(() => {
+    document.title = 'Requisitions · PbHub';
+  }, []);
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();

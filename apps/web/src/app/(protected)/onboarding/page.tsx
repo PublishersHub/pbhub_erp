@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -18,6 +18,9 @@ import type { OnboardingInstanceStatus } from '@/types/onboarding';
 const STATUSES: OnboardingInstanceStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 export default function OnboardingInstancesPage() {
+  useEffect(() => {
+    document.title = 'Onboarding · PbHub';
+  }, []);
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();

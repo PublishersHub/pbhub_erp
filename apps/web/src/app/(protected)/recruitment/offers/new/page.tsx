@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -14,6 +14,9 @@ import type { EmploymentType, DepartmentRef, DesignationRef, EmployeeRef } from 
 const EMPLOYMENT_TYPES: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
 
 export default function CreateOfferPage() {
+  useEffect(() => {
+    document.title = 'New Offer · PbHub';
+  }, []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetAppId = searchParams.get('applicationId') || '';

@@ -7,6 +7,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { getLeaveRequest, reviewLeaveRequest, cancelLeaveRequest } from '@/lib/leave-api';
 import { formatDate, employeeName } from '@/lib/format';
@@ -17,7 +19,12 @@ export default function LeaveRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const toast = useToast();
+  const confirm = useConfirm();
   const { data: remoteReq, error, loading, refetch } = useAsync(() => getLeaveRequest(id), [id]);
+
+  useEffect(() => {
+    document.title = 'Leave Request · PbHub';
+  }, []);
 
   // Local copy for optimistic mutations
   const [req, setReq] = useState<LeaveRequest | null>(null);
@@ -37,6 +44,15 @@ export default function LeaveRequestDetailPage() {
 
   async function handleApprove() {
     if (!req) return;
+
+    const ok = await confirm({
+      title: 'Approve leave request?',
+      description: `Approving leave for ${employeeName(req.employee)}.`,
+      confirmLabel: 'Approve',
+      cancelLabel: 'Not yet',
+      tone: 'default',
+    });
+    if (!ok) return;
 
     const prev = req;
 
@@ -77,6 +93,15 @@ export default function LeaveRequestDetailPage() {
 
   async function handleReject() {
     if (!req) return;
+
+    const ok = await confirm({
+      title: 'Reject leave request?',
+      description: `Rejecting leave for ${employeeName(req.employee)}. They will be notified.`,
+      confirmLabel: 'Reject',
+      cancelLabel: 'Keep reviewing',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     const prev = req;
     const trimmedRemarks = remarks.trim() || null;
@@ -135,6 +160,22 @@ export default function LeaveRequestDetailPage() {
     } finally {
       setActing(false);
     }
+  }
+
+  async function handleConfirmCancel() {
+    const ok = await confirm({
+      title: 'Cancel leave request?',
+      description: 'Your manager will be notified the request is no longer needed.',
+      confirmLabel: 'Cancel request',
+      cancelLabel: 'Keep it',
+      tone: 'warning',
+    });
+    if (!ok) return;
+    doAction(() =>
+      cancelLeaveRequest(id, {
+        cancelReason: cancelReason.trim() || undefined,
+      }),
+    );
   }
 
   if (loading) return <Loading />;
@@ -259,21 +300,23 @@ export default function LeaveRequestDetailPage() {
             <div className="space-y-2">
               {canApprove && (
                 <>
-                  <button
-                    disabled={acting}
+                  <LoadingButton
+                    loading={acting}
+                    loadingText="Approving…"
                     onClick={handleApprove}
-                    className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                    className="w-full !bg-success !text-success-foreground hover:!bg-success/90"
                   >
-                    {acting ? 'Approving...' : 'Approve'}
-                  </button>
+                    Approve
+                  </LoadingButton>
                   {!showRejectForm ? (
-                    <button
-                      disabled={acting}
+                    <LoadingButton
+                      variant="destructive"
+                      loading={acting}
                       onClick={() => setShowRejectForm(true)}
-                      className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      className="w-full"
                     >
                       Reject
-                    </button>
+                    </LoadingButton>
                   ) : (
                     <div className="rounded-md border border-destructive/20 bg-destructive-soft p-3 space-y-2">
                       <textarea
@@ -284,14 +327,17 @@ export default function LeaveRequestDetailPage() {
                         className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-destructive focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
                       />
                       <div className="flex gap-2">
-                        <button
-                          disabled={acting}
+                        <LoadingButton
+                          variant="destructive"
+                          loading={acting}
+                          loadingText="Rejecting…"
                           onClick={handleReject}
-                          className="rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
+                          className="!px-3 !py-1 !text-xs"
                         >
-                          {acting ? 'Rejecting...' : 'Confirm Reject'}
-                        </button>
+                          Confirm Reject
+                        </LoadingButton>
                         <button
+                          type="button"
                           onClick={() => {
                             setShowRejectForm(false);
                             setRemarks('');
@@ -309,13 +355,14 @@ export default function LeaveRequestDetailPage() {
               {canCancel && (
                 <>
                   {!showCancelForm ? (
-                    <button
-                      disabled={acting}
+                    <LoadingButton
+                      variant="secondary"
+                      loading={acting}
                       onClick={() => setShowCancelForm(true)}
-                      className="w-full rounded-md border border-border bg-card text-foreground hover:bg-muted/50 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      className="w-full"
                     >
                       Cancel Request
-                    </button>
+                    </LoadingButton>
                   ) : (
                     <div className="rounded-md border border-border bg-secondary/30 p-3 space-y-2">
                       <textarea
@@ -326,20 +373,16 @@ export default function LeaveRequestDetailPage() {
                         className="block w-full rounded-md border border-input bg-card text-foreground px-2 py-1 text-xs focus:border-primary focus:ring-2 focus:ring-ring/50 focus:outline-none transition-colors"
                       />
                       <div className="flex gap-2">
-                        <button
-                          disabled={acting}
-                          onClick={() =>
-                            doAction(() =>
-                              cancelLeaveRequest(id, {
-                                cancelReason: cancelReason.trim() || undefined,
-                              }),
-                            )
-                          }
-                          className="rounded-md bg-foreground text-background hover:bg-foreground/90 motion-press transition-colors px-3 py-1 text-xs font-medium disabled:opacity-50"
+                        <LoadingButton
+                          loading={acting}
+                          loadingText="Cancelling…"
+                          onClick={handleConfirmCancel}
+                          className="!px-3 !py-1 !text-xs"
                         >
-                          {acting ? 'Cancelling...' : 'Confirm Cancel'}
-                        </button>
+                          Confirm Cancel
+                        </LoadingButton>
                         <button
+                          type="button"
                           onClick={() => {
                             setShowCancelForm(false);
                             setCancelReason('');

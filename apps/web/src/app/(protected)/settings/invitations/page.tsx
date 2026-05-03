@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { SkeletonTable } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { TableSearch } from '@/components/ui/table-search';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
 import {
@@ -186,13 +190,9 @@ function SendInvitationForm({
         )}
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors motion-press"
-      >
-        {submitting ? 'Sending…' : 'Send invitation'}
-      </button>
+      <LoadingButton type="submit" loading={submitting} loadingText="Sending…">
+        Send invitation
+      </LoadingButton>
     </form>
   );
 }
@@ -227,105 +227,189 @@ function LastCreatedCard({ invitation }: { invitation: CreatedInvitation }) {
 
 function InvitationsTable({
   invitations,
+  totalAll,
   loading,
   error,
   canManage,
+  search,
   onRevoke,
   onRetry,
+  onInvite,
 }: {
   invitations: Invitation[] | undefined;
+  totalAll: number;
   loading: boolean;
   error: string | null;
   canManage: boolean;
-  onRevoke: (id: string) => void;
+  search: string;
+  onRevoke: (inv: Invitation) => void;
   onRetry: () => void;
+  onInvite?: () => void;
 }) {
   if (loading) return <SkeletonTable rows={4} cols={5} />;
   if (error) return <ErrorMessage message={error} onRetry={onRetry} />;
+
+  if (totalAll === 0) {
+    return (
+      <EmptyState
+        variant="inbox"
+        title="No invitations yet"
+        description="Send an invitation to a teammate to join your organization."
+        cta={onInvite ? { label: 'Invite a user', onClick: onInvite } : undefined}
+      />
+    );
+  }
+
   if (!invitations || invitations.length === 0) {
     return (
       <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-        No invitations found.
+        {search ? `No invitations match "${search}".` : 'No invitations match the current filter.'}
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Roles</th>
-            <th className="px-4 py-3 font-medium">Invited by</th>
-            <th className="px-4 py-3 font-medium">Expires</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            {canManage && <th className="px-4 py-3 font-medium">Actions</th>}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {invitations.map((inv) => {
-            const invitedBy = inv.invitedByUser?.account;
-            const expiresDate = new Date(inv.expiresAt);
-            const isExpiredOrRevoked = inv.status === 'REVOKED' || inv.status === 'EXPIRED';
-            return (
-              <tr key={inv.id} className={`transition-colors hover:bg-secondary/20 ${isExpiredOrRevoked ? 'opacity-60' : ''}`}>
-                <td className="px-4 py-3 font-medium text-foreground">{inv.email}</td>
-                <td className="px-4 py-3 text-muted-foreground">{inv.firstName} {inv.lastName}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {inv.roleAssignments.length === 0 ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      inv.roleAssignments.map((ra) => (
+    <>
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Roles</th>
+              <th className="px-4 py-3 font-medium">Invited by</th>
+              <th className="px-4 py-3 font-medium">Expires</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              {canManage && <th className="px-4 py-3 font-medium">Actions</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {invitations.map((inv) => {
+              const invitedBy = inv.invitedByUser?.account;
+              const expiresDate = new Date(inv.expiresAt);
+              const isExpiredOrRevoked = inv.status === 'REVOKED' || inv.status === 'EXPIRED';
+              return (
+                <tr key={inv.id} className={`transition-colors hover:bg-secondary/20 ${isExpiredOrRevoked ? 'opacity-60' : ''}`}>
+                  <td className="px-4 py-3 font-medium text-foreground">{inv.email}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{inv.firstName} {inv.lastName}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {inv.roleAssignments.length === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        inv.roleAssignments.map((ra) => (
+                          <span
+                            key={ra.role.id}
+                            className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                          >
+                            {ra.role.name}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {invitedBy ? `${invitedBy.firstName} ${invitedBy.lastName}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    {expiresDate.toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={inv.status} />
+                  </td>
+                  {canManage && (
+                    <td className="px-4 py-3">
+                      {inv.status === 'PENDING' && (
+                        <button
+                          type="button"
+                          onClick={() => onRevoke(inv)}
+                          className="rounded-md border border-destructive/30 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors motion-press"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="block md:hidden space-y-3 p-3">
+        {invitations.map((inv) => {
+          const invitedBy = inv.invitedByUser?.account;
+          const expiresDate = new Date(inv.expiresAt);
+          const isExpiredOrRevoked = inv.status === 'REVOKED' || inv.status === 'EXPIRED';
+          const initials = `${inv.firstName.charAt(0)}${inv.lastName.charAt(0)}`.toUpperCase();
+          return (
+            <div
+              key={inv.id}
+              className={`rounded-xl border border-border bg-card p-3 shadow-soft ${isExpiredOrRevoked ? 'opacity-60' : ''}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-primary/60 text-xs font-bold text-white shadow-sm">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {inv.firstName} {inv.lastName}
+                    </p>
+                    <StatusBadge status={inv.status} />
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">{inv.email}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Expires {expiresDate.toLocaleDateString()}
+                    {invitedBy ? ` · by ${invitedBy.firstName} ${invitedBy.lastName}` : ''}
+                  </p>
+                  {inv.roleAssignments.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {inv.roleAssignments.map((ra) => (
                         <span
                           key={ra.role.id}
-                          className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                          className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
                         >
                           {ra.role.name}
                         </span>
-                      ))
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {invitedBy ? `${invitedBy.firstName} ${invitedBy.lastName}` : '—'}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {expiresDate.toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={inv.status} />
-                </td>
-                {canManage && (
-                  <td className="px-4 py-3">
-                    {inv.status === 'PENDING' && (
-                      <button
-                        type="button"
-                        onClick={() => onRevoke(inv.id)}
-                        className="rounded-md border border-destructive/30 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors motion-press"
-                      >
-                        Revoke
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {canManage && inv.status === 'PENDING' && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onRevoke(inv)}
+                    className="rounded-md border border-destructive/30 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors motion-press"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
 // ─── Page ─────────────────────────────────────
 
 export default function InvitationsPage() {
+  useEffect(() => {
+    document.title = 'Invitations · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const canManage = can('user.create') || can('user.manage_roles');
   const toast = useToast();
+  const confirm = useConfirm();
 
   const {
     data: invitations,
@@ -338,10 +422,18 @@ export default function InvitationsPage() {
 
   const [lastCreated, setLastCreated] = useState<CreatedInvitation | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
 
-  async function handleRevoke(id: string) {
+  async function handleRevoke(inv: Invitation) {
+    const ok = await confirm({
+      title: 'Revoke invitation?',
+      description: `This will revoke the invitation sent to ${inv.email}. They won't be able to use the link to join.`,
+      confirmLabel: 'Revoke',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await revokeInvitation(id);
+      await revokeInvitation(inv.id);
       toast.success('Invitation revoked');
       await refetchInvitations();
     } catch (err) {
@@ -349,9 +441,31 @@ export default function InvitationsPage() {
     }
   }
 
-  const filteredInvitations = statusFilter
-    ? invitations?.filter((i) => i.status === statusFilter)
-    : invitations;
+  function focusInviteForm() {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector<HTMLInputElement>(
+      'input[placeholder="jane@company.com"]',
+    );
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  const filteredInvitations = useMemo(() => {
+    if (!invitations) return undefined;
+    let list = invitations;
+    if (statusFilter) list = list.filter((i) => i.status === statusFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.email.toLowerCase().includes(q) ||
+          `${i.firstName} ${i.lastName}`.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [invitations, statusFilter, search]);
 
   if (!canManage) {
     return (
@@ -392,32 +506,43 @@ export default function InvitationsPage() {
 
       {/* Invitations list section */}
       <div className="rounded-xl border border-border bg-card shadow-soft">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex flex-col gap-3 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-foreground">Invitations</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {invitations ? `${invitations.length} total` : ''}
             </p>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
-          >
-            <option value="">All statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="ACCEPTED">Accepted</option>
-            <option value="REVOKED">Revoked</option>
-            <option value="EXPIRED">Expired</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <TableSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search invitations…"
+              className="w-full sm:w-64"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+            >
+              <option value="">All statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="REVOKED">Revoked</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
+          </div>
         </div>
         <InvitationsTable
           invitations={filteredInvitations}
+          totalAll={invitations?.length ?? 0}
           loading={loading}
           error={error}
           canManage={canManage}
+          search={search}
           onRevoke={handleRevoke}
           onRetry={refetchInvitations}
+          onInvite={focusInviteForm}
         />
       </div>
     </div>

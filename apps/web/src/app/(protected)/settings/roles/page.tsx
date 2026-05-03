@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FormEvent } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { TableSearch } from '@/components/ui/table-search';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/toast';
@@ -171,13 +174,9 @@ function CreateRoleForm({
       </div>
       {formError && <ErrorMessage message={formError} />}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 motion-press disabled:opacity-50"
-        >
-          {submitting ? 'Creating...' : 'Create role'}
-        </button>
+        <LoadingButton type="submit" loading={submitting} loadingText="Creating…">
+          Create role
+        </LoadingButton>
         <button
           type="button"
           onClick={onCancel}
@@ -246,6 +245,7 @@ interface DetailPanelProps {
 
 function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated }: DetailPanelProps) {
   const toast = useToast();
+  const confirm = useConfirm();
 
   const {
     data: detail,
@@ -370,6 +370,13 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
 
   async function handleDeactivate() {
     if (!detail || deactivating) return;
+    const ok = await confirm({
+      title: 'Deactivate role?',
+      description: `This will deactivate "${detail.name}". Users assigned to this role will lose its permissions until it's reactivated.`,
+      confirmLabel: 'Deactivate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setDeactivating(true);
     try {
       await deactivateRole(detail.id);
@@ -412,13 +419,14 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
               />
               {editError && <ErrorMessage message={editError} />}
               <div className="flex gap-2">
-                <button
+                <LoadingButton
                   type="submit"
-                  disabled={editSaving}
-                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground motion-press hover:bg-primary/90 disabled:opacity-50"
+                  loading={editSaving}
+                  loadingText="Saving…"
+                  className="px-3 py-1.5 text-xs"
                 >
-                  {editSaving ? 'Saving...' : 'Save'}
-                </button>
+                  Save
+                </LoadingButton>
                 <button
                   type="button"
                   onClick={() => setEditing(false)}
@@ -579,6 +587,10 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
 // ─── Page ─────────────────────────────────────
 
 export default function RolesPage() {
+  useEffect(() => {
+    document.title = 'Roles & Permissions · PbHub';
+  }, []);
+
   const { can } = usePermission();
   const { user } = useAuth();
   const canManage = can('role.manage');
@@ -589,6 +601,7 @@ export default function RolesPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState('');
 
   const {
     data: roles,
@@ -598,6 +611,18 @@ export default function RolesPage() {
   } = useAsync(() => listRoles(), []);
 
   const { data: allPerms, loading: permsLoading } = useAsync(() => listAllPermissions(), []);
+
+  const filteredRoles = useMemo(() => {
+    if (!roles) return roles;
+    if (!search) return roles;
+    const q = search.toLowerCase();
+    return roles.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.slug.toLowerCase().includes(q) ||
+        (r.description ?? '').toLowerCase().includes(q),
+    );
+  }, [roles, search]);
 
   // If the page isn't readable, show 403
   if (!canRead) {
@@ -656,10 +681,15 @@ export default function RolesPage() {
         {/* ── Left: roles list ── */}
         <div className="w-full lg:w-80 lg:shrink-0">
           <div className="rounded-xl border border-border bg-card shadow-soft">
-            <div className="border-b border-border px-3 py-2.5">
+            <div className="border-b border-border px-3 py-2.5 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Roles
               </p>
+              <TableSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search roles…"
+              />
             </div>
             <div className="p-2">
               {rolesLoading && <Loading />}
@@ -670,11 +700,21 @@ export default function RolesPage() {
                 <EmptyState
                   title="No roles yet"
                   description="Create your first role to get started."
+                  cta={
+                    canManage
+                      ? { label: 'New role', onClick: () => setShowCreate(true) }
+                      : undefined
+                  }
                 />
               )}
-              {roles && roles.length > 0 && (
+              {!rolesLoading && !rolesError && filteredRoles && filteredRoles.length === 0 && roles && roles.length > 0 && (
+                <p className="px-3 py-4 text-sm text-muted-foreground">
+                  No roles match "{search}".
+                </p>
+              )}
+              {filteredRoles && filteredRoles.length > 0 && (
                 <div className="space-y-0.5">
-                  {roles.map((role) => (
+                  {filteredRoles.map((role) => (
                     <RoleListItem
                       key={role.id}
                       role={role}

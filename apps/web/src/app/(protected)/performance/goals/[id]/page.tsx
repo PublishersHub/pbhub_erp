@@ -7,6 +7,8 @@ import { DetailRow } from '@/components/ui/detail-row';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getGoal,
@@ -20,6 +22,7 @@ import { formatDateTime, employeeName } from '@/lib/format';
 
 export default function GoalDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const confirm = useConfirm();
   const { can } = usePermission();
   const canCreateGoals = can('performance.create_goals');
   const canApproveGoals = can('performance.approve_goals');
@@ -71,6 +74,13 @@ export default function GoalDetailPage() {
   }
 
   async function handleDeactivate() {
+    const ok = await confirm({
+      title: 'Deactivate this goal?',
+      description: 'The goal will be marked inactive and will no longer count toward this cycle. Existing progress is preserved.',
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     try {
@@ -242,13 +252,9 @@ export default function GoalDetailPage() {
             <h3 className="text-sm font-semibold uppercase text-muted-foreground">Actions</h3>
 
             {canSubmitGoal && (
-              <button
-                onClick={handleSubmit}
-                disabled={actionLoading}
-                className="w-full rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 motion-press"
-              >
-                {actionLoading ? 'Submitting...' : 'Submit for Approval'}
-              </button>
+              <LoadingButton onClick={handleSubmit} loading={actionLoading} loadingText="Submitting..." className="w-full">
+                Submit for Approval
+              </LoadingButton>
             )}
 
             {canApproveThisGoal && !showApproval && (
@@ -295,9 +301,9 @@ export default function GoalDetailPage() {
               <button
                 onClick={handleDeactivate}
                 disabled={actionLoading}
-                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 motion-press"
+                className="w-full rounded-md bg-destructive-soft text-destructive px-4 py-2 text-sm font-medium hover:bg-destructive/20 disabled:opacity-50 motion-press disabled:cursor-not-allowed"
               >
-                Deactivate Goal
+                {actionLoading ? 'Working…' : 'Deactivate Goal'}
               </button>
             )}
 

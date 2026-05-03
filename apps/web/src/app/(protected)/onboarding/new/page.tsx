@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -9,6 +9,9 @@ import { useAsync } from '@/lib/hooks';
 import { createInstance, listTemplates } from '@/lib/onboarding-api';
 
 export default function StartOnboardingPage() {
+  useEffect(() => {
+    document.title = 'New Hire · PbHub';
+  }, []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: templates, loading: tplLoading } = useAsync(() => listTemplates());

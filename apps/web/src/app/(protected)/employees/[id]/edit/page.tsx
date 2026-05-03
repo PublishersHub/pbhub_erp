@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { Loading } from '@/components/ui/loading';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { useAsync } from '@/lib/hooks';
 import {
   getEmployee,
@@ -31,6 +32,10 @@ export default function EditEmployeePage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Edit Employee · PbHub';
+  }, []);
 
   const { data: emp, loading: empLoading } = useAsync(() => getEmployee(id), [id]);
   const { data: departments, loading: deptLoading } = useAsync(() => listDepartments(), []);
@@ -366,13 +371,9 @@ export default function EditEmployeePage() {
         {error && <ErrorMessage message={error} />}
 
         <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Saving...' : 'Save Changes'}
-          </button>
+          <LoadingButton type="submit" loading={submitting} loadingText="Saving…">
+            Save Changes
+          </LoadingButton>
           <button
             type="button"
             onClick={() => router.back()}
