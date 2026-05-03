@@ -10,17 +10,13 @@ infra/
 ├── lib/
 │   ├── config/env-config.ts      # per-env settings (region, origins, etc.)
 │   └── stacks/
-│       ├── storage-stack.ts      # S3 bucket (active)
-│       ├── network-stack.ts      # VPC (TODO)
-│       ├── data-stack.ts         # RDS + Redis (TODO)
-│       ├── compute-stack.ts      # ECS Fargate (TODO)
-│       ├── cdn-stack.ts          # CloudFront (TODO)
-│       ├── dns-stack.ts          # Route53 + ACM (TODO)
-│       └── monitoring-stack.ts   # CloudWatch (TODO)
+│       └── storage-stack.ts      # S3 bucket (only active stack today)
 └── test/                         # CDK assertions
 ```
 
 Region: `us-east-1`. CLI profile: `pb.hub`.
+
+Network / RDS / ECS / CloudFront / Route53 / monitoring stacks will be added when needed — not before.
 
 ## First-time setup
 
@@ -96,6 +92,4 @@ cdk destroy PbHub-Storage-dev --profile pb.hub --context env=dev
 ## Open TODOs
 
 - Pin AWS account IDs in `env-config.ts` once accounts are bootstrapped
-- Implement the empty stacks when we move off Docker Compose
-- Switch from IAM user → task role once compute lives in ECS
-- Add CloudFront in `cdn-stack.ts` once branding traffic justifies it
+- Switch from long-lived IAM user → ECS task role once compute is on AWS
