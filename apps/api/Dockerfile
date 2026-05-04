@@ -54,11 +54,19 @@ RUN pnpm --filter api deploy --prod /app/deployed
 # The generated Prisma query engine (.prisma/client/) is created by
 # `prisma generate` and lives in the pnpm virtual store during build.
 # @prisma/client at runtime does require('.prisma/client') which
-# resolves to node_modules/.prisma/client/. We must copy the generated
-# engine from the build store into the flat deployed node_modules.
-RUN mkdir -p /app/deployed/node_modules/.prisma && \
-    cp -r $(find /app/node_modules -path '*/.prisma/client' -type d | head -1) \
-    /app/deployed/node_modules/.prisma/client
+# resolves to node_modules/.prisma/client/. The pnpm store has multiple
+# .prisma/client dirs; we must follow symlinks (-L) and pick the one
+# that actually contains index.js (i.e. the fully-generated client, not
+# a half-resolved virtual-store stub).
+RUN set -e; \
+    SRC=$(for d in $(find /app -path '*/.prisma/client' -type d 2>/dev/null); do \
+            if [ -f "$d/index.js" ]; then echo "$d"; break; fi; \
+          done); \
+    if [ -z "$SRC" ]; then echo "ERR: no fully-generated .prisma/client found" >&2; exit 1; fi; \
+    echo "Copying Prisma client from $SRC"; \
+    mkdir -p /app/deployed/node_modules/.prisma; \
+    cp -rL "$SRC" /app/deployed/node_modules/.prisma/client; \
+    test -f /app/deployed/node_modules/.prisma/client/index.js
 
 # ---- Production ----
 # Minimal image: flat node_modules from deploy + compiled dist.
