@@ -54,7 +54,9 @@ The system comes preloaded with these users. Passwords are simple on purpose —
 - [ ] If the user belongs to one organization, they go straight to the dashboard.
 - [ ] If they belong to more than one (currently only Super Admin), a screen appears asking to pick an organization. Pick **PbHub** and continue.
 - [ ] **Sidebar (left):** dashboard, employees, attendance, leave, expenses, payroll, performance, recruitment, onboarding, notifications, settings (visible items depend on role — that's expected).
-- [ ] **Top bar (right):** organization name, theme toggle (sun/moon icon), user dropdown.
+- [ ] **Top bar (right):** organization switcher (if you belong to more than one), notification bell, theme toggle (sun/moon icon), user dropdown.
+- [ ] **Theme toggle:** click the sun/moon icon. Cycles light → dark → system. Reload the page — the theme should stick.
+- [ ] **Org switcher (Super Admin only):** the seeded super admin belongs to two organizations. Click the org name in the top bar — you see a dropdown with both. Pick the other one — sidebar / branding refresh to the new org. Switch back.
 - [ ] **Floating button (bottom-right):** a small primary-coloured circle. Click it to open the **Quick Actions** panel.
 
 ### What to flag
@@ -108,11 +110,90 @@ Steps:
 
 ---
 
-## 4. Attendance
+## 4. Employees
+
+### 4a. Employee list
+
+**Logged in as:** Bilal (HR) or Super Admin.
+
+- [ ] Sidebar → **Employees**.
+- [ ] Table of all employees with code, name (with avatar to the left), department, designation, status pill.
+- [ ] On a small screen / mobile, the table converts to cards.
+- [ ] **Search:** type "sara" — table filters live.
+- [ ] **Filters:** by department, by status, by designation. Try one, then **Clear filters**.
+- [ ] **Bulk export:** tick checkboxes on a few rows → sticky bar appears with "Export CSV". Click it. CSV downloads with the selected employees.
+- [ ] Sorting: click a column header (e.g. **Name**). Order should flip with each click.
+- [ ] **Pagination:** if more than one page, navigate using the page controls at the bottom.
+
+**Logged in as:** Sara (manager).
+
+- [ ] Sidebar → **Employees**.
+- [ ] You should ONLY see your team members (Ali, Ayesha, Hamza), not the full company.
+
+### 4b. Add employee
+
+**Logged in as:** Bilal.
+
+- [ ] On the Employees list, click **Add Employee** (top-right).
+- [ ] Fill in: code, first/last name, email, department, designation, joining date, etc.
+- [ ] Click **Add Employee** at the bottom. Spinner shows during submit.
+- [ ] You're redirected to the new employee's detail page. Toast confirms.
+
+### 4c. Edit / view employee
+
+- [ ] Open any employee's detail page. Identity card at top with avatar, name, designation.
+- [ ] **Edit** button → opens edit page. Change phone or department. Save.
+- [ ] On the edit page, the **avatar uploader** (camera icon overlay on hover) lets you upload/replace a photo.
+- [ ] Back on the list, the new photo appears in that row.
+
+### 4d. Deactivate employee
+
+**Logged in as:** Bilal.
+
+- [ ] On an employee's detail page, click **Deactivate**.
+- [ ] A warning confirm dialog appears.
+- [ ] Confirm. Employee status changes to **Inactive**.
+- [ ] On the list, the inactive employee shows in muted style or hidden by the filter (depending on filter setting).
+
+### 4e. Departments
+
+**Logged in as:** Bilal.
+
+- [ ] Sidebar → **Employees → Departments**.
+- [ ] List of departments: ENG, HR, FIN, etc.
+- [ ] Click **New Department**. Fill in code + name. Save.
+- [ ] **Deactivate** an unused department → confirm dialog → confirm.
+- [ ] Empty states show a friendly CTA when no departments match the search.
+
+### 4f. Designations
+
+**Logged in as:** Bilal.
+
+- [ ] Sidebar → **Employees → Designations**.
+- [ ] Same flow as departments: list, search, add, deactivate.
+
+### 4g. Org chart
+
+**Logged in as:** Bilal or Super Admin.
+
+- [ ] Sidebar → **Employees → Org Chart**.
+- [ ] You see a visual tree of the reporting hierarchy. Top: people without a manager. Below them, their reports. And so on.
+- [ ] Each card shows avatar, name, designation.
+- [ ] Click a card → jump to that employee's detail.
+
+### What to flag
+- Avatars don't load (broken image icon) → bug
+- Manager (Sara) sees employees outside her team → permission bug
+- CSV export doesn't include the rows you selected → bug
+- Org chart loops or shows a person twice → data bug
+
+---
+
+## 5. Attendance
 
 The attendance system is **strict mode**: one check-in and one check-out per day. After check-out, the day is locked until tomorrow.
 
-### 4a. Quick Actions widget (every role with check-in permission)
+### 5a. Quick Actions widget (every role with check-in permission)
 
 - [ ] Click the floating button at bottom-right. A panel opens showing today's date.
 - [ ] **Status section** says "Not started" with a "Check in" button.
@@ -124,14 +205,14 @@ The attendance system is **strict mode**: one check-in and one check-out per day
 - [ ] Click **Check out.** Panel changes to "Day complete" with a green tick, your start/end times, and total worked minutes.
 - [ ] Now the panel hides the buttons and shows just the summary — try checking in again, the widget shouldn't let you.
 
-### 4b. Attendance page (`/attendance`)
+### 5b. Attendance page (`/attendance`)
 
 - [ ] In the sidebar, click **Attendance → Check In / Out** (or just **Attendance**).
 - [ ] You see today's date, current time, the same status card, and **Today's Summary** with status (PRESENT / WEEKEND / HOLIDAY etc).
 - [ ] Below: a list of your check-in/out logs. Each log shows time, IP, source (WEB), and small chips for **device** + **location** (if you allowed location).
 - [ ] Click a location chip — opens Google Maps in a new tab at that point.
 
-### 4c. Off-day banner (weekend / holiday)
+### 5c. Off-day banner (weekend / holiday)
 
 Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
@@ -139,7 +220,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] On a weekend or holiday, the Quick Actions panel and `/attendance` page show a friendly **"Weekend"** or **"Holiday — [name]"** card instead of the check-in button.
 - [ ] There's a small **Check in anyway** link below for people who do work weekends.
 
-### 4d. Daily summary (managers / HR)
+### 5d. Daily summary (managers / HR)
 
 **Logged in as:** Bilal (HR Admin) or Super Admin.
 
@@ -148,7 +229,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Use the **date range picker** at the top — try "Last 7 days", "This month", custom range. Table updates.
 - [ ] Try **Search** — type "sara". Table filters live.
 
-### 4e. Attendance corrections
+### 5e. Attendance corrections
 
 **Logged in as:** Hamza (employee).
 
@@ -163,16 +244,38 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] You see Hamza's request. Click **Approve** — confirm dialog appears.
 - [ ] Confirm. Status changes to APPROVED.
 
+### 5f. Attendance policies
+
+**Logged in as:** Bilal.
+
+- [ ] Sidebar → **Attendance → Policies**.
+- [ ] List of policies (e.g. "Standard 9-to-6"). Each shows type (FIXED / FLEXIBLE), working days, grace minutes.
+- [ ] Click into one. You see assigned employees on the right.
+- [ ] **Assign** an employee → toast → row appears.
+- [ ] **Remove assignment** → red confirm dialog.
+- [ ] **Create** a new policy with custom hours (e.g. 10-to-7) and a few working days.
+- [ ] **Deactivate** a policy → confirm dialog (red).
+
+### 5g. Attendance reports
+
+**Logged in as:** Bilal or Super Admin.
+
+- [ ] Sidebar → **Attendance → Reports**.
+- [ ] Pick a month from the **month selector** at the top.
+- [ ] Table per employee: present days, late days, absent, on-leave, weekend, holiday, total worked hours.
+- [ ] Numbers should add up to total days in the month.
+
 ### What to flag
 - After check-out, the page still shows a check-in button → bug
 - Worked time on the panel goes backwards or stuck at 0 → bug
 - Admin daily summary missing employees who didn't check in → expected on a working day (will show as ABSENT after the next overnight job runs); if dates are weeks old and still missing → bug
+- Reports show negative numbers or numbers > total days in month → bug
 
 ---
 
-## 5. Leave
+## 6. Leave
 
-### 5a. Apply for leave (employee)
+### 6a. Apply for leave (employee)
 
 **Logged in as:** Hamza.
 
@@ -187,7 +290,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **Cancel request** → confirm dialog appears asking to confirm.
 - [ ] Confirm. Status changes to **CANCELLED**.
 
-### 5b. Approve leave (manager)
+### 6b. Approve leave (manager)
 
 **Logged in as:** Sara (Hamza's manager via EMP001 → EMP002 → EMP004 chain).
 
@@ -196,7 +299,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **Approve**. Confirm dialog. Confirm. Status → **APPROVED**.
 - [ ] Try **Reject** on another pending request — confirm dialog should be red ("danger" tone) with a remarks field.
 
-### 5c. Bulk approve
+### 6c. Bulk approve
 
 **Logged in as:** Sara or Bilal.
 
@@ -206,7 +309,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **Approve all** — confirm dialog. Confirm.
 - [ ] Toast at the end: "Approved X requests" (or "Approved X of Y — 1 failed" if any fail).
 
-### 5d. Calendar view
+### 6d. Calendar view
 
 **Logged in as:** Sara or Bilal.
 
@@ -218,7 +321,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Use the **<** and **>** arrows to navigate months. Click **Today** to jump back.
 - [ ] Holidays show as a thin coloured strip at the top of cells.
 
-### 5e. Leave balances
+### 6e. Leave balances
 
 **Logged in as:** any employee.
 
@@ -226,7 +329,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Table of leave types with **Total**, **Used**, **Remaining** columns.
 - [ ] After applying for leave (5a), the **Used** count should reflect pending + approved.
 
-### 5f. Holidays
+### 6f. Holidays
 
 **Logged in as:** Bilal.
 
@@ -235,7 +338,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **Add Holiday**. Fill in date + name. Save. Should appear in the list.
 - [ ] Click **Deactivate** on a holiday → confirm dialog → confirm. Holiday hides from the list.
 
-### 5g. Leave policies
+### 6g. Leave policies
 
 **Logged in as:** Bilal.
 
@@ -246,9 +349,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 6. Expenses
+## 7. Expenses
 
-### 6a. Submit a claim with receipt
+### 7a. Submit a claim with receipt
 
 **Logged in as:** Hamza.
 
@@ -262,14 +365,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Re-upload. Submit the claim.
 - [ ] Toast: "Claim submitted".
 
-### 6b. View a claim
+### 7b. View a claim
 
 - [ ] Click your new claim from the list.
 - [ ] Detail page shows items, amounts, receipt thumbnails.
 - [ ] Click a thumbnail → opens the receipt in a new tab.
 - [ ] If the receipt is a PDF, you see a 📄 icon instead of a thumbnail.
 
-### 6c. Approve a claim (manager / finance)
+### 7c. Approve a claim (manager / finance)
 
 **Logged in as:** Sara (manager).
 
@@ -284,14 +387,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Now it's ready for **reimbursement**.
 - [ ] Click **Mark Reimbursed**. Confirm dialog. Status → **REIMBURSED**.
 
-### 6d. Bulk approve
+### 7d. Bulk approve
 
 **Logged in as:** Sara or Usman.
 
 - [ ] Sidebar → **Expenses → Claims** → switch to pending view.
 - [ ] Tick 2–3 claims. Sticky bar at bottom → **Approve all**. Confirm. Toast summary.
 
-### 6e. Categories & policies
+### 7e. Categories & policies
 
 **Logged in as:** Bilal or Usman.
 
@@ -300,9 +403,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 7. Payroll
+## 8. Payroll
 
-### 7a. View own payslip (employee)
+### 8a. View own payslip (employee)
 
 **Logged in as:** Ali.
 
@@ -311,7 +414,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click the latest. Detail page shows breakdown (basic, allowances, deductions, net).
 - [ ] Click **Download PDF**. A branded PDF should download with the org logo.
 
-### 7b. Cycle management (HR / Finance)
+### 8b. Cycle management (HR / Finance)
 
 **Logged in as:** Usman.
 
@@ -325,7 +428,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] After finalize: payslips are visible to employees; cycle is locked.
 - [ ] Try **Regenerate** on a finalized cycle — should warn.
 
-### 7c. Salary components & structures
+### 8c. Salary components & structures
 
 **Logged in as:** Usman.
 
@@ -334,9 +437,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 8. Performance
+## 9. Performance
 
-### 8a. Set a goal (employee)
+### 9a. Set a goal (employee)
 
 **Logged in as:** Ayesha.
 
@@ -346,19 +449,19 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Title ("Improve code review velocity"), description, target date. Save.
 - [ ] Goal appears in the list with status **DRAFT**.
 
-### 8b. Submit goal for approval
+### 9b. Submit goal for approval
 
 - [ ] Click into the goal. Click **Submit for approval**.
 - [ ] Status → **PENDING_APPROVAL**.
 
-### 8c. Approve goal (manager)
+### 9c. Approve goal (manager)
 
 **Logged in as:** Sara.
 
 - [ ] Inbox shows pending goals.
 - [ ] Approve. Status → **APPROVED**.
 
-### 8d. Performance cycle & reviews
+### 9d. Performance cycle & reviews
 
 **Logged in as:** Bilal.
 
@@ -367,9 +470,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 9. Recruitment
+## 10. Recruitment
 
-### 9a. Create a requisition (manager)
+### 10a. Create a requisition (manager)
 
 **Logged in as:** Sara.
 
@@ -377,14 +480,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **New Requisition**. Fill in title, department, target start date, headcount, justification. Save.
 - [ ] Status → **PENDING_APPROVAL**.
 
-### 9b. Approve requisition (HR)
+### 10b. Approve requisition (HR)
 
 **Logged in as:** Bilal.
 
 - [ ] Sidebar → **Recruitment → Requisitions**.
 - [ ] Approve Sara's requisition.
 
-### 9c. Job posting + candidates
+### 10c. Job posting + candidates
 
 **Logged in as:** Bilal.
 
@@ -396,9 +499,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 10. Onboarding
+## 11. Onboarding
 
-### 10a. New hire (HR)
+### 11a. New hire (HR)
 
 **Logged in as:** Bilal.
 
@@ -406,14 +509,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Pick an employee (or create one). Pick an onboarding template.
 - [ ] An onboarding instance is created with a list of tasks (Sign offer, Set up email, Welcome call, etc.).
 
-### 10b. My tasks (new hire)
+### 11b. My tasks (new hire)
 
 **Logged in as:** Hamza.
 
 - [ ] Sidebar → **Onboarding → My Tasks**.
 - [ ] You see your assigned tasks. Tick one as **complete**. Some tasks may require a document upload — drag-drop it.
 
-### 10c. Templates (HR)
+### 11c. Templates (HR)
 
 **Logged in as:** Bilal.
 
@@ -422,9 +525,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 11. Settings
+## 12. Settings
 
-### 11a. Roles & Permissions (Super Admin only)
+### 12a. Roles & Permissions (Super Admin only)
 
 **Logged in as:** Super Admin (`admin@pbhub.com`).
 
@@ -434,13 +537,13 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **New Role** → create a custom role with a few permissions. Verify it shows in the list.
 - [ ] Deactivate a custom role → confirm dialog.
 
-### 11b. Users (Super Admin / HR)
+### 12b. Users (Super Admin / HR)
 
 - [ ] Sidebar → **Settings → Users**.
 - [ ] List of all users in the org with their roles.
 - [ ] Click on a user. Add or remove roles. Save.
 
-### 11c. Invitations
+### 12c. Invitations
 
 - [ ] Sidebar → **Settings → Invitations**.
 - [ ] Click **Invite User**. Enter email, pick a role. Send.
@@ -448,7 +551,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] **Revoke** an invitation → red confirm dialog → confirm.
 - [ ] Open the invitation email (check the team's inbox or the dev server logs). The link should let the invitee set up their password.
 
-### 11d. Branding (your favourite for testing)
+### 12d. Branding (your favourite for testing)
 
 **Logged in as:** Super Admin.
 
@@ -463,7 +566,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] **Replace** an asset by dropping a new file. Old one is replaced.
 - [ ] **Remove** an asset → its slot empties → save → the old logo is gone.
 
-### 11e. Notification preferences
+### 12e. Notification preferences
 
 **Logged in as:** any user.
 
@@ -473,7 +576,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 12. Inbox
+## 13. Inbox
 
 **Logged in as:** any approver (Sara, Bilal, Usman).
 
@@ -487,7 +590,25 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 13. Search (Cmd+K / Ctrl+K)
+## 14. Notifications (the bell icon)
+
+**Logged in as:** any user.
+
+- [ ] Click the **bell icon** in the top bar. A panel opens with recent notifications (leave approved, expense claim submitted, etc.).
+- [ ] Unread items have a small dot or are highlighted.
+- [ ] Click on a notification — it marks it as read and may navigate you to the related page (e.g. the leave request detail).
+- [ ] **Mark all read** button clears unread badges.
+- [ ] Open the full **Notifications** page (sidebar or "View all" link). Filter by read/unread, by event type (Leave / Expense / Payroll / etc.).
+- [ ] On the Notifications page header, a link to **Preferences** (covered in §12e) opens the per-event toggle screen.
+
+### What to flag
+- Bell badge count doesn't decrease after marking read → bug
+- Clicking a notification opens a 404 or wrong page → bug
+- Unread count out of sync between bell and full page → bug
+
+---
+
+## 15. Search (Cmd+K / Ctrl+K)
 
 **Logged in as:** any user.
 
@@ -502,7 +623,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 14. Mobile / responsive
+## 16. Mobile / responsive
 
 Switch your browser into mobile view (in Chrome: Right-click → Inspect → toggle device toolbar → pick iPhone 14 or similar).
 
@@ -515,7 +636,7 @@ Switch your browser into mobile view (in Chrome: Right-click → Inspect → tog
 
 ---
 
-## 15. Edge cases worth a try
+## 17. Edge cases worth a try
 
 - [ ] **Permission denied:** log in as Hamza, try opening `/settings/roles` directly via URL. Should show a friendly "you don't have permission" message, not a generic error.
 - [ ] **Logout:** click avatar → **Log out**. You land on the login screen. Now click your browser's **Back** button — you should go back to the login screen, NOT to the protected page.
@@ -525,7 +646,7 @@ Switch your browser into mobile view (in Chrome: Right-click → Inspect → tog
 
 ---
 
-## 16. Bug report template
+## 18. Bug report template
 
 When you find something off, copy this template into a Slack message or email:
 
