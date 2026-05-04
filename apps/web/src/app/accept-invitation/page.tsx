@@ -8,6 +8,9 @@ import {
   acceptInvitation,
   type InvitationContext,
 } from '@/lib/invitations-api';
+
+// Token-based page; can't be prerendered — read at request time.
+export const dynamic = 'force-dynamic';
 import { setToken, setRefreshToken, setActiveOrgId } from '@/lib/auth';
 import { AuthBrandShell } from '@/components/auth-brand-shell';
 import type { OrgBrandPublic } from '@/lib/branding-api';
