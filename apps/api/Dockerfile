@@ -46,18 +46,18 @@ COPY packages/ packages/
 RUN cd apps/api && pnpm exec prisma generate
 RUN pnpm --filter api build
 
-# Use `pnpm deploy` to create a standalone production package.
-# This outputs a flat node_modules (no pnpm symlink store) with
-# only production dependencies, including @prisma/client.
-RUN pnpm --filter api deploy --prod /app/deployed
-
-# Re-run prisma generate AFTER `pnpm deploy --prod` so the fully-generated
-# client (with model classes, enums, and the binary engine) lands in the
-# deployed flat node_modules. Generating before deploy puts it in the pnpm
-# virtual store which gets pruned away.
-RUN cd /app/deployed && \
-    npm install --no-save --no-package-lock prisma@5.22.0 && \
-    npx prisma generate --schema=/app/apps/api/prisma/schema.prisma && \
+# Use `pnpm deploy` (NOT --prod) to create a standalone deployable package
+# that keeps the prisma CLI in node_modules. Then re-run prisma generate so
+# the fully-resolved client (with model classes, enums, and the binary
+# engine) lands in the deployed flat node_modules — pnpm deploy gives us a
+# usable layout, but the .prisma/client dir under it is still the pnpm-store
+# stub. Regenerating in place fixes that.
+#
+# Keeping devDeps adds ~50 MB to the final image; the alternative was npm
+# install in the deployed dir which choked on pnpm-deploy's package layout.
+RUN pnpm --filter api deploy /app/deployed && \
+    cd /app/deployed && \
+    pnpm exec prisma generate --schema=/app/apps/api/prisma/schema.prisma && \
     test -s /app/deployed/node_modules/.prisma/client/index.js && \
     test -f /app/deployed/node_modules/.prisma/client/libquery_engine-linux-musl-arm64-openssl-3.0.x.so.node
 
