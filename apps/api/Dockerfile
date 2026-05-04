@@ -51,22 +51,15 @@ RUN pnpm --filter api build
 # only production dependencies, including @prisma/client.
 RUN pnpm --filter api deploy --prod /app/deployed
 
-# The generated Prisma query engine (.prisma/client/) is created by
-# `prisma generate` and lives in the pnpm virtual store during build.
-# @prisma/client at runtime does require('.prisma/client') which
-# resolves to node_modules/.prisma/client/. The pnpm store has multiple
-# .prisma/client dirs; we must follow symlinks (-L) and pick the one
-# that actually contains index.js (i.e. the fully-generated client, not
-# a half-resolved virtual-store stub).
-RUN set -e; \
-    SRC=$(for d in $(find /app -path '*/.prisma/client' -type d 2>/dev/null); do \
-            if [ -f "$d/index.js" ]; then echo "$d"; break; fi; \
-          done); \
-    if [ -z "$SRC" ]; then echo "ERR: no fully-generated .prisma/client found" >&2; exit 1; fi; \
-    echo "Copying Prisma client from $SRC"; \
-    mkdir -p /app/deployed/node_modules/.prisma; \
-    cp -rL "$SRC" /app/deployed/node_modules/.prisma/client; \
-    test -f /app/deployed/node_modules/.prisma/client/index.js
+# Re-run prisma generate AFTER `pnpm deploy --prod` so the fully-generated
+# client (with model classes, enums, and the binary engine) lands in the
+# deployed flat node_modules. Generating before deploy puts it in the pnpm
+# virtual store which gets pruned away.
+RUN cd /app/deployed && \
+    npm install --no-save --no-package-lock prisma@5.22.0 && \
+    npx prisma generate --schema=/app/apps/api/prisma/schema.prisma && \
+    test -s /app/deployed/node_modules/.prisma/client/index.js && \
+    test -f /app/deployed/node_modules/.prisma/client/libquery_engine-linux-musl-arm64-openssl-3.0.x.so.node
 
 # ---- Production ----
 # Minimal image: flat node_modules from deploy + compiled dist.
