@@ -3,7 +3,7 @@
 # Daily Postgres backup. Add to crontab:
 #
 #   crontab -e
-#   0 2 * * * /home/ubuntu/pbhub/deploy/scripts/backup-db.sh >> /var/log/pbhub-backup.log 2>&1
+#   0 2 * * * /home/ubuntu/hr-system/deploy/scripts/backup-db.sh >> /var/log/hr-system-backup.log 2>&1
 #
 # Writes /data/backups/db-YYYY-MM-DD-HHMM.sql.gz (kept 14 days).
 # Prunes older backups so the volume doesn't fill up.

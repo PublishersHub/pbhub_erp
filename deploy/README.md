@@ -22,7 +22,7 @@ deploy/
 ├── .env.prod.example          # copy to .env.prod, fill in
 ├── .env.prod                  # ← gitignored, lives only on the server
 ├── nginx/
-│   └── conf.d/pbhub.conf
+│   └── conf.d/hr-system.conf
 └── scripts/
     ├── bootstrap-host.sh      # one-time host setup (Docker, EBS, swap, UFW)
     ├── init-letsencrypt.sh    # one-time SSL bootstrap
@@ -60,8 +60,8 @@ deploy/
 ssh -i ~/.ssh/your-key.pem ubuntu@hr.cloudxbloom.com
 
 # Clone the repo (use a deploy key or PAT for private repo access)
-git clone -b refactor/multi-org-identity git@github.com:PublishersHub/pbhub_erp.git ~/pbhub
-cd ~/pbhub
+git clone -b refactor/multi-org-identity git@github.com:PublishersHub/pbhub_erp.git ~/hr-system
+cd ~/hr-system
 
 # One-time host setup: Docker, EBS mount at /data, swap, UFW, fail2ban
 sudo bash deploy/scripts/bootstrap-host.sh
@@ -75,7 +75,7 @@ docker --version    # sanity check, no sudo needed
 ### 4. Set up secrets
 
 ```bash
-cd ~/pbhub/deploy
+cd ~/hr-system/deploy
 cp .env.prod.example .env.prod
 nano .env.prod   # fill in every CHANGE_ME line
 ```
@@ -85,14 +85,14 @@ What you need to fill in:
 - `DB_PASSWORD` — `openssl rand -base64 32`
 - `DATABASE_URL` — paste the same password in
 - `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` — `openssl rand -base64 48` each (different values!)
-- `S3_BUCKET` — should be `pbhub-prod` if you've deployed the CDK storage stack
-- `S3_ACCESS_KEY` / `S3_SECRET_KEY` — create in IAM console: Users → `pbhub-app-prod` → Security credentials → Create access key
+- `S3_BUCKET` — should be `hr-system-prod` if you've deployed the CDK storage stack
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY` — create in IAM console: Users → `hr-system-app-prod` → Security credentials → Create access key
 - `MAIL_SMTP_USER` / `MAIL_SMTP_PASSWORD` — Gmail address + [App Password](https://myaccount.google.com/apppasswords)
 
 ### 5. Issue the SSL cert + bring up the stack
 
 ```bash
-cd ~/pbhub/deploy
+cd ~/hr-system/deploy
 ./scripts/init-letsencrypt.sh
 ```
 
@@ -132,7 +132,7 @@ Add:
 
 ```
 # Daily Postgres backup at 02:00 UTC
-0 2 * * * /home/ubuntu/pbhub/deploy/scripts/backup-db.sh >> /home/ubuntu/pbhub-backup.log 2>&1
+0 2 * * * /home/ubuntu/hr-system/deploy/scripts/backup-db.sh >> /home/ubuntu/hr-system-backup.log 2>&1
 ```
 
 ### 8. Open https://hr.cloudxbloom.com
@@ -145,7 +145,7 @@ You should land on the login screen. Log in as `admin@pbhub.com` / `admin123` (c
 
 ```bash
 ssh -i ~/.ssh/your-key.pem ubuntu@hr.cloudxbloom.com
-cd ~/pbhub/deploy
+cd ~/hr-system/deploy
 ./scripts/redeploy.sh
 ```
 
@@ -211,4 +211,4 @@ Probably a Prisma migration error. `docker compose ... logs migrate` will show t
 Likely Docker images. `docker system prune -af --volumes` (be careful with `--volumes`!) or `docker image prune -af`.
 
 ### S3 uploads return 403
-The IAM access keys in `.env.prod` are wrong, or the user policy doesn't grant put/get on the bucket. Verify in the AWS console: IAM → Users → `pbhub-app-prod` → Permissions.
+The IAM access keys in `.env.prod` are wrong, or the user policy doesn't grant put/get on the bucket. Verify in the AWS console: IAM → Users → `hr-system-app-prod` → Permissions.

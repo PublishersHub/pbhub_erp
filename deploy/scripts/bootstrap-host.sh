@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
 # Run once on a fresh Ubuntu 22.04 / 24.04 EC2 instance to prepare it for
-# the PbHub stack. Idempotent — safe to re-run.
+# the HR System stack. Idempotent — safe to re-run.
 #
 #   curl -fsSL https://raw.githubusercontent.com/PublishersHub/pbhub_erp/refactor/multi-org-identity/deploy/scripts/bootstrap-host.sh | sudo bash
 #
@@ -62,7 +62,7 @@ systemctl restart docker || true
 log "Mounting data volume $DATA_VOLUME at $DATA_MOUNT"
 if [[ -b "$DATA_VOLUME" ]]; then
   if ! blkid "$DATA_VOLUME" >/dev/null 2>&1; then
-    mkfs.ext4 -L pbhub-data "$DATA_VOLUME"
+    mkfs.ext4 -L hr-system-data "$DATA_VOLUME"
   fi
   mkdir -p "$DATA_MOUNT"
   if ! mountpoint -q "$DATA_MOUNT"; then
@@ -119,8 +119,8 @@ systemctl enable --now fail2ban
 log "Bootstrap complete."
 echo
 echo "Next steps:"
-echo "  1. git clone the repo into ~/pbhub (as the ubuntu user, not root)"
-echo "  2. cd ~/pbhub/deploy"
+echo "  1. git clone the repo into ~/hr-system (as the ubuntu user, not root)"
+echo "  2. cd ~/hr-system/deploy"
 echo "  3. cp .env.prod.example .env.prod && edit"
 echo "  4. ./scripts/init-letsencrypt.sh"
 echo "  5. docker compose -f docker-compose.prod.yml up -d"

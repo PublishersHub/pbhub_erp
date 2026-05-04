@@ -16,9 +16,9 @@ describe('StorageStack', () => {
     template.resourceCountIs('AWS::S3::Bucket', 1);
   });
 
-  it('names the bucket pbhub-{env}', () => {
+  it('names the bucket hr-system-{env}', () => {
     template.hasResourceProperties('AWS::S3::Bucket', {
-      BucketName: `pbhub-${config.env}`,
+      BucketName: `hr-system-${config.env}`,
     });
   });
 

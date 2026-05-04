@@ -56,7 +56,7 @@ export class StorageStack extends Stack {
       config.removalPolicy === 'retain' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
 
     this.bucket = new Bucket(this, 'AppBucket', {
-      bucketName: `pbhub-${config.env}`,
+      bucketName: `hr-system-${config.env}`,
       encryption: BucketEncryption.S3_MANAGED,
       versioned: config.bucketVersioning,
       enforceSSL: true,
@@ -130,7 +130,7 @@ export class StorageStack extends Stack {
     // For prod (ECS/Beanstalk), prefer task role over a long-lived user — we'll add
     // that role in compute-stack.ts later and remove this user in prod.
     this.appUser = new User(this, 'AppUser', {
-      userName: `pbhub-app-${config.env}`,
+      userName: `hr-system-app-${config.env}`,
     });
 
     this.appUser.addManagedPolicy(
@@ -161,17 +161,17 @@ export class StorageStack extends Stack {
     new CfnOutput(this, 'BucketName', {
       value: this.bucket.bucketName,
       description: 'Set as STORAGE_S3_BUCKET in api .env',
-      exportName: `pbhub-${config.env}-bucket-name`,
+      exportName: `hr-system-${config.env}-bucket-name`,
     });
     new CfnOutput(this, 'BucketRegion', {
       value: this.region,
       description: 'Set as STORAGE_S3_REGION in api .env',
-      exportName: `pbhub-${config.env}-bucket-region`,
+      exportName: `hr-system-${config.env}-bucket-region`,
     });
     new CfnOutput(this, 'AppUserArn', {
       value: this.appUser.userArn,
       description: 'IAM user ARN; create access keys via AWS console after deploy',
-      exportName: `pbhub-${config.env}-app-user-arn`,
+      exportName: `hr-system-${config.env}-app-user-arn`,
     });
   }
 }
