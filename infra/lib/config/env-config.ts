@@ -17,8 +17,10 @@ export interface ComputeConfig {
   instanceType: string;
   /** GiB for the data EBS volume mounted at /data. */
   dataVolumeSizeGib: number;
-  /** Optional CIDR range allowed to SSH/SSM to the instance. Defaults to 0.0.0.0/0 — restrict in prod. */
+  /** Optional CIDR range allowed to SSH to the instance. Defaults to 0.0.0.0/0 — restrict in prod. */
   sshAllowedCidr?: string;
+  /** Name of an existing AWS EC2 key pair to attach for SSH access. */
+  keyName: string;
 }
 
 export interface EnvConfig {
@@ -61,6 +63,7 @@ export const ENV_CONFIGS: Record<Environment, EnvConfig> = {
       hostedZoneName: 'cloudxbloom.com',
       instanceType: 't4g.medium',
       dataVolumeSizeGib: 30,
+      keyName: 'cloudXbloom',
     },
   },
 };

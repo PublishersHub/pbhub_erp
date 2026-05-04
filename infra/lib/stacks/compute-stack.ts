@@ -15,11 +15,11 @@ import {
   CfnEIPAssociation,
   UserData,
   CpuCredits,
+  KeyPair,
 } from 'aws-cdk-lib/aws-ec2';
 import {
   Role,
   ServicePrincipal,
-  ManagedPolicy,
   PolicyStatement,
   Effect,
 } from 'aws-cdk-lib/aws-iam';
@@ -54,7 +54,7 @@ export class ComputeStack extends Stack {
     if (!config.compute) {
       throw new Error(`Env ${config.env} has no compute config — populate it in env-config.ts`);
     }
-    const { domain, hostedZoneName, instanceType, dataVolumeSizeGib, sshAllowedCidr } = config.compute;
+    const { domain, hostedZoneName, instanceType, dataVolumeSizeGib, sshAllowedCidr, keyName } = config.compute;
 
     // Use the default VPC — free, has public subnets, no NAT needed for an
     // internet-facing single host.
@@ -69,19 +69,18 @@ export class ComputeStack extends Stack {
     securityGroup.addIngressRule(
       Peer.ipv4(sshAllowedCidr ?? '0.0.0.0/0'),
       Port.tcp(22),
-      'SSH (prefer SSM Session Manager - restrict this in prod)',
+      'SSH (restrict to your IP in prod)',
     );
     securityGroup.addIngressRule(Peer.anyIpv4(), Port.tcp(80), 'HTTP (LetsEncrypt + redirect)');
     securityGroup.addIngressRule(Peer.anyIpv4(), Port.tcp(443), 'HTTPS');
 
-    // ─── IAM role: SSM + S3 ──────────────────────────────────────────────────
+    // ─── IAM role: S3 only ───────────────────────────────────────────────────
+    // No SSM, no CloudWatch agent. Access is via SSH on port 22 with the
+    // configured key pair. The role exists solely to give the api container
+    // S3 read/write via EC2 instance metadata (no long-lived access keys).
     const role = new Role(this, 'InstanceRole', {
       assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
-      description: 'EC2 instance role for hr-system host (SSM + S3 + CloudWatch logs)',
-      managedPolicies: [
-        ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
-        ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy'),
-      ],
+      description: 'EC2 instance role for hr-system host (S3 access via IMDS)',
     });
 
     // Look up the existing storage bucket (deployed by StorageStack) and grant
@@ -111,6 +110,7 @@ export class ComputeStack extends Stack {
       ),
       securityGroup,
       role,
+      keyPair: KeyPair.fromKeyPairName(this, 'AppKeyPair', keyName),
       userData,
       // 8 GB root + 30 GB second volume bind-mounted into Docker at /data.
       blockDevices: [
@@ -165,10 +165,10 @@ export class ComputeStack extends Stack {
     Tags.of(this).add('ManagedBy', 'cdk');
 
     // ─── Outputs ─────────────────────────────────────────────────────────────
-    new CfnOutput(this, 'InstanceId', { value: instance.instanceId, description: 'EC2 instance ID — connect with `aws ssm start-session --target ...`' });
+    new CfnOutput(this, 'InstanceId', { value: instance.instanceId, description: 'EC2 instance ID' });
     new CfnOutput(this, 'PublicIp', { value: eip.ref, description: 'Elastic IP attached to the instance' });
-    new CfnOutput(this, 'Domain', { value: `https://${domain}`, description: 'Public URL once Let\'s Encrypt + nginx are up' });
-    new CfnOutput(this, 'SsmSessionCommand', { value: `aws ssm start-session --target ${instance.instanceId} --profile pb.hub`, description: 'Command to open a shell on the instance (no SSH key needed)' });
+    new CfnOutput(this, 'Domain', { value: `https://${domain}`, description: 'Public URL once Lets Encrypt + nginx are up' });
+    new CfnOutput(this, 'SshCommand', { value: `ssh -i ~/Downloads/Keys/${keyName}.pem ubuntu@${domain}`, description: 'Command to SSH into the instance' });
   }
 }
 

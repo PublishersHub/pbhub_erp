@@ -76,17 +76,8 @@ describe('StorageStack', () => {
     });
   });
 
-  it('creates an IAM user for the api with bucket put/get/delete', () => {
-    template.resourceCountIs('AWS::IAM::User', 1);
-    template.hasResourceProperties('AWS::IAM::ManagedPolicy', {
-      PolicyDocument: Match.objectLike({
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Action: Match.arrayWith(['s3:PutObject', 's3:GetObject', 's3:DeleteObject']),
-          }),
-        ]),
-      }),
-    });
+  it('does not create an IAM user — S3 access lives on the EC2 instance role', () => {
+    template.resourceCountIs('AWS::IAM::User', 0);
   });
 
   it('expires payslip cache after 30 days', () => {

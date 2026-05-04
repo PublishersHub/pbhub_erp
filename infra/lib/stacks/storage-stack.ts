@@ -12,8 +12,6 @@ import {
   PolicyStatement,
   Effect,
   AnyPrincipal,
-  User,
-  ManagedPolicy,
 } from 'aws-cdk-lib/aws-iam';
 import type { EnvConfig } from '../config/env-config';
 
@@ -46,7 +44,6 @@ interface StorageStackProps extends StackProps {
  */
 export class StorageStack extends Stack {
   public readonly bucket: Bucket;
-  public readonly appUser: User;
 
   constructor(scope: Construct, id: string, props: StorageStackProps) {
     super(scope, id, props);
@@ -125,37 +122,8 @@ export class StorageStack extends Stack {
       }),
     );
 
-    // IAM user the API (in ECS or wherever) assumes to sign URLs and finalize uploads.
-    // For local dev, generate access keys after deploy and put them in the api .env.
-    // For prod (ECS/Beanstalk), prefer task role over a long-lived user — we'll add
-    // that role in compute-stack.ts later and remove this user in prod.
-    this.appUser = new User(this, 'AppUser', {
-      userName: `hr-system-app-${config.env}`,
-    });
-
-    this.appUser.addManagedPolicy(
-      new ManagedPolicy(this, 'AppUserBucketPolicy', {
-        statements: [
-          new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: [
-              's3:PutObject',
-              's3:PutObjectAcl',
-              's3:GetObject',
-              's3:DeleteObject',
-              's3:AbortMultipartUpload',
-              's3:ListMultipartUploadParts',
-            ],
-            resources: [`${this.bucket.bucketArn}/*`],
-          }),
-          new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: ['s3:ListBucket', 's3:GetBucketLocation'],
-            resources: [this.bucket.bucketArn],
-          }),
-        ],
-      }),
-    );
+    // S3 access lives on the EC2 instance role (compute-stack.ts), not on a
+    // standalone IAM user. If we ever deploy outside AWS we can re-add a user.
 
     // Outputs — referenced by api .env
     new CfnOutput(this, 'BucketName', {
@@ -167,11 +135,6 @@ export class StorageStack extends Stack {
       value: this.region,
       description: 'Set as STORAGE_S3_REGION in api .env',
       exportName: `hr-system-${config.env}-bucket-region`,
-    });
-    new CfnOutput(this, 'AppUserArn', {
-      value: this.appUser.userArn,
-      description: 'IAM user ARN; create access keys via AWS console after deploy',
-      exportName: `hr-system-${config.env}-app-user-arn`,
     });
   }
 }
