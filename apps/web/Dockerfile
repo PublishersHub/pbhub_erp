@@ -28,6 +28,12 @@ CMD ["pnpm", "--filter", "web", "dev"]
 # ---- Build ----
 FROM base AS build
 
+# NEXT_PUBLIC_* values are inlined into the JS bundle at build time, so they
+# must be present as ENV before `next build` runs. Pass via --build-arg in
+# docker-compose or `docker build`.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* turbo.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/types/package.json packages/types/

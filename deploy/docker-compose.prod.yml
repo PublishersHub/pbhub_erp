@@ -1,0 +1,163 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Production stack — single host, EBS-backed, S3 for uploads, Let's Encrypt SSL
+#
+# Run from the deploy/ directory:
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pbhub-postgres
+    restart: unless-stopped
+    # No ports exposed to host — only api/migrate reach it via internal network.
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  redis:
+    image: redis:7-alpine
+    container_name: pbhub-redis
+    restart: unless-stopped
+    command: ['redis-server', '--save', '60', '1', '--loglevel', 'warning']
+    volumes:
+      - /data/redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  # One-shot migration runner. Uses the build-stage image (has the prisma CLI).
+  # Completes before the api starts, via depends_on: condition: service_completed_successfully.
+  migrate:
+    image: pbhub-api-migrate:latest
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+      target: build
+    container_name: pbhub-migrate
+    working_dir: /app/apps/api
+    command: sh -c "pnpm exec prisma migrate deploy"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  api:
+    image: pbhub-api:latest
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+      target: production
+    container_name: pbhub-api
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+      APP_PORT: 3001
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3001/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  web:
+    image: pbhub-web:latest
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      target: production
+      args:
+        # NEXT_PUBLIC_* must be present at build time so Next can inline them.
+        # Same-origin in prod: empty value works because the frontend uses
+        # relative `/api/...` URLs which nginx proxies. We set the full URL
+        # for explicit clarity though — both work.
+        NEXT_PUBLIC_API_URL: ${APP_BASE_URL}
+    container_name: pbhub-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pbhub-nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /data/letsencrypt:/etc/letsencrypt:ro
+      - /data/certbot-www:/var/www/certbot:ro
+    depends_on:
+      - web
+      - api
+    # Reload nginx every 12h to pick up renewed certificates.
+    command: >-
+      sh -c "while :; do sleep 12h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: pbhub-certbot
+    volumes:
+      - /data/letsencrypt:/etc/letsencrypt
+      - /data/certbot-www:/var/www/certbot
+    # Renew every 12h. Certbot itself only writes if a cert is within 30 days
+    # of expiry. nginx reloads on its own 12h timer (above) — this means after
+    # a renewal you may serve the old cert for up to 12h, which is fine
+    # (Let's Encrypt certs are valid 90 days; 12h drift is meaningless).
+    entrypoint: >-
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
