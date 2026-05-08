@@ -101,12 +101,19 @@ Steps:
 - [ ] **Inline edit (pencil icon):** hover over a field like first name. A pencil appears. Click it, type, hit Enter — the value saves.
 - [ ] Press **Esc** while editing — should cancel without saving.
 - [ ] **Change password** form: enter current + new + confirm. Should work and log you out / require re-login.
+- [ ] **Download ID Card** button (NEW): click it → a branded PDF downloads. Open it. It should show:
+  - Org logo + name in a coloured header band
+  - Your photo (or initials in a coloured circle if you haven't uploaded one)
+  - Full name, employee code, designation, department, joining date
+  - Sized like a credit card (85.6 × 54 mm) — print on a small card if you want a physical copy.
 
 ### What to flag
 - Photo upload spinner gets stuck → bug
 - Old photo briefly flickers back after upload → cosmetic
 - Inline edit doesn't show a pencil on hover → bug
 - Saving a name shows the old value until you refresh → bug
+- ID Card PDF won't open / shows "Damaged" → bug
+- ID Card PDF shows white-on-white text or wrong colours → bug
 
 ---
 
@@ -181,11 +188,40 @@ Steps:
 - [ ] Each card shows avatar, name, designation.
 - [ ] Click a card → jump to that employee's detail.
 
+### 4h. Custom Schedule (per-employee time override) — NEW
+
+**Logged in as:** Bilal (HR) or Super Admin.
+
+Some employees don't follow the standard policy hours (e.g. Sara is on a 10-to-7 shift, Hamza works Tue–Sat). The Custom Schedule section lets you override per employee.
+
+- [ ] Open any employee's detail page → **Edit**.
+- [ ] Scroll to the **Custom Schedule** section (collapsible — click to expand).
+- [ ] Enter a custom **Start time** and **End time** (e.g. 10:00 → 19:00).
+- [ ] Pick **Working days** (chips for Mon–Sun; tap to toggle).
+- [ ] Optionally adjust **Grace late** and **Grace early** in minutes.
+- [ ] Click **Save**.
+- [ ] Switch to that employee, click **Check in** — the off-day banner and late/early calculations should now follow the override, not the standard policy.
+- [ ] Click **Reset to policy default** — wipes the override; back to standard policy.
+
+### 4i. Performance notes per employee — NEW
+
+**Logged in as:** Sara (manager) or Bilal (HR).
+
+- [ ] Open Hamza's detail page (he reports to Ali → who reports to Sara, so Sara is in his chain).
+- [ ] You see a **Performance notes** card.
+- [ ] Type a note ("Great handling of the recent migration deadline."), tick **Private** (default on), click **Add note**.
+- [ ] Note appears with your name + timestamp.
+- [ ] Log in as **Hamza** himself, open his profile / detail page — he should NOT see the private note.
+- [ ] Log in as Sara, post another note with **Private** unticked.
+- [ ] Log in as Hamza — he NOW sees this public note.
+
 ### What to flag
 - Avatars don't load (broken image icon) → bug
 - Manager (Sara) sees employees outside her team → permission bug
 - CSV export doesn't include the rows you selected → bug
 - Org chart loops or shows a person twice → data bug
+- Custom Schedule saved but check-in still uses standard policy → bug
+- Private performance note visible to the subject employee → privacy bug
 
 ---
 
@@ -428,12 +464,63 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] After finalize: payslips are visible to employees; cycle is locked.
 - [ ] Try **Regenerate** on a finalized cycle — should warn.
 
-### 8c. Salary components & structures
+### 8c. Salary components — with formulas (UPDATED)
 
 **Logged in as:** Usman.
 
-- [ ] Sidebar → **Payroll → Components** — list of fixed components (Basic, HRA, etc.). Add one. Deactivate one.
-- [ ] Sidebar → **Payroll → Structures** — assign salary structures to employees.
+- [ ] Sidebar → **Payroll → Components**.
+- [ ] Click **New Component**. Fill in code (e.g. `BASIC`), name, type (EARNING/DEDUCTION).
+- [ ] **Formula** dropdown (NEW): pick **% of CTC**, **% of Basic**, **% of Gross**, or **Fixed**.
+- [ ] If you picked a percentage type, enter the value (e.g. `60` for 60%).
+- [ ] Save. The list now shows the formula in a "Formula" column (e.g. "60% of CTC").
+- [ ] Edit an existing component to change its formula type → save → refresh — value persists.
+
+Common setup:
+- `BASIC` = 60% of CTC
+- `HRA` = 30% of Basic
+- `TRAVEL` = Fixed (5,000)
+- `PF` = 12% of Basic (DEDUCTION)
+
+### 8d. Salary structure — with live preview (UPDATED)
+
+**Logged in as:** Usman.
+
+- [ ] Sidebar → **Payroll → Structures** → **Assign / New** for an employee.
+- [ ] Enter a **CTC** at the top (e.g. 200,000).
+- [ ] Tick the components to include (BASIC, HRA, TRAVEL, PF).
+- [ ] **Live preview** panel updates with each component's computed amount + a "60% of CTC = 120,000" derivation hint.
+- [ ] Components with a non-Fixed formula are read-only (driven by CTC).
+- [ ] Components with **Fixed** formula get a typed amount input.
+- [ ] Save. The assigned structure persists with the resolved amounts + the CTC value.
+
+### 8e. Auto-generate payroll from attendance (UPDATED)
+
+**Logged in as:** Usman.
+
+- [ ] Open a draft cycle. Click **Generate Payroll**.
+- [ ] A confirm dialog explains: "This will compute payslips for all active employees from their salary structures and {Month} attendance. Loss-of-pay will be applied for unpaid absences."
+- [ ] Confirm. The system:
+  - Computes each employee's expected working days for the month (using their custom schedule override if set, else policy)
+  - Counts present + paid-leave + holiday + weekend days
+  - Subtracts a **Loss of Pay** deduction for unpaid absences
+- [ ] Each generated payslip should show line items + an explicit **Loss of Pay** line if any days were absent.
+- [ ] Try generating for a month with mixed attendance (some employees absent) — verify LOP is non-zero only for the absent ones.
+
+### 8f. Auto-email PDF payslips on Finalize (NEW)
+
+**Logged in as:** Usman.
+
+- [ ] On a generated cycle, click **Finalize**.
+- [ ] Confirm dialog. Confirm.
+- [ ] Within seconds, every employee should receive an email titled **"Your payslip for {Month Year}"** with the PDF attached.
+- [ ] Open the email. Subject + body should include the org brand name. PDF amounts should show "PKR ..." formatting.
+- [ ] If an email fails (e.g. employee has no `Account.email` set), the finalize still succeeds — only that one is skipped. Use **Resend emails** (admin-only button) to re-fire.
+
+### What to flag
+- Live preview shows the wrong total for a known formula (e.g. 60% of 200,000 ≠ 120,000) → bug
+- LOP deduction missing on a payslip when the employee had absences → bug
+- Finalize succeeds but no emails went out → bug (check api logs for SMTP errors)
+- PDF attachment is corrupted / 0 bytes → bug
 
 ---
 
@@ -470,9 +557,100 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 10. Recruitment
+## 10. Tasks (NEW)
 
-### 10a. Create a requisition (manager)
+A simple task tracker. Managers/HR assign work to employees; employees see what they're responsible for and mark items complete.
+
+### 10a. Create a task
+
+**Logged in as:** Sara (manager) or Bilal (HR).
+
+- [ ] Sidebar → **Tasks**.
+- [ ] Click **New Task**.
+- [ ] Pick assignee (e.g. Hamza), title ("Update CV before Friday"), description, due date, priority (Low/Medium/High/Urgent).
+- [ ] Save. You're redirected back to the list.
+
+### 10b. Receive + complete a task
+
+**Logged in as:** Hamza.
+
+- [ ] Sidebar → **Tasks**.
+- [ ] **My Tasks** view shows the task Sara just assigned.
+- [ ] Click into it. See title, description, due date, priority.
+- [ ] Click **Mark Complete** (or change status via the dropdown). Confirm dialog appears.
+- [ ] Confirm. Status → **COMPLETED**.
+
+### 10c. Filter + admin views
+
+- [ ] As Sara: switch to **Assigned by me** view → see all tasks she's assigned.
+- [ ] As Bilal: there's a third **All tasks** view (HR sees everyone's tasks).
+- [ ] Filter by status (TODO / IN_PROGRESS / COMPLETED / CANCELLED).
+- [ ] An overdue badge appears on past-due non-completed tasks.
+
+### What to flag
+- Assigning to an employee outside one's team works but shouldn't (depends on perms — HR/manager should be allowed; verify role)
+- Mark Complete doesn't update status → bug
+- Overdue badge missing on past-due tasks → cosmetic bug
+
+---
+
+## 11. Mail (NEW)
+
+Admin tool for sending one-off emails to employees from inside the HRMS — announcements, policy changes, etc.
+
+**Logged in as:** Bilal or Super Admin.
+
+- [ ] Sidebar → **Mail**.
+- [ ] **Compose** opens a form: **Recipient mode** (All employees / Department / Specific employees), Subject, Body.
+- [ ] Pick **Specific** → search + tick employees you want.
+- [ ] Type a subject and body.
+- [ ] **Send** → confirm dialog showing recipient count.
+- [ ] Confirm. Toast: "Sent to 3 of 3 recipients" (or X of Y if some failed).
+- [ ] Each picked employee receives the email at their account email. Body wrapped in a branded HTML template (org name + brand colour).
+
+### What to flag
+- "Specific" picker doesn't include search → bug
+- Send proceeds without a confirm dialog → bug (we want a sanity check before mass-emailing)
+- Email arrives without org branding → cosmetic
+- Sender email address looks wrong → check `MAIL_FROM` env var with the dev team
+
+---
+
+## 12. Suggestion box (NEW)
+
+Two-sided: employees post suggestions; HR / super admin reviews and responds in an inbox.
+
+### 12a. Submit a suggestion (employee)
+
+**Logged in as:** Hamza.
+
+- [ ] Sidebar → **Suggestions**.
+- [ ] Click **New Suggestion**.
+- [ ] Pick a **Category** (Workplace / Process / Tools / Culture / Compensation / Other).
+- [ ] Title + body.
+- [ ] **Anonymous** checkbox (default off): if ticked, your name + employee ID won't be visible to admins. Banner explains this.
+- [ ] Submit. You see your own submitted suggestion in the list (named, not anonymous — anonymous ones aren't shown in "My suggestions" because they have no author link).
+
+### 12b. Admin inbox + respond
+
+**Logged in as:** Bilal or Super Admin.
+
+- [ ] Sidebar → **Suggestions → Inbox**.
+- [ ] List of every submission with status (OPEN / IN_REVIEW / IMPLEMENTED / DECLINED / ARCHIVED).
+- [ ] Anonymous ones show **"Anonymous"** instead of name — admin literally cannot see who wrote them.
+- [ ] Click into one. Add a response, change status to **IMPLEMENTED** or **DECLINED**, save.
+- [ ] If the suggestion was non-anonymous, the author gets a notification (bell icon + email if mail is wired).
+
+### What to flag
+- Anonymous submission still shows the author's name → CRITICAL privacy bug
+- Status doesn't update after response → bug
+- Author of a non-anonymous suggestion doesn't get a notification → bug
+
+---
+
+## 13. Recruitment
+
+### 13a. Create a requisition (manager)
 
 **Logged in as:** Sara.
 
@@ -480,14 +658,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **New Requisition**. Fill in title, department, target start date, headcount, justification. Save.
 - [ ] Status → **PENDING_APPROVAL**.
 
-### 10b. Approve requisition (HR)
+### 13b. Approve requisition (HR)
 
 **Logged in as:** Bilal.
 
 - [ ] Sidebar → **Recruitment → Requisitions**.
 - [ ] Approve Sara's requisition.
 
-### 10c. Job posting + candidates
+### 13c. Job posting + candidates
 
 **Logged in as:** Bilal.
 
@@ -499,9 +677,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 11. Onboarding
+## 14. Onboarding
 
-### 11a. New hire (HR)
+### 14a. New hire (HR)
 
 **Logged in as:** Bilal.
 
@@ -509,14 +687,14 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Pick an employee (or create one). Pick an onboarding template.
 - [ ] An onboarding instance is created with a list of tasks (Sign offer, Set up email, Welcome call, etc.).
 
-### 11b. My tasks (new hire)
+### 14b. My tasks (new hire)
 
 **Logged in as:** Hamza.
 
 - [ ] Sidebar → **Onboarding → My Tasks**.
 - [ ] You see your assigned tasks. Tick one as **complete**. Some tasks may require a document upload — drag-drop it.
 
-### 11c. Templates (HR)
+### 14c. Templates (HR)
 
 **Logged in as:** Bilal.
 
@@ -525,9 +703,9 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 12. Settings
+## 15. Settings
 
-### 12a. Roles & Permissions (Super Admin only)
+### 15a. Roles & Permissions (Super Admin only)
 
 **Logged in as:** Super Admin (`admin@pbhub.com`).
 
@@ -537,13 +715,13 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] Click **New Role** → create a custom role with a few permissions. Verify it shows in the list.
 - [ ] Deactivate a custom role → confirm dialog.
 
-### 12b. Users (Super Admin / HR)
+### 15b. Users (Super Admin / HR)
 
 - [ ] Sidebar → **Settings → Users**.
 - [ ] List of all users in the org with their roles.
 - [ ] Click on a user. Add or remove roles. Save.
 
-### 12c. Invitations
+### 15c. Invitations
 
 - [ ] Sidebar → **Settings → Invitations**.
 - [ ] Click **Invite User**. Enter email, pick a role. Send.
@@ -551,7 +729,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] **Revoke** an invitation → red confirm dialog → confirm.
 - [ ] Open the invitation email (check the team's inbox or the dev server logs). The link should let the invitee set up their password.
 
-### 12d. Branding (your favourite for testing)
+### 15d. Branding (your favourite for testing)
 
 **Logged in as:** Super Admin.
 
@@ -566,7 +744,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 - [ ] **Replace** an asset by dropping a new file. Old one is replaced.
 - [ ] **Remove** an asset → its slot empties → save → the old logo is gone.
 
-### 12e. Notification preferences
+### 15e. Notification preferences
 
 **Logged in as:** any user.
 
@@ -576,7 +754,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 13. Inbox
+## 16. Inbox
 
 **Logged in as:** any approver (Sara, Bilal, Usman).
 
@@ -590,7 +768,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 14. Notifications (the bell icon)
+## 17. Notifications (the bell icon)
 
 **Logged in as:** any user.
 
@@ -608,7 +786,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 15. Search (Cmd+K / Ctrl+K)
+## 18. Search (Cmd+K / Ctrl+K)
 
 **Logged in as:** any user.
 
@@ -623,7 +801,7 @@ Today (2026-05-04) is a Monday — a normal working day. To test the banner:
 
 ---
 
-## 16. Mobile / responsive
+## 19. Mobile / responsive
 
 Switch your browser into mobile view (in Chrome: Right-click → Inspect → toggle device toolbar → pick iPhone 14 or similar).
 
@@ -636,7 +814,7 @@ Switch your browser into mobile view (in Chrome: Right-click → Inspect → tog
 
 ---
 
-## 17. Edge cases worth a try
+## 20. Edge cases worth a try
 
 - [ ] **Permission denied:** log in as Hamza, try opening `/settings/roles` directly via URL. Should show a friendly "you don't have permission" message, not a generic error.
 - [ ] **Logout:** click avatar → **Log out**. You land on the login screen. Now click your browser's **Back** button — you should go back to the login screen, NOT to the protected page.
@@ -646,7 +824,7 @@ Switch your browser into mobile view (in Chrome: Right-click → Inspect → tog
 
 ---
 
-## 18. Bug report template
+## 21. Bug report template
 
 When you find something off, copy this template into a Slack message or email:
 
