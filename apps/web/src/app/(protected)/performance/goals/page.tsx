@@ -171,7 +171,19 @@ export default function GoalsPage() {
                       </Link>
                     </td>
                     {view !== 'my' && (
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{employeeName(g.employee)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">
+                        {g.employee ? (
+                          <Link
+                            href={`/employees/${g.employee.id}`}
+                            className="text-primary hover:underline"
+                            title="Open employee page (performance notes)"
+                          >
+                            {employeeName(g.employee)}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                     )}
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground/80">{g.cycle?.name ?? '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={g.measurementType} /></td>

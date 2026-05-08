@@ -86,4 +86,22 @@ export class PayrollCyclesController {
   ) {
     return this.cyclesService.finalize(user.organizationId, id, user.userId);
   }
+
+  @Post(':id/resend-emails')
+  @RequirePermissions('payroll.approve')
+  @ApiOperation({
+    summary:
+      'Re-send payslip emails for a finalized cycle (optionally scoped to one employee)',
+  })
+  async resendEmails(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query('employeeId') employeeId?: string,
+  ) {
+    return this.cyclesService.resendPayslipEmails(
+      user.organizationId,
+      id,
+      employeeId,
+    );
+  }
 }

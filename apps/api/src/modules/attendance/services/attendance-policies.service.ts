@@ -187,6 +187,10 @@ export class AttendancePoliciesService {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
+    let basePolicy: Awaited<
+      ReturnType<typeof this.prisma.attendancePolicy.findFirst>
+    > | null = null;
+
     if (employee) {
       const assignment = await this.prisma.employeeAttendancePolicyAssignment.findFirst({
         where: {
@@ -199,15 +203,43 @@ export class AttendancePoliciesService {
         orderBy: { effectiveFrom: 'desc' },
       });
       if (assignment?.attendancePolicy) {
-        return assignment.attendancePolicy;
+        basePolicy = assignment.attendancePolicy;
       }
     }
 
     // Fallback: org's most-recent active policy
-    return this.prisma.attendancePolicy.findFirst({
-      where: { organizationId, isActive: true },
-      orderBy: { createdAt: 'desc' },
+    if (!basePolicy) {
+      basePolicy = await this.prisma.attendancePolicy.findFirst({
+        where: { organizationId, isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    if (!basePolicy || !employee) {
+      return basePolicy;
+    }
+
+    // Overlay the per-employee schedule override (any field set wins) so the
+    // UI's off-day banner / start-time hint reflects the actual schedule.
+    const override = await this.prisma.employeeAttendanceOverride.findUnique({
+      where: { employeeId: employee.id },
     });
+
+    if (!override) return basePolicy;
+
+    const overlaid = { ...basePolicy };
+    if (override.scheduleStart) overlaid.startTime = override.scheduleStart;
+    if (override.scheduleEnd) overlaid.endTime = override.scheduleEnd;
+    if (override.graceMinutesLate !== null) {
+      overlaid.graceMinutesLate = override.graceMinutesLate;
+    }
+    if (override.graceMinutesEarly !== null) {
+      overlaid.graceMinutesEarly = override.graceMinutesEarly;
+    }
+    if (override.workingDays && override.workingDays.length > 0) {
+      overlaid.workingDays = override.workingDays;
+    }
+    return overlaid;
   }
 
   // ─── Helpers ─────────────────────────────

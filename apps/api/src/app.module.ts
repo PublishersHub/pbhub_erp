@@ -20,10 +20,13 @@ import { PayrollModule } from './modules/payroll/payroll.module';
 import { ExpenseModule } from './modules/expense/expense.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { RecruitmentModule } from './modules/recruitment/recruitment.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { AdminMailModule } from './modules/admin-mail/admin-mail.module';
+import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { JwtAccessGuard } from './modules/auth/guards/jwt-access.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import appConfig from './config/app.config';
@@ -64,10 +67,13 @@ import appConfig from './config/app.config';
     ExpenseModule,
     OnboardingModule,
     RecruitmentModule,
+    TasksModule,
     NotificationModule,
     ActivityModule,
     InvitationsModule,
     UploadModule,
+    AdminMailModule,
+    SuggestionsModule,
   ],
   providers: [
     // Global guards applied in order:

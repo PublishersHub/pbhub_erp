@@ -9,7 +9,7 @@ import { Loading } from '@/components/ui/loading';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { useToast } from '@/components/toast';
-import { useAsync } from '@/lib/hooks';
+import { useAsync, usePermission } from '@/lib/hooks';
 import {
   getEmployee,
   updateEmployee,
@@ -18,6 +18,10 @@ import {
   listDesignations,
   listEmployees,
 } from '@/lib/employee-api';
+import {
+  getEmployeeAttendanceOverride,
+  setEmployeeAttendanceOverride,
+} from '@/lib/attendance-api';
 import type { Gender, EmploymentType, EmploymentStatus, Employee } from '@/types/employee';
 
 const GENDERS: Gender[] = ['MALE', 'FEMALE', 'OTHER'];
@@ -66,6 +70,53 @@ export default function EditEmployeePage() {
   const [confirmationDate, setConfirmationDate] = useState('');
   const [probationEndDate, setProbationEndDate] = useState('');
   const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus>('ACTIVE');
+
+  // Custom schedule override (collapsible — only writable with attendance.manage)
+  const { can } = usePermission();
+  const canManageSchedule = can('attendance.manage');
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [ipExempt, setIpExempt] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [scheduleStart, setScheduleStart] = useState('');
+  const [scheduleEnd, setScheduleEnd] = useState('');
+  const [workingDays, setWorkingDays] = useState<number[]>([]);
+  const [graceLate, setGraceLate] = useState<string>('');
+  const [graceEarly, setGraceEarly] = useState<string>('');
+  const [overrideExists, setOverrideExists] = useState(false);
+
+  const { data: existingOverride } = useAsync(
+    () => (canManageSchedule ? getEmployeeAttendanceOverride(id) : Promise.resolve(null)),
+    [id, canManageSchedule],
+  );
+
+  useEffect(() => {
+    if (existingOverride) {
+      setOverrideExists(true);
+      setIpExempt(existingOverride.ipRestrictionExempt);
+      setOverrideReason(existingOverride.reason ?? '');
+      setScheduleStart(existingOverride.scheduleStart ?? '');
+      setScheduleEnd(existingOverride.scheduleEnd ?? '');
+      setWorkingDays(existingOverride.workingDays ?? []);
+      setGraceLate(
+        existingOverride.graceMinutesLate !== null
+          ? String(existingOverride.graceMinutesLate)
+          : '',
+      );
+      setGraceEarly(
+        existingOverride.graceMinutesEarly !== null
+          ? String(existingOverride.graceMinutesEarly)
+          : '',
+      );
+      // Auto-expand if any schedule field is set so the manager sees it.
+      const hasScheduleOverride =
+        existingOverride.scheduleStart !== null ||
+        existingOverride.scheduleEnd !== null ||
+        (existingOverride.workingDays?.length ?? 0) > 0 ||
+        existingOverride.graceMinutesLate !== null ||
+        existingOverride.graceMinutesEarly !== null;
+      if (hasScheduleOverride) setShowSchedule(true);
+    }
+  }, [existingOverride]);
 
   const [initialized, setInitialized] = useState(false);
 
@@ -144,6 +195,21 @@ export default function EditEmployeePage() {
           ...(confirmationDate && { confirmationDate }),
           ...(probationEndDate && { probationEndDate }),
           employmentStatus,
+        });
+      }
+
+      // Persist schedule override only when the section is open OR an override
+      // already exists (so toggling fields off goes through). When the section
+      // is collapsed and there was no prior override, we leave it alone.
+      if (canManageSchedule && (showSchedule || overrideExists)) {
+        await setEmployeeAttendanceOverride(id, {
+          ipRestrictionExempt: ipExempt,
+          ...(overrideReason.trim() ? { reason: overrideReason.trim() } : { reason: undefined }),
+          scheduleStart: scheduleStart || null,
+          scheduleEnd: scheduleEnd || null,
+          workingDays,
+          graceMinutesLate: graceLate === '' ? null : Number(graceLate),
+          graceMinutesEarly: graceEarly === '' ? null : Number(graceEarly),
         });
       }
 
@@ -406,6 +472,169 @@ export default function EditEmployeePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Custom Schedule (override) — admin-only */}
+        {canManageSchedule && (
+          <>
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="showSchedule"
+                checked={showSchedule}
+                onChange={(e) => setShowSchedule(e.target.checked)}
+                className="rounded border-input"
+              />
+              <label
+                htmlFor="showSchedule"
+                className="text-sm font-semibold uppercase text-foreground"
+              >
+                Custom Schedule
+              </label>
+              {overrideExists && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                  Override active
+                </span>
+              )}
+            </div>
+
+            {showSchedule && (
+              <div className="space-y-4 rounded-md border border-border bg-secondary/30 p-4">
+                <p className="text-xs text-muted-foreground/80">
+                  Leave any field blank to fall back to the assigned policy default.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Start time</label>
+                    <input
+                      type="time"
+                      value={scheduleStart}
+                      onChange={(e) => setScheduleStart(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>End time</label>
+                    <input
+                      type="time"
+                      value={scheduleEnd}
+                      onChange={(e) => setScheduleEnd(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Working days</label>
+                  <p className="mt-0.5 text-xs text-muted-foreground/70">
+                    Select the days this employee is expected to work. Leave none selected to use the policy default.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      { d: 1, label: 'Mon' },
+                      { d: 2, label: 'Tue' },
+                      { d: 3, label: 'Wed' },
+                      { d: 4, label: 'Thu' },
+                      { d: 5, label: 'Fri' },
+                      { d: 6, label: 'Sat' },
+                      { d: 0, label: 'Sun' },
+                    ].map(({ d, label }) => {
+                      const checked = workingDays.includes(d);
+                      return (
+                        <label
+                          key={d}
+                          className={`cursor-pointer select-none rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                            checked
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-input bg-card text-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={(e) => {
+                              setWorkingDays((prev) =>
+                                e.target.checked
+                                  ? [...prev, d].sort((a, b) => a - b)
+                                  : prev.filter((x) => x !== d),
+                              );
+                            }}
+                          />
+                          {label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Grace late (minutes)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={240}
+                      value={graceLate}
+                      onChange={(e) => setGraceLate(e.target.value)}
+                      placeholder="Policy default"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Grace early (minutes)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={240}
+                      value={graceEarly}
+                      onChange={(e) => setGraceEarly(e.target.value)}
+                      placeholder="Policy default"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="ipExempt"
+                    checked={ipExempt}
+                    onChange={(e) => setIpExempt(e.target.checked)}
+                    className="rounded border-input"
+                  />
+                  <label htmlFor="ipExempt" className="text-sm text-foreground/80">
+                    Exempt from IP restrictions (e.g. permanent WFH)
+                  </label>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Reason / notes</label>
+                  <input
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    placeholder="Optional — why this employee has a custom schedule"
+                    className={inputCls}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScheduleStart('');
+                    setScheduleEnd('');
+                    setWorkingDays([]);
+                    setGraceLate('');
+                    setGraceEarly('');
+                  }}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Reset to policy default
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {error && <ErrorMessage message={error} />}

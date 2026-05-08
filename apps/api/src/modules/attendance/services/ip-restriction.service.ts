@@ -97,16 +97,42 @@ export class IpRestrictionService {
     });
     if (!employee) throw new NotFoundException('Employee not found in this organization');
 
+    // Schedule fields: only overwrite if the caller explicitly sent them.
+    // Sending `null` clears the override for that field; omitting it leaves
+    // the existing value untouched. workingDays uses [] for "no override".
+    const scheduleUpdate: Record<string, unknown> = {};
+    if (Object.prototype.hasOwnProperty.call(dto, 'scheduleStart')) {
+      scheduleUpdate.scheduleStart = dto.scheduleStart ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'scheduleEnd')) {
+      scheduleUpdate.scheduleEnd = dto.scheduleEnd ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'workingDays')) {
+      scheduleUpdate.workingDays = dto.workingDays ?? [];
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'graceMinutesLate')) {
+      scheduleUpdate.graceMinutesLate = dto.graceMinutesLate ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'graceMinutesEarly')) {
+      scheduleUpdate.graceMinutesEarly = dto.graceMinutesEarly ?? null;
+    }
+
     return this.prisma.employeeAttendanceOverride.upsert({
       where: { employeeId },
       update: {
         ipRestrictionExempt: dto.ipRestrictionExempt,
         reason: dto.reason ?? null,
+        ...scheduleUpdate,
       },
       create: {
         employeeId,
         ipRestrictionExempt: dto.ipRestrictionExempt,
         reason: dto.reason ?? null,
+        scheduleStart: dto.scheduleStart ?? null,
+        scheduleEnd: dto.scheduleEnd ?? null,
+        workingDays: dto.workingDays ?? [],
+        graceMinutesLate: dto.graceMinutesLate ?? null,
+        graceMinutesEarly: dto.graceMinutesEarly ?? null,
       },
     });
   }

@@ -231,3 +231,27 @@ export interface CalibrateReviewPayload {
   finalRating: number;
   calibrationComment?: string;
 }
+
+// ─── Performance notes ──────────────────────
+
+export interface PerformanceNote {
+  id: string;
+  organizationId: string;
+  employeeId: string;
+  authorId: string;
+  body: string;
+  isPrivate: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author?: EmployeeRef;
+}
+
+export interface CreatePerformanceNotePayload {
+  body: string;
+  isPrivate?: boolean;
+}
+
+export interface UpdatePerformanceNotePayload {
+  body?: string;
+  isPrivate?: boolean;
+}

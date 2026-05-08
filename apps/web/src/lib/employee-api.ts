@@ -1,4 +1,6 @@
 import { get, post, put, patch, del } from './api';
+import { API_BASE_URL } from './utils';
+import { getToken } from './auth';
 import type {
   Employee,
   CreateEmployeePayload,
@@ -130,4 +132,25 @@ export function updateDesignation(id: string, payload: Partial<CreateDesignation
 
 export function deactivateDesignation(id: string) {
   return del<void>(`/api/designations/${id}`);
+}
+
+// ─── ID Card PDF ───────────────────────────
+//
+// Bearer auth lives in localStorage (not a cookie), so a plain <a download>
+// would 401. Mirrors the `downloadPayslipPdf` helper in payroll-api.
+export async function downloadEmployeeIdCard(employeeId: string, filename: string) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/employees/${employeeId}/id-card.pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Could not download ID card (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

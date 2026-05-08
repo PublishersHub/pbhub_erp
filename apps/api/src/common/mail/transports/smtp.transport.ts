@@ -33,6 +33,11 @@ export class SmtpMailTransport implements MailTransport {
         subject: message.subject,
         text: message.body,
         html: message.html,
+        attachments: message.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        })),
       });
       this.logger.debug(`SMTP message sent: ${info.messageId}`);
     } catch (err) {

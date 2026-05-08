@@ -427,17 +427,23 @@ export class AttendanceService {
       return;
     }
 
-    // Get active policy assignment for this employee on this date.
-    const assignment = await this.prisma.employeeAttendancePolicyAssignment.findFirst({
-      where: {
-        employeeId,
-        effectiveFrom: { lte: dayStart },
-        OR: [{ effectiveTo: null }, { effectiveTo: { gte: dayStart } }],
-        attendancePolicy: { organizationId },
-      },
-      include: { attendancePolicy: true },
-      orderBy: { effectiveFrom: 'desc' },
-    });
+    // Get active policy assignment for this employee on this date, plus any
+    // per-employee schedule override.
+    const [assignment, override] = await Promise.all([
+      this.prisma.employeeAttendancePolicyAssignment.findFirst({
+        where: {
+          employeeId,
+          effectiveFrom: { lte: dayStart },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: dayStart } }],
+          attendancePolicy: { organizationId },
+        },
+        include: { attendancePolicy: true },
+        orderBy: { effectiveFrom: 'desc' },
+      }),
+      this.prisma.employeeAttendanceOverride.findUnique({
+        where: { employeeId },
+      }),
+    ]);
 
     let status: AttendanceStatus = AttendanceStatus.PRESENT;
     let lateMinutes = 0;
@@ -447,15 +453,23 @@ export class AttendanceService {
     if (assignment?.attendancePolicy) {
       const policy = assignment.attendancePolicy;
 
+      // Effective schedule: override takes priority field-by-field, otherwise policy.
+      const effStartTime = override?.scheduleStart ?? policy.startTime;
+      const effEndTime = override?.scheduleEnd ?? policy.endTime;
+      const effGraceLate =
+        override?.graceMinutesLate ?? policy.graceMinutesLate;
+      const effGraceEarly =
+        override?.graceMinutesEarly ?? policy.graceMinutesEarly;
+
       if (
         policy.policyType === 'FIXED' &&
         firstCheckIn &&
-        policy.startTime &&
-        policy.endTime
+        effStartTime &&
+        effEndTime
       ) {
-        const policyStartMin = this.parseTimeToMinutes(policy.startTime);
+        const policyStartMin = this.parseTimeToMinutes(effStartTime);
         const checkInMin = this.civilMinutesOfDay(firstCheckIn, tz);
-        const graceStart = policyStartMin + policy.graceMinutesLate;
+        const graceStart = policyStartMin + effGraceLate;
 
         if (checkInMin > graceStart) {
           lateMinutes = checkInMin - policyStartMin;
@@ -463,9 +477,9 @@ export class AttendanceService {
         }
 
         if (lastCheckOut) {
-          const policyEndMin = this.parseTimeToMinutes(policy.endTime);
+          const policyEndMin = this.parseTimeToMinutes(effEndTime);
           const checkOutMin = this.civilMinutesOfDay(lastCheckOut, tz);
-          const graceEnd = policyEndMin - policy.graceMinutesEarly;
+          const graceEnd = policyEndMin - effGraceEarly;
 
           if (checkOutMin < graceEnd) {
             earlyDepartureMinutes = policyEndMin - checkOutMin;
@@ -521,9 +535,14 @@ export class AttendanceService {
     // HOLIDAY/ON_LEAVE overrides and creates ABSENT rows for employees with
     // no logs at all (we early-return above when nothing touched the day).
     {
-      const workingDays = assignment?.attendancePolicy?.workingDays ?? [
-        1, 2, 3, 4, 5,
-      ];
+      // Per-employee override `workingDays` (non-empty) wins over the policy.
+      const overrideWorkingDays =
+        override?.workingDays && override.workingDays.length > 0
+          ? override.workingDays
+          : null;
+      const workingDays =
+        overrideWorkingDays ??
+        assignment?.attendancePolicy?.workingDays ?? [1, 2, 3, 4, 5];
       const civilParts = this.civilParts(dayStart, tz);
       const civilDow = new Date(
         Date.UTC(civilParts.y, civilParts.m - 1, civilParts.day),

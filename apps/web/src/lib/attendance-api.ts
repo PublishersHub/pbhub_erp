@@ -1,4 +1,4 @@
-import { get, post, patch, del } from './api';
+import { get, post, patch, del, put } from './api';
 import type {
   AttendanceLog,
   AttendanceDailySummary,
@@ -13,6 +13,8 @@ import type {
   CorrectionRequestStatus,
   TodayReport,
   EmployeeMonthlyStats,
+  EmployeeAttendanceOverride,
+  SetEmployeeOverridePayload,
 } from '@/types/attendance';
 
 function qs(params: Record<string, string | undefined>): string {
@@ -148,5 +150,29 @@ export function getMonthlyReport(month: string) {
 export function getEmployeeMonthlyReport(employeeId: string, month: string) {
   return get<EmployeeMonthlyStats>(
     `/api/attendance-reports/employee/${employeeId}/month?month=${month}`,
+  );
+}
+
+// ─── Employee Attendance Overrides ──────────
+
+export function getEmployeeAttendanceOverride(employeeId: string) {
+  return get<EmployeeAttendanceOverride | null>(
+    `/api/employees/${employeeId}/attendance-override`,
+  );
+}
+
+export function setEmployeeAttendanceOverride(
+  employeeId: string,
+  payload: SetEmployeeOverridePayload,
+) {
+  return put<EmployeeAttendanceOverride>(
+    `/api/employees/${employeeId}/attendance-override`,
+    payload,
+  );
+}
+
+export function removeEmployeeAttendanceOverride(employeeId: string) {
+  return del<EmployeeAttendanceOverride>(
+    `/api/employees/${employeeId}/attendance-override`,
   );
 }

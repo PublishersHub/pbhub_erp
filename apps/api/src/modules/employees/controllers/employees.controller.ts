@@ -2,15 +2,20 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
   Put,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { EmployeesService } from '../services/employees.service';
+import { EmployeeIdCardService } from '../services/employee-id-card.service';
 import { CreateEmployeeDto } from '../dto/create-employee.dto';
 import { UpdateEmployeeDto } from '../dto/update-employee.dto';
 import { UpdateSelfEmployeeDto } from '../dto/update-self-employee.dto';
@@ -24,7 +29,10 @@ import { AuthenticatedUser } from '../../../common/types';
 @ApiBearerAuth()
 @Controller('employees')
 export class EmployeesController {
-  constructor(private readonly employeesService: EmployeesService) {}
+  constructor(
+    private readonly employeesService: EmployeesService,
+    private readonly idCardService: EmployeeIdCardService,
+  ) {}
 
   @Post()
   @RequirePermissions('employee.create')
@@ -89,6 +97,33 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Get employee by ID with full details' })
   async findById(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.employeesService.findById(user.organizationId, id);
+  }
+
+  // ─── ID Card PDF ────────────────────────────
+  // Gated by `employee.read_own`; the service-level check below allows the
+  // record's owner OR any caller with `employee.read` (admins/HR).
+  @Get(':id/id-card.pdf')
+  @RequirePermissions('employee.read_own')
+  @ApiOperation({ summary: 'Download printable employee ID card PDF' })
+  async downloadIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const owner = await this.idCardService.findOwnership(user.organizationId, id);
+    if (!owner) throw new NotFoundException('Employee not found');
+    const isSelf = owner.userId === user.userId;
+    if (!isSelf && !user.permissions.includes('employee.read')) {
+      throw new ForbiddenException('You can only download your own ID card');
+    }
+
+    const buf = await this.idCardService.generateIdCardPdf(user.organizationId, id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="id-card-${owner.employeeCode}.pdf"`,
+    );
+    res.send(buf);
   }
 
   @Patch(':id')

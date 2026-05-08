@@ -13,20 +13,39 @@ import { EmployeeAvatar } from '@/components/ui/employee-avatar';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/toast';
 import { useAsync, usePermission } from '@/lib/hooks';
-import { getEmployee, deactivateEmployee } from '@/lib/employee-api';
+import { useAuth } from '@/context/auth-context';
+import { getEmployee, deactivateEmployee, downloadEmployeeIdCard } from '@/lib/employee-api';
 import { formatDate, employeeName } from '@/lib/format';
+import { PerformanceNotesCard } from '@/components/performance-notes-card';
 
 export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { can } = usePermission();
+  const { user } = useAuth();
   const confirm = useConfirm();
   const toast = useToast();
   const { data: emp, error, loading, refetch } = useAsync(() => getEmployee(id), [id]);
   const [actionError, setActionError] = useState('');
   const [acting, setActing] = useState(false);
+  const [downloadingCard, setDownloadingCard] = useState(false);
 
   useDocumentTitle(emp ? `${emp.firstName} ${emp.lastName}` : 'Employee');
+
+  async function handleDownloadIdCard() {
+    if (!emp || downloadingCard) return;
+    setDownloadingCard(true);
+    try {
+      await downloadEmployeeIdCard(emp.id, `id-card-${emp.employeeCode}.pdf`);
+    } catch (err) {
+      toast.error(
+        'Failed to download ID card',
+        err instanceof Error ? err.message : 'Please try again',
+      );
+    } finally {
+      setDownloadingCard(false);
+    }
+  }
 
   async function handleDeactivate() {
     if (!emp) return;
@@ -176,6 +195,17 @@ export default function EmployeeDetailPage() {
             </div>
           )}
 
+          {/* Performance Notes — visible to managers/HR (perf.review) and to the
+              subject themselves (read-only public notes via the API rule). */}
+          {(can('performance.review') ||
+            can('performance.manage') ||
+            emp.userId === user?.user?.id) && (
+            <PerformanceNotesCard
+              employeeId={emp.id}
+              canCompose={can('performance.review') || can('performance.manage')}
+            />
+          )}
+
           {/* Direct Reports */}
           {emp.directReports && emp.directReports.length > 0 && (
             <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
@@ -211,6 +241,16 @@ export default function EmployeeDetailPage() {
                   className="w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
                 >
                   Edit Employee
+                </button>
+              )}
+
+              {(can('employee.read') || emp.userId === user?.user?.id) && (
+                <button
+                  onClick={handleDownloadIdCard}
+                  disabled={downloadingCard}
+                  className="w-full rounded-md border border-border bg-card text-foreground hover:bg-muted motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {downloadingCard ? 'Preparing…' : 'Download ID Card'}
                 </button>
               )}
 

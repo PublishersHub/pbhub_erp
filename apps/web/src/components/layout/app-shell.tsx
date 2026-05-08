@@ -77,6 +77,21 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
     </svg>
   ),
+  Lightbulb: (p: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className={p.className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+    </svg>
+  ),
+  CheckCircle: (p: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className={p.className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  PaperPlane: (p: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className={p.className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+    </svg>
+  ),
 };
 
 interface NavChild {
@@ -167,6 +182,18 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    href: '/mail/compose',
+    label: 'Mail',
+    icon: Icon.PaperPlane,
+    permissions: ['admin_mail.send'],
+  },
+  {
+    href: '/tasks',
+    label: 'Tasks',
+    icon: Icon.CheckCircle,
+    permissions: ['task.read_own'],
+  },
+  {
     href: '/recruitment',
     label: 'Recruitment',
     icon: Icon.Briefcase,
@@ -188,6 +215,16 @@ const NAV_ITEMS: NavItem[] = [
       { href: '/onboarding/my', label: 'My Onboarding', permissions: ['onboarding.read_own'] },
       { href: '/onboarding/tasks/my', label: 'My Tasks', permissions: ['onboarding.read_own', 'onboarding.task.update'] },
       { href: '/onboarding/templates', label: 'Templates', permissions: ['onboarding.template.manage'] },
+    ],
+  },
+  {
+    href: '/suggestions',
+    label: 'Suggestions',
+    icon: Icon.Lightbulb,
+    permissions: ['suggestion.read_own', 'suggestion.manage'],
+    children: [
+      { href: '/suggestions', label: 'My Suggestions', permissions: ['suggestion.read_own'] },
+      { href: '/suggestions/inbox', label: 'Inbox', permissions: ['suggestion.manage'] },
     ],
   },
   { href: '/notifications', label: 'Notifications', icon: Icon.Bell, permissions: ['notification.read_own'] },

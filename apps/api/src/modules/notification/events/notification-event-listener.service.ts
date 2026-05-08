@@ -143,4 +143,14 @@ export class NotificationEventListenerService {
       payload,
     );
   }
+
+  // ─── Suggestion events ──────────────────
+
+  @OnEvent(NotificationEvents.SUGGESTION_RESPONDED)
+  async onSuggestionResponded(payload: NotificationEventPayload) {
+    await this.dispatcher.dispatch(
+      NotificationEvents.SUGGESTION_RESPONDED,
+      payload,
+    );
+  }
 }

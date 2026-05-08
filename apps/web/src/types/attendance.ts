@@ -192,3 +192,29 @@ export interface ReviewCorrectionPayload {
   status: 'APPROVED' | 'REJECTED';
   remarks?: string;
 }
+
+// ─── Employee attendance overrides ──────────
+
+export interface EmployeeAttendanceOverride {
+  id: string;
+  employeeId: string;
+  ipRestrictionExempt: boolean;
+  reason: string | null;
+  scheduleStart: string | null;
+  scheduleEnd: string | null;
+  workingDays: number[];
+  graceMinutesLate: number | null;
+  graceMinutesEarly: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SetEmployeeOverridePayload {
+  ipRestrictionExempt: boolean;
+  reason?: string;
+  scheduleStart?: string | null;
+  scheduleEnd?: string | null;
+  workingDays?: number[];
+  graceMinutesLate?: number | null;
+  graceMinutesEarly?: number | null;
+}

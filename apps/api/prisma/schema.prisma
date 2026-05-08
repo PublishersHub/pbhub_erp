@@ -38,13 +38,13 @@ enum EmploymentStatus {
 // ============================================
 
 model Organization {
-  id           String   @id @default(uuid())
-  name         String
-  slug         String   @unique
-  timezone     String   @default("UTC")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("UTC")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // White-label branding (all optional)
   brandName       String? @map("brand_name")
@@ -76,9 +76,10 @@ model Organization {
   holidays                       Holiday[]
 
   // Performance Management
-  performanceCycles  PerformanceCycle[]
-  goals              Goal[]
-  performanceReviews PerformanceReview[]
+  performanceCycles        PerformanceCycle[]
+  goals                    Goal[]
+  performanceReviews       PerformanceReview[]
+  employeePerformanceNotes EmployeePerformanceNote[]
 
   // Payroll
   salaryComponents         SalaryComponent[]
@@ -110,6 +111,15 @@ model Organization {
   // Invitations
   invitations Invitation[]
 
+  // Tasks
+  tasks Task[]
+
+  // Admin Mail
+  adminMailMessages AdminMailMessage[]
+
+  // Suggestions
+  suggestions Suggestion[]
+
   @@map("organizations")
 }
 
@@ -129,10 +139,10 @@ model Account {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  users                User[]
-  refreshTokens        RefreshToken[]
-  acceptedInvitations  Invitation[] @relation("AcceptedInvitations")
-  passwordResetTokens  PasswordResetToken[]
+  users               User[]
+  refreshTokens       RefreshToken[]
+  acceptedInvitations Invitation[]         @relation("AcceptedInvitations")
+  passwordResetTokens PasswordResetToken[]
 
   @@map("accounts")
 }
@@ -160,7 +170,7 @@ model User {
   uploadedDocuments       EmployeeDocument[]
   notificationPreferences NotificationPreference[]
   notifications           Notification[]
-  invitedInvitations      Invitation[] @relation("InvitedByUser")
+  invitedInvitations      Invitation[]             @relation("InvitedByUser")
 
   @@unique([accountId, organizationId])
   @@index([accountId])
@@ -185,9 +195,9 @@ model Role {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization        Organization?            @relation(fields: [organizationId], references: [id])
-  rolePermissions     RolePermission[]
-  userRoles           UserRole[]
+  organization          Organization?              @relation(fields: [organizationId], references: [id])
+  rolePermissions       RolePermission[]
+  userRoles             UserRole[]
   invitationAssignments InvitationRoleAssignment[]
 
   // Uniqueness is enforced via partial indexes in the migration:
@@ -270,9 +280,9 @@ model Invitation {
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  invitedByUser   User?        @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
-  acceptedAccount Account?     @relation("AcceptedInvitations", fields: [acceptedAccountId], references: [id])
+  organization    Organization               @relation(fields: [organizationId], references: [id])
+  invitedByUser   User?                      @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
+  acceptedAccount Account?                   @relation("AcceptedInvitations", fields: [acceptedAccountId], references: [id])
   roleAssignments InvitationRoleAssignment[]
 
   @@unique([tokenHash])
@@ -322,7 +332,7 @@ model RefreshToken {
 model PasswordResetToken {
   id        String    @id @default(uuid())
   accountId String    @map("account_id")
-  tokenHash String    @map("token_hash") @unique
+  tokenHash String    @unique @map("token_hash")
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -437,13 +447,15 @@ model Employee {
   leaveApprovalActions   LeaveApprovalAction[]
 
   // Performance Management
-  goals               Goal[]
-  createdGoals        Goal[]               @relation("GoalCreator")
-  approvedGoals       Goal[]               @relation("GoalApprover")
-  goalProgressUpdates GoalProgressUpdate[]
-  performanceReviews  PerformanceReview[]
-  managedReviews      PerformanceReview[]  @relation("ReviewManager")
-  calibratedReviews   PerformanceReview[]  @relation("ReviewCalibrator")
+  goals                    Goal[]
+  createdGoals             Goal[]                    @relation("GoalCreator")
+  approvedGoals            Goal[]                    @relation("GoalApprover")
+  goalProgressUpdates      GoalProgressUpdate[]
+  performanceReviews       PerformanceReview[]
+  managedReviews           PerformanceReview[]       @relation("ReviewManager")
+  calibratedReviews        PerformanceReview[]       @relation("ReviewCalibrator")
+  performanceNotes         EmployeePerformanceNote[] @relation("PerformanceNoteEmployee")
+  authoredPerformanceNotes EmployeePerformanceNote[] @relation("PerformanceNoteAuthor")
 
   // Payroll
   salaryStructures        EmployeeSalaryStructure[]
@@ -477,6 +489,17 @@ model Employee {
   // Onboarding
   onboardingInstance      OnboardingInstance? @relation("OnboardingEmployee")
   assignedOnboardingTasks OnboardingTask[]    @relation("OnboardingAssignee")
+
+  // Tasks
+  assignedTasks Task[] @relation("TaskAssignee")
+  createdTasks  Task[] @relation("TaskAssignedBy")
+
+  // Admin Mail
+  sentAdminMailMessages AdminMailMessage[] @relation("AdminMailSender")
+
+  // Suggestions
+  authoredSuggestions  Suggestion[] @relation("SuggestionAuthor")
+  respondedSuggestions Suggestion[] @relation("SuggestionResponder")
 
   @@unique([organizationId, employeeCode])
   @@index([organizationId])
@@ -649,6 +672,13 @@ model EmployeeAttendanceOverride {
   employeeId          String   @unique @map("employee_id")
   ipRestrictionExempt Boolean  @default(false) @map("ip_restriction_exempt")
   reason              String?
+  // Per-employee schedule override. Any of these set means "use override for that field,
+  // fall back to policy default for the rest". `workingDays` empty array = no override.
+  scheduleStart       String?  @map("schedule_start")
+  scheduleEnd         String?  @map("schedule_end")
+  workingDays         Int[]    @default([]) @map("working_days")
+  graceMinutesLate    Int?     @map("grace_minutes_late")
+  graceMinutesEarly   Int?     @map("grace_minutes_early")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -662,22 +692,22 @@ model EmployeeAttendanceOverride {
 // ============================================
 
 model AttendanceLog {
-  id              String              @id @default(uuid())
-  organizationId  String              @map("organization_id")
-  employeeId      String              @map("employee_id")
-  logType         AttendanceLogType   @map("log_type")
-  timestamp       DateTime
-  ipAddress       String?             @map("ip_address")
-  source          AttendanceLogSource @default(WEB)
-  notes           String?
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  employeeId     String              @map("employee_id")
+  logType        AttendanceLogType   @map("log_type")
+  timestamp      DateTime
+  ipAddress      String?             @map("ip_address")
+  source         AttendanceLogSource @default(WEB)
+  notes          String?
   // Device + location metadata captured at the moment of check-in/out
-  userAgent       String?             @map("user_agent")
-  deviceType      String?             @map("device_type")
-  latitude        Decimal?            @db.Decimal(10, 7)
-  longitude       Decimal?            @db.Decimal(10, 7)
-  accuracyMeters  Decimal?            @map("accuracy_meters") @db.Decimal(10, 2)
-  locationLabel   String?             @map("location_label")
-  createdAt       DateTime            @default(now()) @map("created_at")
+  userAgent      String?             @map("user_agent")
+  deviceType     String?             @map("device_type")
+  latitude       Decimal?            @db.Decimal(10, 7)
+  longitude      Decimal?            @db.Decimal(10, 7)
+  accuracyMeters Decimal?            @map("accuracy_meters") @db.Decimal(10, 2)
+  locationLabel  String?             @map("location_label")
+  createdAt      DateTime            @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -1222,6 +1252,28 @@ model GoalReview {
   @@index([reviewId])
   @@index([goalId])
   @@map("goal_reviews")
+}
+
+// ============================================
+// Employee Performance Notes (manager free-form notes)
+// ============================================
+
+model EmployeePerformanceNote {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  employeeId     String   @map("employee_id")
+  authorId       String   @map("author_id")
+  body           String
+  isPrivate      Boolean  @default(true) @map("is_private")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  employee     Employee     @relation("PerformanceNoteEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  author       Employee     @relation("PerformanceNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([employeeId, createdAt])
+  @@map("employee_performance_notes")
 }
 
 // ============================================
@@ -2255,4 +2307,119 @@ model OnboardingTaskDocument {
 
   @@index([onboardingTaskId])
   @@map("onboarding_task_documents")
+}
+
+// ============================================
+// Tasks — lightweight task assignment between
+// managers/HR and employees. Independent of
+// onboarding tasks (which live on a template).
+// ============================================
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  title          String
+  description    String?
+  assigneeId     String       @map("assignee_id")
+  assignedById   String       @map("assigned_by_id")
+  dueDate        DateTime?    @map("due_date") @db.Date
+  priority       TaskPriority @default(MEDIUM)
+  status         TaskStatus   @default(TODO)
+  completedAt    DateTime?    @map("completed_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  assignee     Employee     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignedBy   Employee     @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+
+  @@index([organizationId])
+  @@index([assigneeId, status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// ============================================
+// Admin Mail — audit trail of admin-composed
+// emails sent to employees from inside the HRMS.
+// ============================================
+
+model AdminMailMessage {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  senderId       String   @map("sender_id")
+  subject        String
+  body           String
+  recipientCount Int      @map("recipient_count")
+  // Recipients stored as JSON array of { employeeId, email, deliveredAt?, error? }
+  recipients     Json
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  sender       Employee     @relation("AdminMailSender", fields: [senderId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("admin_mail_messages")
+}
+
+// ============================================
+// Suggestion Box — employees post suggestions
+// (named or anonymous), HR/admin reviews and
+// responds.
+// ============================================
+
+enum SuggestionCategory {
+  WORKPLACE
+  PROCESS
+  TOOLS
+  CULTURE
+  COMPENSATION
+  OTHER
+}
+
+enum SuggestionStatus {
+  OPEN
+  IN_REVIEW
+  IMPLEMENTED
+  DECLINED
+  ARCHIVED
+}
+
+model Suggestion {
+  id             String             @id @default(uuid())
+  organizationId String             @map("organization_id")
+  // null when posted anonymously
+  authorId       String?            @map("author_id")
+  isAnonymous    Boolean            @default(false) @map("is_anonymous")
+  category       SuggestionCategory @default(OTHER)
+  title          String
+  body           String
+  status         SuggestionStatus   @default(OPEN)
+  responseBody   String?            @map("response_body")
+  respondedById  String?            @map("responded_by_id")
+  respondedAt    DateTime?          @map("responded_at")
+  upvotes        Int                @default(0)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  author       Employee?    @relation("SuggestionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  respondedBy  Employee?    @relation("SuggestionResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@map("suggestions")
 }

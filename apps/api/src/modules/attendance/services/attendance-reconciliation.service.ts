@@ -121,6 +121,18 @@ export class AttendanceReconciliationService {
       }
     }
 
+    // Per-employee schedule overrides (non-empty workingDays wins over policy).
+    const overrides = await this.prisma.employeeAttendanceOverride.findMany({
+      where: { employeeId: { in: employeeIds } },
+      select: { employeeId: true, workingDays: true },
+    });
+    const overrideWorkingDaysByEmployee = new Map<string, number[]>();
+    for (const o of overrides) {
+      if (o.workingDays && o.workingDays.length > 0) {
+        overrideWorkingDaysByEmployee.set(o.employeeId, o.workingDays);
+      }
+    }
+
     // Approved leave requests covering this date for these employees
     const leaveRequests = await this.prisma.leaveRequest.findMany({
       where: {
@@ -149,7 +161,10 @@ export class AttendanceReconciliationService {
 
     for (const emp of employees) {
       const existing = summaryByEmployee.get(emp.id);
-      const workingDays = workingDaysByEmployee.get(emp.id) ?? [1, 2, 3, 4, 5];
+      const workingDays =
+        overrideWorkingDaysByEmployee.get(emp.id) ??
+        workingDaysByEmployee.get(emp.id) ??
+        [1, 2, 3, 4, 5];
       const isWorkingDay = workingDays.includes(dayOfWeek);
 
       // Determine the day-type override status (priority 1-3)

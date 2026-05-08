@@ -116,6 +116,21 @@ const PERMISSIONS = [
   { code: 'onboarding.template.manage', name: 'Manage Onboarding Templates', module: 'onboarding' },
   { code: 'onboarding.instance.manage', name: 'Manage Onboarding Instances', module: 'onboarding' },
   { code: 'onboarding.task.update', name: 'Update Assigned Onboarding Tasks', module: 'onboarding' },
+
+  // Tasks
+  { code: 'task.create', name: 'Create / Assign Tasks', module: 'task' },
+  { code: 'task.read_own', name: 'View Own Tasks', module: 'task' },
+  { code: 'task.read', name: 'View All Tasks', module: 'task' },
+  { code: 'task.update', name: 'Update Tasks', module: 'task' },
+  { code: 'task.delete', name: 'Delete Tasks', module: 'task' },
+
+  // Admin Mail
+  { code: 'admin_mail.send', name: 'Send Admin Mail', module: 'admin_mail' },
+
+  // Suggestions
+  { code: 'suggestion.create', name: 'Submit Suggestions', module: 'suggestion' },
+  { code: 'suggestion.read_own', name: 'View Own Suggestions', module: 'suggestion' },
+  { code: 'suggestion.manage', name: 'Manage All Suggestions', module: 'suggestion' },
 ];
 
 // ============================================
@@ -155,6 +170,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'onboarding.read_own', 'onboarding.read',
     'onboarding.template.manage', 'onboarding.instance.manage',
     'onboarding.task.update',
+    'task.create', 'task.read_own', 'task.read', 'task.update', 'task.delete',
+    'admin_mail.send',
+    'suggestion.create', 'suggestion.read_own', 'suggestion.manage',
   ],
 
   manager: [
@@ -176,6 +194,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'recruitment.requisition.create',
     'recruitment.interview.manage',
     'onboarding.read_own', 'onboarding.read', 'onboarding.task.update',
+    'task.create', 'task.read_own', 'task.read', 'task.update',
+    'suggestion.create', 'suggestion.read_own',
   ],
 
   employee: [
@@ -190,6 +210,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'notification.read_own',
     'recruitment.read_own',
     'onboarding.read_own', 'onboarding.task.update',
+    'task.read_own', 'task.update',
+    'suggestion.create', 'suggestion.read_own',
   ],
 
   finance_admin: [
@@ -209,6 +231,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'policy.read', 'policy.acknowledge',
     'notification.read_own',
     'onboarding.read_own',
+    'task.read_own', 'task.update',
+    'suggestion.create', 'suggestion.read_own',
   ],
 
   recruiter: [
@@ -231,6 +255,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'recruitment.offer.manage',
     'recruitment.hire',
     'onboarding.read_own', 'onboarding.read', 'onboarding.task.update',
+    'task.read_own', 'task.update',
+    'suggestion.create', 'suggestion.read_own',
   ],
 };
 

@@ -51,6 +51,9 @@ export const NotificationEvents = {
   ONBOARDING_TASK_ASSIGNED: 'onboarding.task_assigned',
   ONBOARDING_TASK_COMPLETED: 'onboarding.task_completed',
   ONBOARDING_COMPLETED: 'onboarding.completed',
+
+  // Suggestions
+  SUGGESTION_RESPONDED: 'suggestion.responded',
 } as const;
 
 export type NotificationEventType =
@@ -215,5 +218,9 @@ export const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }
   [NotificationEvents.ONBOARDING_COMPLETED]: {
     subject: 'Onboarding complete: {{employeeName}}',
     body: 'All required tasks for {{employeeName}} have been completed.',
+  },
+  [NotificationEvents.SUGGESTION_RESPONDED]: {
+    subject: 'Response to your suggestion: {{title}}',
+    body: 'Your suggestion "{{title}}" was {{status}} by {{responderName}}.',
   },
 };

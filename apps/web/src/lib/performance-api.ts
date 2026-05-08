@@ -14,6 +14,9 @@ import type {
   SubmitSelfReviewPayload,
   SubmitManagerReviewPayload,
   CalibrateReviewPayload,
+  PerformanceNote,
+  CreatePerformanceNotePayload,
+  UpdatePerformanceNotePayload,
 } from '@/types/performance';
 
 function qs(params: Record<string, string | undefined>): string {
@@ -120,4 +123,28 @@ export function submitManagerReview(id: string, payload: SubmitManagerReviewPayl
 
 export function calibrateReview(id: string, payload: CalibrateReviewPayload) {
   return patch<PerformanceReview>(`/api/performance-reviews/${id}/calibrate`, payload);
+}
+
+// ─── Performance Notes ──────────────────────
+
+export function listPerformanceNotes(employeeId: string) {
+  return get<PerformanceNote[]>(`/api/performance/employees/${employeeId}/notes`);
+}
+
+export function createPerformanceNote(
+  employeeId: string,
+  payload: CreatePerformanceNotePayload,
+) {
+  return post<PerformanceNote>(`/api/performance/employees/${employeeId}/notes`, payload);
+}
+
+export function updatePerformanceNote(
+  noteId: string,
+  payload: UpdatePerformanceNotePayload,
+) {
+  return patch<PerformanceNote>(`/api/performance/notes/${noteId}`, payload);
+}
+
+export function deletePerformanceNote(noteId: string) {
+  return del<{ success: boolean }>(`/api/performance/notes/${noteId}`);
 }

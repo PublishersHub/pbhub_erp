@@ -9,8 +9,14 @@ export class ConsoleMailTransport implements MailTransport {
     const recipients = Array.isArray(message.to)
       ? message.to.join(', ')
       : message.to;
+    const attachmentsLine =
+      message.attachments && message.attachments.length > 0
+        ? `\n  Attachments: ${message.attachments
+            .map((a) => `${a.filename} (${a.content.length} bytes)`)
+            .join(', ')}`
+        : '';
     this.logger.log(
-      `[EMAIL] ${message.from} -> ${recipients}\n  Subject: ${message.subject}\n  Body: ${message.body}`,
+      `[EMAIL] ${message.from} -> ${recipients}\n  Subject: ${message.subject}\n  Body: ${message.body}${attachmentsLine}`,
     );
   }
 }

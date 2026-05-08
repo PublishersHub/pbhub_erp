@@ -16,7 +16,7 @@ import {
   changeMyPassword,
   type AccountProfile,
 } from '@/lib/account-api';
-import { getMyEmployee, updateMyEmployee } from '@/lib/employee-api';
+import { getMyEmployee, updateMyEmployee, downloadEmployeeIdCard } from '@/lib/employee-api';
 import type { Employee } from '@/types/employee';
 
 const inputCls =
@@ -62,6 +62,9 @@ export default function ProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // ID-card download state
+  const [downloadingCard, setDownloadingCard] = useState(false);
+
   useDocumentTitle('My Profile');
 
   const loadProfile = async () => {
@@ -86,6 +89,21 @@ export default function ProfilePage() {
     void loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleDownloadIdCard() {
+    if (!employee || downloadingCard) return;
+    setDownloadingCard(true);
+    try {
+      await downloadEmployeeIdCard(employee.id, `id-card-${employee.employeeCode}.pdf`);
+    } catch (err) {
+      toast.error(
+        'Failed to download ID card',
+        err instanceof Error ? err.message : 'Please try again',
+      );
+    } finally {
+      setDownloadingCard(false);
+    }
+  }
 
   async function handlePhotoUploaded(key: string) {
     try {
@@ -170,7 +188,7 @@ export default function ProfilePage() {
               imageUrl={null}
             />
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-lg font-semibold text-foreground">
               {`${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Your account'}
             </p>
@@ -179,6 +197,18 @@ export default function ProfilePage() {
               <p className="mt-1 text-xs text-muted-foreground/70">
                 No employee profile in this organization — photo cannot be set here.
               </p>
+            )}
+            {employee && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadIdCard}
+                  disabled={downloadingCard}
+                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted motion-press transition-colors disabled:opacity-50"
+                >
+                  {downloadingCard ? 'Preparing…' : 'Download ID Card'}
+                </button>
+              </div>
             )}
           </div>
         </div>
