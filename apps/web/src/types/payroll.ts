@@ -1,6 +1,7 @@
 // ─── Enums ───────────────────────────────────
 
 export type SalaryComponentType = 'EARNING' | 'DEDUCTION';
+export type SalaryFormulaBase = 'CTC' | 'BASIC' | 'GROSS' | 'FIXED' | 'CUSTOM';
 export type PayrollCycleStatus = 'DRAFT' | 'PROCESSING' | 'PROCESSED' | 'FINALIZED';
 export type PayrollAdjustmentType = 'EARNING' | 'DEDUCTION';
 export type PayrollAdjustmentCategory =
@@ -33,6 +34,8 @@ export interface SalaryComponent {
   isDefault: boolean;
   isActive: boolean;
   sortOrder: number;
+  formulaBase: SalaryFormulaBase;
+  formulaValue: string | null; // Decimal string (or null for FIXED)
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +62,7 @@ export interface EmployeeSalaryStructure {
   organizationId: string;
   employeeId: string;
   effectiveFrom: string;
+  ctc: string; // Decimal
   grossSalary: string; // Decimal
   totalDeductions: string; // Decimal
   netSalary: string; // Decimal
@@ -170,6 +174,8 @@ export interface CreateSalaryComponentPayload {
   isTaxable?: boolean;
   isDefault?: boolean;
   sortOrder?: number;
+  formulaBase?: SalaryFormulaBase;
+  formulaValue?: number;
 }
 
 export interface UpdateSalaryComponentPayload {
@@ -179,13 +185,40 @@ export interface UpdateSalaryComponentPayload {
   isDefault?: boolean;
   isActive?: boolean;
   sortOrder?: number;
+  formulaBase?: SalaryFormulaBase;
+  formulaValue?: number;
 }
 
 export interface SetSalaryStructurePayload {
   employeeId: string;
   effectiveFrom: string;
+  ctc?: number;
   notes?: string;
   components: { salaryComponentId: string; amount: number }[];
+}
+
+export interface PreviewSalaryStructurePayload {
+  ctc: number;
+  componentIds: string[];
+}
+
+export interface ResolvedSalaryComponent {
+  componentId: string;
+  code: string;
+  name: string;
+  type: SalaryComponentType;
+  amount: number;
+  derivedFrom: string;
+}
+
+export interface SalaryStructurePreview {
+  ctc: number;
+  components: ResolvedSalaryComponent[];
+  totals: {
+    grossEarnings: number;
+    totalDeductions: number;
+    netSalary: number;
+  };
 }
 
 export interface CreatePayrollCyclePayload {

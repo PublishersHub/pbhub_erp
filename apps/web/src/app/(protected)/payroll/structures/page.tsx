@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -15,8 +15,10 @@ import {
   getEmployeeSalaryStructure,
   getEmployeeSalaryHistory,
   setSalaryStructure,
+  previewSalaryStructure,
 } from '@/lib/payroll-api';
 import { formatDate, formatCurrency, employeeName } from '@/lib/format';
+import type { SalaryStructurePreview } from '@/types/payroll';
 
 export default function SalaryStructuresPage() {
   useDocumentTitle('Salary Structures');
@@ -51,12 +53,83 @@ export default function SalaryStructuresPage() {
   const [showSetForm, setShowSetForm] = useState(false);
   const [setEmpId, setSetEmpId] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState('');
+  const [ctcInput, setCtcInput] = useState('');
   const [notes, setNotes] = useState('');
   const [compRows, setCompRows] = useState<{ salaryComponentId: string; amount: string }[]>([]);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [preview, setPreview] = useState<SalaryStructurePreview | null>(null);
+  const [previewError, setPreviewError] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const activeComponents = (components ?? []).filter((c) => c.isActive);
+
+  // Identify which selected rows are formula-driven (% of CTC/BASIC/GROSS).
+  // Only those should be auto-filled from preview; FIXED rows stay user-typed.
+  const componentMap = useMemo(
+    () => new Map((components ?? []).map((c) => [c.id, c])),
+    [components],
+  );
+
+  const selectedComponentIds = useMemo(
+    () => compRows.map((r) => r.salaryComponentId).filter(Boolean),
+    [compRows],
+  );
+
+  const hasFormulaComponent = useMemo(
+    () =>
+      selectedComponentIds.some((id) => {
+        const c = componentMap.get(id);
+        return c && c.formulaBase !== 'FIXED';
+      }),
+    [selectedComponentIds, componentMap],
+  );
+
+  // Fetch a live preview when CTC + selected components change.
+  useEffect(() => {
+    if (!showSetForm) return;
+    const ctc = parseFloat(ctcInput);
+    if (!isFinite(ctc) || ctc < 0) {
+      setPreview(null);
+      return;
+    }
+    if (selectedComponentIds.length === 0) {
+      setPreview(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError('');
+    previewSalaryStructure({ ctc, componentIds: selectedComponentIds })
+      .then((res) => {
+        if (cancelled) return;
+        setPreview(res);
+        // Auto-fill amounts for formula-driven rows. Leave FIXED rows alone.
+        setCompRows((prev) =>
+          prev.map((r) => {
+            if (!r.salaryComponentId) return r;
+            const c = componentMap.get(r.salaryComponentId);
+            if (!c || c.formulaBase === 'FIXED') return r;
+            const resolved = res.components.find(
+              (rc) => rc.componentId === r.salaryComponentId,
+            );
+            return resolved ? { ...r, amount: String(resolved.amount) } : r;
+          }),
+        );
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setPreview(null);
+        setPreviewError(err instanceof Error ? err.message : 'Preview failed');
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctcInput, selectedComponentIds.join(','), showSetForm]);
 
   function addRow() {
     setCompRows((prev) => [...prev, { salaryComponentId: '', amount: '' }]);
@@ -81,9 +154,14 @@ export default function SalaryStructuresPage() {
     setFormError('');
     setSubmitting(true);
     try {
+      const ctc = ctcInput ? parseFloat(ctcInput) : 0;
+      if (hasFormulaComponent && (!ctcInput || isNaN(ctc) || ctc <= 0)) {
+        throw new Error('Enter a CTC — at least one selected component is formula-driven');
+      }
       await setSalaryStructure({
         employeeId: setEmpId,
         effectiveFrom,
+        ctc,
         ...(notes.trim() && { notes: notes.trim() }),
         components: validRows.map((r) => ({
           salaryComponentId: r.salaryComponentId,
@@ -93,8 +171,10 @@ export default function SalaryStructuresPage() {
       setShowSetForm(false);
       setSetEmpId('');
       setEffectiveFrom('');
+      setCtcInput('');
       setNotes('');
       setCompRows([]);
+      setPreview(null);
       // Refresh if viewing this employee
       if (setEmpId === selectedEmpId) refetchStructure();
     } catch (err) {
@@ -130,7 +210,7 @@ export default function SalaryStructuresPage() {
       {showSetForm && (
         <form onSubmit={handleSet} className="mb-6 rounded-lg border border-border bg-card p-4 shadow-soft space-y-4">
           <h3 className="text-sm font-semibold text-foreground/80">Set Employee Salary Structure</h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div>
               <label className="block text-xs font-medium text-foreground/80">Employee *</label>
               <select required value={setEmpId} onChange={(e) => setSetEmpId(e.target.value)} className={inputCls}>
@@ -145,6 +225,20 @@ export default function SalaryStructuresPage() {
             <div>
               <label className="block text-xs font-medium text-foreground/80">Effective From *</label>
               <input type="date" required value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground/80">
+                CTC{hasFormulaComponent ? ' *' : ''}
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={ctcInput}
+                onChange={(e) => setCtcInput(e.target.value)}
+                className={inputCls}
+                placeholder="e.g. 1200000"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground/80">Notes</label>
@@ -163,43 +257,94 @@ export default function SalaryStructuresPage() {
               <p className="text-xs text-muted-foreground">Click &quot;+ Add Row&quot; to add salary components.</p>
             )}
             <div className="space-y-2">
-              {compRows.map((row, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <select
-                    value={row.salaryComponentId}
-                    onChange={(e) => updateRow(idx, 'salaryComponentId', e.target.value)}
-                    className="flex-1 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground"
-                  >
-                    <option value="">Select component...</option>
-                    {activeComponents.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} — {c.name} ({c.type})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="Amount"
-                    value={row.amount}
-                    onChange={(e) => updateRow(idx, 'amount', e.target.value)}
-                    className="w-32 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground"
-                  />
-                  <button type="button" onClick={() => removeRow(idx)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">
-                    Remove
-                  </button>
-                </div>
-              ))}
+              {compRows.map((row, idx) => {
+                const c = row.salaryComponentId ? componentMap.get(row.salaryComponentId) : null;
+                const isFormula = c && c.formulaBase !== 'FIXED';
+                const formulaLabel = isFormula
+                  ? `${c.formulaValue ?? '0'}% of ${c.formulaBase}`
+                  : null;
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    <select
+                      value={row.salaryComponentId}
+                      onChange={(e) => updateRow(idx, 'salaryComponentId', e.target.value)}
+                      className="flex-1 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground"
+                    >
+                      <option value="">Select component...</option>
+                      {activeComponents.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {c.name} ({c.type})
+                          {c.formulaBase !== 'FIXED' ? ` · ${c.formulaValue ?? '0'}% of ${c.formulaBase}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="Amount"
+                      value={row.amount}
+                      onChange={(e) => updateRow(idx, 'amount', e.target.value)}
+                      readOnly={Boolean(isFormula)}
+                      title={isFormula ? `Auto-computed: ${formulaLabel}` : undefined}
+                      className={`w-32 rounded-md border border-input px-2 py-1.5 text-sm bg-card text-foreground ${
+                        isFormula ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
+                    />
+                    <button type="button" onClick={() => removeRow(idx)} className="rounded bg-destructive-soft text-destructive px-2 py-1 text-xs hover:bg-destructive/20">
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          {/* Live preview */}
+          {(preview || previewLoading || previewError) && (
+            <div className="rounded-md border border-info/20 bg-info-soft p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase text-info">Live Preview</h4>
+                {previewLoading && <span className="text-xs text-info/70">Computing…</span>}
+              </div>
+              {previewError && <ErrorMessage message={previewError} />}
+              {preview && (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-info/80">
+                      <th className="py-1">Component</th>
+                      <th className="py-1">Type</th>
+                      <th className="py-1">Derivation</th>
+                      <th className="py-1 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.components.map((rc) => (
+                      <tr key={rc.componentId} className="border-t border-info/10">
+                        <td className="py-1 text-foreground">{rc.name} <span className="text-muted-foreground">({rc.code})</span></td>
+                        <td className="py-1"><StatusBadge status={rc.type} /></td>
+                        <td className="py-1 text-muted-foreground">{rc.derivedFrom}</td>
+                        <td className={`py-1 text-right font-medium ${rc.type === 'EARNING' ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(rc.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-info/30 font-semibold">
+                      <td colSpan={3} className="py-1 text-foreground">Net Salary</td>
+                      <td className="py-1 text-right text-foreground">{formatCurrency(preview.totals.netSalary)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
 
           {formError && <ErrorMessage message={formError} />}
           <div className="flex gap-2">
             <LoadingButton type="submit" loading={submitting} loadingText="Saving...">
               Save Structure
             </LoadingButton>
-            <LoadingButton type="button" variant="secondary" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); }}>
+            <LoadingButton type="button" variant="secondary" onClick={() => { setShowSetForm(false); setCompRows([]); setFormError(''); setPreview(null); setCtcInput(''); }}>
               Cancel
             </LoadingButton>
           </div>

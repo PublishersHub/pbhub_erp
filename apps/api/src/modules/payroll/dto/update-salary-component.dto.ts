@@ -2,10 +2,13 @@ import {
   IsString,
   IsOptional,
   IsBoolean,
+  IsEnum,
   IsInt,
+  IsNumber,
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SalaryFormulaBase } from '@prisma/client';
 
 export class UpdateSalaryComponentDto {
   @ApiPropertyOptional({ example: 'Basic Salary' })
@@ -38,4 +41,15 @@ export class UpdateSalaryComponentDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ enum: SalaryFormulaBase })
+  @IsOptional()
+  @IsEnum(SalaryFormulaBase)
+  formulaBase?: SalaryFormulaBase;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  formulaValue?: number;
 }

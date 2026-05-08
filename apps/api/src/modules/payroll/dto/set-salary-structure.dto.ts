@@ -31,6 +31,15 @@ export class SetSalaryStructureDto {
   @IsDateString()
   effectiveFrom: string;
 
+  @ApiPropertyOptional({
+    example: 1200000,
+    description: 'Cost to company. Required when any component uses a CTC% formula.',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  ctc?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

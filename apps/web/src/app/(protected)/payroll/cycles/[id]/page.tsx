@@ -89,6 +89,17 @@ export default function PayrollCycleDetailPage() {
   );
 
   async function handleGenerate() {
+    if (!cycle) return;
+    const monthLabel = `${MONTHS[cycle.month - 1]} ${cycle.year}`;
+    const ok = await confirm({
+      title: 'Generate payroll for this cycle?',
+      description:
+        `This will compute payslips for all active employees from their salary structures and ${monthLabel} attendance. ` +
+        `Loss-of-pay will be applied for any unpaid absences. Continue?`,
+      confirmLabel: 'Generate',
+      tone: 'warning',
+    });
+    if (!ok) return;
     setActionError('');
     setActionLoading(true);
     setGenResult(null);

@@ -8,6 +8,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SalaryStructuresService } from '../services/salary-structures.service';
 import { SetSalaryStructureDto } from '../dto/set-salary-structure.dto';
+import { PreviewSalaryStructureDto } from '../dto/preview-salary-structure.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../../../common/types';
@@ -26,6 +27,18 @@ export class SalaryStructuresController {
     @Body() dto: SetSalaryStructureDto,
   ) {
     return this.service.setSalaryStructure(user.organizationId, dto);
+  }
+
+  @Post('preview')
+  @RequirePermissions('payroll.run')
+  @ApiOperation({
+    summary: 'Preview a salary structure for a given CTC + component list (no persistence)',
+  })
+  async previewStructure(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: PreviewSalaryStructureDto,
+  ) {
+    return this.service.previewStructure(user.organizationId, dto);
   }
 
   @Get('employee/:employeeId')

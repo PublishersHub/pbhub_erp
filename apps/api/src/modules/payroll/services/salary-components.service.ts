@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateSalaryComponentDto } from '../dto/create-salary-component.dto';
 import { UpdateSalaryComponentDto } from '../dto/update-salary-component.dto';
@@ -23,6 +24,11 @@ export class SalaryComponentsService {
           isTaxable: dto.isTaxable ?? false,
           isDefault: dto.isDefault ?? false,
           sortOrder: dto.sortOrder ?? 0,
+          formulaBase: dto.formulaBase ?? 'FIXED',
+          formulaValue:
+            dto.formulaValue !== undefined
+              ? new Prisma.Decimal(dto.formulaValue)
+              : null,
         },
       });
     } catch (error: any) {
@@ -62,6 +68,13 @@ export class SalaryComponentsService {
         ...(dto.isDefault !== undefined && { isDefault: dto.isDefault }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.formulaBase !== undefined && { formulaBase: dto.formulaBase }),
+        ...(dto.formulaValue !== undefined && {
+          formulaValue:
+            dto.formulaValue === null
+              ? null
+              : new Prisma.Decimal(dto.formulaValue),
+        }),
       },
     });
   }

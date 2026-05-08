@@ -6,10 +6,59 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { SetSalaryStructureDto } from '../dto/set-salary-structure.dto';
+import { PreviewSalaryStructureDto } from '../dto/preview-salary-structure.dto';
+import {
+  SalaryFormulaService,
+  ResolvedComponent,
+} from './salary-formula.service';
 
 @Injectable()
 export class SalaryStructuresService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly formula: SalaryFormulaService,
+  ) {}
+
+  /**
+   * Compute per-component amounts from a CTC + a list of component ids,
+   * without persisting anything. Used by the structure-assignment UI for
+   * a live preview.
+   */
+  async previewStructure(
+    organizationId: string,
+    dto: PreviewSalaryStructureDto,
+  ): Promise<{
+    ctc: number;
+    components: ResolvedComponent[];
+    totals: { grossEarnings: number; totalDeductions: number; netSalary: number };
+  }> {
+    const components = await this.prisma.salaryComponent.findMany({
+      where: { id: { in: dto.componentIds }, organizationId, isActive: true },
+    });
+    if (components.length !== dto.componentIds.length) {
+      throw new BadRequestException(
+        'One or more salary components are invalid or inactive',
+      );
+    }
+    // Sort by sortOrder to keep BASIC tier-1 ordering predictable in the UI.
+    components.sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const resolved = this.formula.computeStructure(dto.ctc, components);
+
+    let grossEarnings = 0;
+    let totalDeductions = 0;
+    for (const r of resolved) {
+      if (r.type === 'EARNING') grossEarnings += r.amount;
+      else totalDeductions += r.amount;
+    }
+    const netSalary = grossEarnings - totalDeductions;
+
+    return {
+      ctc: dto.ctc,
+      components: resolved,
+      totals: { grossEarnings, totalDeductions, netSalary },
+    };
+  }
 
   async setSalaryStructure(organizationId: string, dto: SetSalaryStructureDto) {
     // Validate employee exists
@@ -63,6 +112,7 @@ export class SalaryStructuresService {
           organizationId,
           employeeId: dto.employeeId,
           effectiveFrom: new Date(dto.effectiveFrom),
+          ctc: new Prisma.Decimal(dto.ctc ?? 0),
           grossSalary,
           totalDeductions,
           netSalary,

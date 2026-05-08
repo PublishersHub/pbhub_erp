@@ -329,6 +329,16 @@ export class PayrollGenerationService {
     employeeId: string,
     periodStart: Date,
   ): Promise<number[]> {
+    // Per-employee override wins over the assigned policy. The override's
+    // workingDays defaults to [] which means "no override — fall back to policy".
+    const override = await tx.employeeAttendanceOverride.findUnique({
+      where: { employeeId },
+      select: { workingDays: true },
+    });
+    if (override?.workingDays && override.workingDays.length > 0) {
+      return override.workingDays;
+    }
+
     const assignment = await tx.employeeAttendancePolicyAssignment.findFirst({
       where: {
         employeeId,

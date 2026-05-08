@@ -7,6 +7,8 @@ import type {
   UpdateSalaryComponentPayload,
   EmployeeSalaryStructure,
   SetSalaryStructurePayload,
+  PreviewSalaryStructurePayload,
+  SalaryStructurePreview,
   PayrollCycle,
   CreatePayrollCyclePayload,
   PayrollGenerationResult,
@@ -40,6 +42,10 @@ export function deactivateSalaryComponent(id: string) {
 
 export function setSalaryStructure(payload: SetSalaryStructurePayload) {
   return post<EmployeeSalaryStructure>('/api/salary-structures', payload);
+}
+
+export function previewSalaryStructure(payload: PreviewSalaryStructurePayload) {
+  return post<SalaryStructurePreview>('/api/salary-structures/preview', payload);
 }
 
 export function getEmployeeSalaryStructure(employeeId: string) {

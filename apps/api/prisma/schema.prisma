@@ -814,6 +814,14 @@ enum SalaryComponentType {
   DEDUCTION
 }
 
+enum SalaryFormulaBase {
+  CTC    // % of total CTC
+  BASIC  // % of basic component (looked up by code = 'BASIC')
+  GROSS  // % of total earnings (sum of all earnings whose formula doesn't depend on GROSS)
+  FIXED  // not a formula — value is the literal amount
+  CUSTOM // free expression — for v1, treated as FIXED
+}
+
 enum PayrollCycleStatus {
   DRAFT
   PROCESSING
@@ -1291,6 +1299,10 @@ model SalaryComponent {
   isDefault      Boolean             @default(false) @map("is_default")
   isActive       Boolean             @default(true) @map("is_active")
   sortOrder      Int                 @default(0) @map("sort_order")
+  // Formula fields. For PERCENTAGE-style formulas, formulaValue is the % (e.g. 60 for 60%).
+  // For FIXED, the existing fixed amount on the structure stays the source of truth.
+  formulaBase    SalaryFormulaBase   @default(FIXED) @map("formula_base")
+  formulaValue   Decimal?            @map("formula_value") @db.Decimal(10, 4)
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
 
@@ -1312,6 +1324,7 @@ model EmployeeSalaryStructure {
   organizationId  String   @map("organization_id")
   employeeId      String   @map("employee_id")
   effectiveFrom   DateTime @map("effective_from") @db.Date
+  ctc             Decimal  @default(0) @map("ctc") @db.Decimal(15, 2)
   grossSalary     Decimal  @map("gross_salary") @db.Decimal(12, 2)
   totalDeductions Decimal  @map("total_deductions") @db.Decimal(12, 2)
   netSalary       Decimal  @map("net_salary") @db.Decimal(12, 2)

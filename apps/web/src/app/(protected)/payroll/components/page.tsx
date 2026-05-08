@@ -25,7 +25,14 @@ import {
   updateSalaryComponent,
   deactivateSalaryComponent,
 } from '@/lib/payroll-api';
-import type { SalaryComponentType } from '@/types/payroll';
+import type { SalaryComponentType, SalaryFormulaBase } from '@/types/payroll';
+
+const FORMULA_OPTIONS: { value: SalaryFormulaBase; label: string }[] = [
+  { value: 'FIXED', label: 'Fixed amount (typed per employee)' },
+  { value: 'CTC', label: '% of CTC' },
+  { value: 'BASIC', label: '% of BASIC' },
+  { value: 'GROSS', label: '% of GROSS earnings' },
+];
 
 export default function SalaryComponentsPage() {
   useDocumentTitle('Salary Components');
@@ -84,6 +91,8 @@ export default function SalaryComponentsPage() {
   const [isTaxable, setIsTaxable] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
   const [sortOrderVal, setSortOrderVal] = useState('0');
+  const [formulaBase, setFormulaBase] = useState<SalaryFormulaBase>('FIXED');
+  const [formulaValue, setFormulaValue] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -94,6 +103,8 @@ export default function SalaryComponentsPage() {
   const [editTaxable, setEditTaxable] = useState(false);
   const [editDefault, setEditDefault] = useState(false);
   const [editSort, setEditSort] = useState('0');
+  const [editFormulaBase, setEditFormulaBase] = useState<SalaryFormulaBase>('FIXED');
+  const [editFormulaValue, setEditFormulaValue] = useState('');
 
   function resetForm() {
     setName('');
@@ -103,6 +114,8 @@ export default function SalaryComponentsPage() {
     setIsTaxable(false);
     setIsDefault(false);
     setSortOrderVal('0');
+    setFormulaBase('FIXED');
+    setFormulaValue('');
   }
 
   async function handleCreate(e: FormEvent) {
@@ -111,6 +124,10 @@ export default function SalaryComponentsPage() {
     setFormError('');
     setSubmitting(true);
     try {
+      const isPercent = formulaBase !== 'FIXED';
+      if (isPercent && (!formulaValue || isNaN(parseFloat(formulaValue)))) {
+        throw new Error('Enter a percentage value for this formula');
+      }
       await createSalaryComponent({
         name: name.trim(),
         code: code.trim().toUpperCase(),
@@ -119,6 +136,8 @@ export default function SalaryComponentsPage() {
         isTaxable,
         isDefault,
         sortOrder: parseInt(sortOrderVal, 10) || 0,
+        formulaBase,
+        ...(isPercent && { formulaValue: parseFloat(formulaValue) }),
       });
       setShowCreate(false);
       resetForm();
@@ -137,17 +156,27 @@ export default function SalaryComponentsPage() {
     setEditTaxable(c.isTaxable);
     setEditDefault(c.isDefault);
     setEditSort(String(c.sortOrder));
+    setEditFormulaBase(c.formulaBase ?? 'FIXED');
+    setEditFormulaValue(c.formulaValue != null ? String(c.formulaValue) : '');
   }
 
   async function handleUpdate() {
     setFormError('');
     try {
+      const isPercent = editFormulaBase !== 'FIXED';
+      if (isPercent && (!editFormulaValue || isNaN(parseFloat(editFormulaValue)))) {
+        throw new Error('Enter a percentage value for this formula');
+      }
       await updateSalaryComponent(editingId, {
         name: editName.trim(),
         description: editDesc.trim() || undefined,
         isTaxable: editTaxable,
         isDefault: editDefault,
         sortOrder: parseInt(editSort, 10) || 0,
+        formulaBase: editFormulaBase,
+        ...(isPercent
+          ? { formulaValue: parseFloat(editFormulaValue) }
+          : { formulaValue: 0 }),
       });
       setEditingId('');
       refetch();
@@ -221,6 +250,38 @@ export default function SalaryComponentsPage() {
               <input type="number" min={0} value={sortOrderVal} onChange={(e) => setSortOrderVal(e.target.value)} className={inputCls} />
             </div>
           </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-foreground/80">Formula</label>
+              <select
+                value={formulaBase}
+                onChange={(e) => setFormulaBase(e.target.value as SalaryFormulaBase)}
+                className={inputCls}
+              >
+                {FORMULA_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Fixed components are typed per employee. % formulas are auto-computed from CTC.
+              </p>
+            </div>
+            {formulaBase !== 'FIXED' && (
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Percentage *</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  required
+                  value={formulaValue}
+                  onChange={(e) => setFormulaValue(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. 60 for 60%"
+                />
+              </div>
+            )}
+          </div>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 text-sm text-foreground/80">
               <input type="checkbox" checked={isTaxable} onChange={(e) => setIsTaxable(e.target.checked)} className="rounded border-gray-300" />
@@ -272,6 +333,7 @@ export default function SalaryComponentsPage() {
                   <SortableHeader label="Code" sortKey="code" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Name" sortKey="name" currentSort={sort} currentOrder={order} onSort={setSort} />
                   <SortableHeader label="Type" sortKey="type" currentSort={sort} currentOrder={order} onSort={setSort} />
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Formula</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Taxable</th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Default</th>
                   <SortableHeader label="Order" sortKey="sortOrder" currentSort={sort} currentOrder={order} onSort={setSort} />
@@ -290,6 +352,30 @@ export default function SalaryComponentsPage() {
                         <input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded border border-input px-2 py-1 text-sm w-full bg-card text-foreground" />
                       </td>
                       <td className="px-4 py-2"><StatusBadge status={c.type} /></td>
+                      <td className="px-4 py-2">
+                        <div className="flex flex-col gap-1">
+                          <select
+                            value={editFormulaBase}
+                            onChange={(e) => setEditFormulaBase(e.target.value as SalaryFormulaBase)}
+                            className="rounded border border-input px-1.5 py-0.5 text-xs bg-card text-foreground"
+                          >
+                            {FORMULA_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.value}</option>
+                            ))}
+                          </select>
+                          {editFormulaBase !== 'FIXED' && (
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={editFormulaValue}
+                              onChange={(e) => setEditFormulaValue(e.target.value)}
+                              className="w-20 rounded border border-input px-1.5 py-0.5 text-xs bg-card text-foreground"
+                              placeholder="%"
+                            />
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-2">
                         <input type="checkbox" checked={editTaxable} onChange={(e) => setEditTaxable(e.target.checked)} className="rounded border-gray-300" />
                       </td>
@@ -310,6 +396,11 @@ export default function SalaryComponentsPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">{c.code}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">{c.name}</td>
                       <td className="px-4 py-3"><StatusBadge status={c.type} /></td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {c.formulaBase === 'FIXED'
+                          ? 'Fixed'
+                          : `${c.formulaValue ?? '0'}% of ${c.formulaBase}`}
+                      </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{c.isTaxable ? 'Yes' : 'No'}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{c.isDefault ? 'Yes' : 'No'}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{c.sortOrder}</td>
