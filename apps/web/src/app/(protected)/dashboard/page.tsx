@@ -294,6 +294,13 @@ function AttendanceHeatmap({ activeEmployees }: { activeEmployees: number }) {
 
   const summaries = useAsync(safe(() => getAllSummaries({ from: fromStr, to: toStr })), []);
 
+  // Refresh when a check-in/out happens elsewhere in the app.
+  useEffect(() => {
+    const handler = () => summaries.refetch();
+    window.addEventListener('attendance:updated', handler);
+    return () => window.removeEventListener('attendance:updated', handler);
+  }, [summaries]);
+
   // Build array of the past 30 days
   const days = useMemo(() => {
     const result: { date: string; presentCount: number }[] = [];
@@ -306,7 +313,10 @@ function AttendanceHeatmap({ activeEmployees }: { activeEmployees: number }) {
       const byDate: Record<string, number> = {};
       for (const s of summaries.data) {
         if (s.status === 'PRESENT' || s.status === 'LATE' || s.status === 'HALF_DAY') {
-          byDate[s.date] = (byDate[s.date] ?? 0) + 1;
+          // s.date arrives as a full ISO string from the API ("2026-05-04T00:00:00.000Z");
+          // day.date is "2026-05-04". Slice so the lookup keys actually match.
+          const key = typeof s.date === 'string' ? s.date.slice(0, 10) : s.date;
+          byDate[key] = (byDate[key] ?? 0) + 1;
         }
       }
       for (const day of result) {

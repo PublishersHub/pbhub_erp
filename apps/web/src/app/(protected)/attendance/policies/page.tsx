@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -29,9 +30,7 @@ import type { AttendancePolicyType } from '@/types/attendance';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AttendancePoliciesPage() {
-  useEffect(() => {
-    document.title = 'Attendance Policies · PbHub';
-  }, []);
+  useDocumentTitle('Attendance Policies');
 
   const confirm = useConfirm();
   const { can } = usePermission();

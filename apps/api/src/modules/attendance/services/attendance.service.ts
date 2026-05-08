@@ -191,16 +191,22 @@ export class AttendanceService {
 
   // ─── Employee Self-Service Queries ───────
 
+  /**
+   * Today's summary + logs for the authenticated user.
+   * Uses civilDateAsUtcMidnight for the summary lookup so the @db.Date
+   * column matches the row written by recalculateDailySummary.
+   */
   async getMyToday(userId: string, organizationId: string) {
     const employee = await this.findEmployeeByUserId(userId, organizationId);
     const tz = await this.getOrgTimezone(organizationId);
     const now = new Date();
     const dayStart = this.startOfCivilDay(now, tz);
     const dayEnd = this.endOfCivilDay(now, tz);
+    const summaryDate = this.civilDateAsUtcMidnight(now, tz);
 
     const [summary, logs] = await Promise.all([
       this.prisma.attendanceDailySummary.findUnique({
-        where: { employeeId_date: { employeeId: employee.id, date: dayStart } },
+        where: { employeeId_date: { employeeId: employee.id, date: summaryDate } },
       }),
       this.prisma.attendanceLog.findMany({
         where: {
@@ -494,9 +500,14 @@ export class AttendanceService {
       }
     }
 
+    // The Postgres @db.Date column wants a UTC-midnight Date so it truncates
+    // to the right civil day. dayStart is the UTC instant for civil 00:00 in
+    // the org tz, which for tz east of UTC sits on the previous UTC date.
+    const summaryDate = this.civilDateAsUtcMidnight(dayStart, tz);
+
     // Preserve IP non-compliance: once false for the day, stays false.
     const existingSummary = await this.prisma.attendanceDailySummary.findUnique({
-      where: { employeeId_date: { employeeId, date: dayStart } },
+      where: { employeeId_date: { employeeId, date: summaryDate } },
     });
     const finalIpCompliant = existingSummary?.isIpCompliant === false
       ? false
@@ -524,7 +535,7 @@ export class AttendanceService {
     }
 
     await this.prisma.attendanceDailySummary.upsert({
-      where: { employeeId_date: { employeeId, date: dayStart } },
+      where: { employeeId_date: { employeeId, date: summaryDate } },
       update: {
         status,
         firstCheckIn,
@@ -538,7 +549,7 @@ export class AttendanceService {
       create: {
         organizationId,
         employeeId,
-        date: dayStart,
+        date: summaryDate,
         status,
         firstCheckIn,
         lastCheckOut,
@@ -591,6 +602,17 @@ export class AttendanceService {
   private endOfCivilDay(d: Date, tz: string): Date {
     const { y, m, day } = this.civilParts(d, tz);
     return this.zonedWallClockToUtc(y, m, day, 23, 59, 59, 999, tz);
+  }
+
+  /**
+   * Returns the civil date as a UTC-midnight Date so Postgres @db.Date
+   * truncates it to the right day. `startOfCivilDay()` returns a UTC instant
+   * that for tz east of UTC (e.g. Karachi) lies on the *previous* UTC date,
+   * which causes the daily summary's date to be off by one for tz != UTC.
+   */
+  private civilDateAsUtcMidnight(d: Date, tz: string): Date {
+    const { y, m, day } = this.civilParts(d, tz);
+    return new Date(Date.UTC(y, m - 1, day));
   }
 
   /** Civil minutes-of-day (0..1439) of `d` interpreted in `tz`. */

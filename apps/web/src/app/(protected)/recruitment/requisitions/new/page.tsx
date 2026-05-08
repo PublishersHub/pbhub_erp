@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -13,9 +14,7 @@ import type { EmploymentType, DepartmentRef, DesignationRef, EmployeeRef } from 
 const EMPLOYMENT_TYPES: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
 
 export default function CreateRequisitionPage() {
-  useEffect(() => {
-    document.title = 'New Requisition · PbHub';
-  }, []);
+  useDocumentTitle('New Requisition');
   const router = useRouter();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);

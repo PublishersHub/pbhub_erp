@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { listEmployees } from '@/lib/employee-api';
@@ -148,9 +149,7 @@ function OrgTreeNode({ node }: { node: TreeNode }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OrgChartPage() {
-  useEffect(() => {
-    document.title = 'Org chart · PbHub';
-  }, []);
+  useDocumentTitle('Org chart');
 
   const { can } = usePermission();
   const { data, error, loading, refetch } = useAsync(() => listEmployees(), []);

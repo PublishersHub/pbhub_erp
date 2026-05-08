@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -18,9 +19,7 @@ const MONTHS = [
 ];
 
 export default function MyPayslipDetailPage() {
-  useEffect(() => {
-    document.title = 'Payslip · PbHub';
-  }, []);
+  useDocumentTitle('Payslip');
 
   const { cycleId } = useParams<{ cycleId: string }>();
   const { data: payslip, error, loading, refetch } = useAsync(

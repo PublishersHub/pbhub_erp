@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -14,9 +15,7 @@ import { getCandidate, updateCandidateBlacklist } from '@/lib/recruitment-api';
 import { formatDate } from '@/lib/format';
 
 export default function CandidateDetailPage() {
-  useEffect(() => {
-    document.title = 'Candidate · PbHub';
-  }, []);
+  useDocumentTitle('Candidate');
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const { data: candidate, error, loading, refetch } = useAsync(() => getCandidate(id), [id]);

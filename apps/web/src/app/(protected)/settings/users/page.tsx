@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -253,9 +254,7 @@ function DetailPanel({
 // ─── Page ─────────────────────────────────────
 
 export default function UsersPage() {
-  useEffect(() => {
-    document.title = 'Members · PbHub';
-  }, []);
+  useDocumentTitle('Members');
 
   const { can } = usePermission();
   const canManage = can('user.manage_roles');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -30,9 +31,7 @@ import type { PerformanceReview } from '@/types/performance';
 type ViewMode = 'my' | 'team' | 'all';
 
 export default function ReviewsPage() {
-  useEffect(() => {
-    document.title = 'Reviews · PbHub';
-  }, []);
+  useDocumentTitle('Reviews');
 
   const { can } = usePermission();
   const canReadAll = can('performance.read');

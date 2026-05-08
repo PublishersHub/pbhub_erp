@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
@@ -94,9 +95,7 @@ export default function ExpenseClaimDetailPage() {
   const canReimburse = can('expense.reimburse');
   const canCreate = can('expense.create');
 
-  useEffect(() => {
-    document.title = 'Expense Claims · PbHub';
-  }, []);
+  useDocumentTitle('Expense Claims');
 
   const { data: remoteClaim, error, loading, refetch } = useAsync(
     () => (canReadAll ? getClaimDetail(id) : getMyClaimDetail(id)),

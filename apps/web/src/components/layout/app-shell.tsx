@@ -367,31 +367,34 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {/* Sidebar footer — user pill */}
-        <div className="border-t border-hairline px-3 py-3">
-          <div className="flex items-center gap-3 rounded-xl bg-secondary/40 px-2.5 py-2">
-            <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:opacity-80" onClick={closeDrawer}>
-              <div className="gradient-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm">
-                {initials(user?.account?.firstName, user?.account?.lastName)}
-              </div>
-              <div className="min-w-0 leading-tight">
-                <p className="truncate text-xs font-semibold text-foreground">
-                  {user?.account?.firstName} {user?.account?.lastName}
-                </p>
-                <p className="truncate text-[10px] text-muted-foreground">{user?.account?.email}</p>
-              </div>
-            </Link>
-            <button
-              onClick={logout}
-              aria-label="Logout"
-              title="Logout"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground motion-press"
-            >
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-              </svg>
-            </button>
-          </div>
+        {/* Sidebar footer — user pill + visible Log out button */}
+        <div className="space-y-2 border-t border-hairline px-3 py-3">
+          <Link
+            href="/profile"
+            className="flex min-w-0 items-center gap-3 rounded-xl bg-secondary/40 px-2.5 py-2 transition-colors hover:opacity-80"
+            onClick={closeDrawer}
+          >
+            <div className="gradient-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold text-white shadow-sm">
+              {initials(user?.account?.firstName, user?.account?.lastName)}
+            </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-xs font-semibold text-foreground">
+                {user?.account?.firstName} {user?.account?.lastName}
+              </p>
+              <p className="truncate text-[10px] text-muted-foreground">{user?.account?.email}</p>
+            </div>
+          </Link>
+          <button
+            onClick={logout}
+            aria-label="Logout"
+            title="Logout"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-card/40 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-border hover:bg-secondary hover:text-foreground motion-press"
+          >
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+            </svg>
+            <span>Log out</span>
+          </button>
         </div>
       </aside>
 

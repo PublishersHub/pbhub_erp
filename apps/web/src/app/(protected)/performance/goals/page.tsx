@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -25,9 +26,7 @@ import { employeeName } from '@/lib/format';
 type ViewMode = 'my' | 'team' | 'all';
 
 export default function GoalsPage() {
-  useEffect(() => {
-    document.title = 'Goals · PbHub';
-  }, []);
+  useDocumentTitle('Goals');
 
   const { can } = usePermission();
   const canReadAll = can('performance.read');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -18,9 +19,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 const INTERVIEW_MODES: InterviewMode[] = ['VIDEO', 'IN_PERSON', 'PHONE'];
 
 export default function ScheduleInterviewPage() {
-  useEffect(() => {
-    document.title = 'Schedule Interview · PbHub';
-  }, []);
+  useDocumentTitle('Schedule Interview');
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetAppId = searchParams.get('applicationId') || '';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
@@ -26,9 +27,7 @@ interface GoalReviewFormItem {
 }
 
 export default function ReviewDetailPage() {
-  useEffect(() => {
-    document.title = 'Review · PbHub';
-  }, []);
+  useDocumentTitle('Review');
 
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();

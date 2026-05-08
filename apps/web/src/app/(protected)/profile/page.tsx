@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { InlineEdit } from '@/components/ui/inline-edit';
@@ -61,9 +62,7 @@ export default function ProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
 
-  useEffect(() => {
-    document.title = 'My Profile · PbHub';
-  }, []);
+  useDocumentTitle('My Profile');
 
   const loadProfile = async () => {
     try {

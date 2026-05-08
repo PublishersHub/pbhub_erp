@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -22,9 +23,7 @@ import { formatDate, formatDateTime, formatCurrency, employeeName } from '@/lib/
 import type { OnboardingInstance } from '@/types/onboarding';
 
 export default function OfferDetailPage() {
-  useEffect(() => {
-    document.title = 'Offer · PbHub';
-  }, []);
+  useDocumentTitle('Offer');
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { can } = usePermission();

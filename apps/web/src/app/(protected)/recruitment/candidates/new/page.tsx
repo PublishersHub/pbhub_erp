@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -16,9 +17,7 @@ const SOURCES: CandidateSource[] = [
 ];
 
 export default function CreateCandidatePage() {
-  useEffect(() => {
-    document.title = 'New Candidate · PbHub';
-  }, []);
+  useDocumentTitle('New Candidate');
   const router = useRouter();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);

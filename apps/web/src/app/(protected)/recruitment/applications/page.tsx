@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -21,9 +22,7 @@ const STATUSES: ApplicationStatus[] = [
 ];
 
 export default function ApplicationsListPage() {
-  useEffect(() => {
-    document.title = 'Applications · PbHub';
-  }, []);
+  useDocumentTitle('Applications');
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();

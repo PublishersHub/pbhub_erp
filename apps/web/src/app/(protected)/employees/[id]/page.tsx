@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
@@ -25,13 +26,7 @@ export default function EmployeeDetailPage() {
   const [actionError, setActionError] = useState('');
   const [acting, setActing] = useState(false);
 
-  useEffect(() => {
-    if (emp) {
-      document.title = `${emp.firstName} ${emp.lastName} · PbHub`;
-    } else {
-      document.title = 'Employee · PbHub';
-    }
-  }, [emp]);
+  useDocumentTitle(emp ? `${emp.firstName} ${emp.lastName}` : 'Employee');
 
   async function handleDeactivate() {
     if (!emp) return;

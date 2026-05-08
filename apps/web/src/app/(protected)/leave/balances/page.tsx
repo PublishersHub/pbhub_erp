@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,9 +24,7 @@ export default function LeaveBalancesPage() {
   const canManage = can('leave.manage');
   const currentYear = new Date().getFullYear();
 
-  useEffect(() => {
-    document.title = 'My Leave · PbHub';
-  }, []);
+  useDocumentTitle('My Leave');
 
   const [year, setYear] = useState(currentYear);
   const [employeeId, setEmployeeId] = useState('');

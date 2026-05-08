@@ -17,9 +17,10 @@ import { useToast } from '@/components/toast';
 import { listEmployees } from '@/lib/employee-api';
 import { listCandidates } from '@/lib/recruitment-api';
 import { checkIn, checkOut } from '@/lib/attendance-api';
-import { gatherCheckInMetadata, metaHasLocation } from '@/lib/attendance-metadata';
+import { gatherCheckInMetadata, describeLocationStatus } from '@/lib/attendance-metadata';
 import { getAllLeaveRequests, getPendingApprovals, getMyLeaveRequests } from '@/lib/leave-api';
 import { getAllClaims, getMyClaims, getPendingClaims } from '@/lib/expense-api';
+import { formatCurrency } from '@/lib/format';
 import type { Employee } from '@/types/employee';
 import type { Candidate } from '@/types/recruitment';
 import type { LeaveRequest } from '@/types/leave';
@@ -394,13 +395,15 @@ function Palette({ onClose }: { onClose: () => void }) {
       keywords: ['attendance', 'arrive', 'start work'],
       action: async () => {
         try {
-          const meta = await gatherCheckInMetadata();
+          const { meta, locationStatus } = await gatherCheckInMetadata();
           await checkIn(meta);
-          if (metaHasLocation(meta)) {
-            success('Checked in', 'Your attendance has been recorded.');
-          } else {
-            success('Checked in', 'Location not shared');
-          }
+          success(
+            'Checked in',
+            locationStatus === 'captured'
+              ? 'Your attendance has been recorded with location.'
+              : describeLocationStatus(locationStatus),
+          );
+          window.dispatchEvent(new CustomEvent('attendance:updated'));
           onClose();
         } catch (e) {
           error('Check-in failed', e instanceof Error ? e.message : 'Please try again.');
@@ -416,13 +419,15 @@ function Palette({ onClose }: { onClose: () => void }) {
       keywords: ['attendance', 'leave', 'end work'],
       action: async () => {
         try {
-          const meta = await gatherCheckInMetadata();
+          const { meta, locationStatus } = await gatherCheckInMetadata();
           await checkOut(meta);
-          if (metaHasLocation(meta)) {
-            success('Checked out', 'Your departure has been recorded.');
-          } else {
-            success('Checked out', 'Location not shared');
-          }
+          success(
+            'Checked out',
+            locationStatus === 'captured'
+              ? 'Your departure has been recorded with location.'
+              : describeLocationStatus(locationStatus),
+          );
+          window.dispatchEvent(new CustomEvent('attendance:updated'));
           onClose();
         } catch (e) {
           error('Check-out failed', e instanceof Error ? e.message : 'Please try again.');
@@ -473,11 +478,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   });
 
   const expenseItems: CommandItem[] = expenseClaims.map((claim) => {
-    const amount = (() => {
-      const n = parseFloat(claim.totalAmount);
-      if (isNaN(n)) return claim.totalAmount;
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-    })();
+    const amount = formatCurrency(claim.totalAmount);
     const empName = claim.employee
       ? `${claim.employee.firstName} ${claim.employee.lastName}`
       : '';

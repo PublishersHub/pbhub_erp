@@ -1,15 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { createTemplate } from '@/lib/onboarding-api';
 
 export default function CreateTemplatePage() {
-  useEffect(() => {
-    document.title = 'New Onboarding Template · PbHub';
-  }, []);
+  useDocumentTitle('New Onboarding Template');
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -31,9 +32,7 @@ export default function ExpenseCategoriesPage() {
   const toast = useToast();
   const { page, sort, order, pageSize, setPage, setSort } = useTableParams();
 
-  useEffect(() => {
-    document.title = 'Expense Categories · PbHub';
-  }, []);
+  useDocumentTitle('Expense Categories');
 
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listExpenseCategories(), []);
 

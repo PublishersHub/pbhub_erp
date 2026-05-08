@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
@@ -22,9 +23,7 @@ import type { OnboardingTaskAssigneeRole } from '@/types/onboarding';
 const ASSIGNEE_ROLES: Exclude<OnboardingTaskAssigneeRole, 'CUSTOM'>[] = ['NEW_HIRE', 'MANAGER', 'HR', 'IT'];
 
 export default function TemplateDetailPage() {
-  useEffect(() => {
-    document.title = 'Onboarding Template · PbHub';
-  }, []);
+  useDocumentTitle('Onboarding Template');
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const canManage = can('onboarding.template.manage');

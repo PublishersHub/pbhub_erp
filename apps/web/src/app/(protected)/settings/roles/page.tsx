@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -587,9 +588,7 @@ function DetailPanel({ roleId, allPerms, canManage, isSuperAdmin, onRoleUpdated 
 // ─── Page ─────────────────────────────────────
 
 export default function RolesPage() {
-  useEffect(() => {
-    document.title = 'Roles & Permissions · PbHub';
-  }, []);
+  useDocumentTitle('Roles & Permissions');
 
   const { can } = usePermission();
   const { user } = useAuth();

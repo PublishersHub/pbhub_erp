@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -73,9 +74,7 @@ export default function InboxPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   // Set document title
-  useEffect(() => {
-    document.title = 'Inbox · PbHub';
-  }, []);
+  useDocumentTitle('Inbox');
 
   // ─── Loaders ─────────────────────────────
 

@@ -8,7 +8,7 @@ import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'PbHub HRMS',
+  title: 'HR System',
   description: 'Human Resource Management System',
 };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -18,9 +19,7 @@ import {
 import { formatDate, formatCurrency, employeeName } from '@/lib/format';
 
 export default function SalaryStructuresPage() {
-  useEffect(() => {
-    document.title = 'Salary Structures · PbHub';
-  }, []);
+  useDocumentTitle('Salary Structures');
 
   const { can } = usePermission();
   const canManage = can('payroll.run');

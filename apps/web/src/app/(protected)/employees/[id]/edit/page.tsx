@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -36,9 +37,7 @@ export default function EditEmployeePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Edit Employee · PbHub';
-  }, []);
+  useDocumentTitle('Edit Employee');
 
   // We treat the photo as locally mutable on this page (separate from the
   // form submit) so the uploader can show the new image immediately without

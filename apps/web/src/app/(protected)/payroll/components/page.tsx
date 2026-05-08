@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,9 +28,7 @@ import {
 import type { SalaryComponentType } from '@/types/payroll';
 
 export default function SalaryComponentsPage() {
-  useEffect(() => {
-    document.title = 'Salary Components · PbHub';
-  }, []);
+  useDocumentTitle('Salary Components');
 
   const confirm = useConfirm();
   const { can } = usePermission();

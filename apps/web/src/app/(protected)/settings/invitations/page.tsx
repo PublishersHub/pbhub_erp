@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -402,9 +403,7 @@ function InvitationsTable({
 // ─── Page ─────────────────────────────────────
 
 export default function InvitationsPage() {
-  useEffect(() => {
-    document.title = 'Invitations · PbHub';
-  }, []);
+  useDocumentTitle('Invitations');
 
   const { can } = usePermission();
   const canManage = can('user.create') || can('user.manage_roles');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -28,9 +29,7 @@ export default function HolidaysPage() {
   const currentYear = new Date().getFullYear();
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    document.title = 'Holidays · PbHub';
-  }, []);
+  useDocumentTitle('Holidays');
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
   const yearFilter = searchParams.get('year') || '';

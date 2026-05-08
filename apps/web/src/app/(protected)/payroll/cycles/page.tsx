@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -28,9 +29,7 @@ const MONTHS = [
 ];
 
 export default function PayrollCyclesPage() {
-  useEffect(() => {
-    document.title = 'Payroll Cycles · PbHub';
-  }, []);
+  useDocumentTitle('Payroll Cycles');
 
   const { can } = usePermission();
   const canRun = can('payroll.run');

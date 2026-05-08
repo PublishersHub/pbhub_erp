@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -48,9 +49,7 @@ export default function NewExpenseClaimPage() {
   const activeCategories = (categories ?? []).filter((c) => c.isActive);
   const activePolicies = (policies ?? []).filter((p) => p.isActive);
 
-  useEffect(() => {
-    document.title = 'Submit Claim · PbHub';
-  }, []);
+  useDocumentTitle('Submit Claim');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

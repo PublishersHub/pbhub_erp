@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -18,9 +19,7 @@ import { getTodayReport, getMonthlyReport } from '@/lib/attendance-api';
 import { employeeName } from '@/lib/format';
 
 export default function AttendanceReportsPage() {
-  useEffect(() => {
-    document.title = 'Attendance Reports · PbHub';
-  }, []);
+  useDocumentTitle('Attendance Reports');
 
   const { can } = usePermission();
   const canRead = can('attendance.read');

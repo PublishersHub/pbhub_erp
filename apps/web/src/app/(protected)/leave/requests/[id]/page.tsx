@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -22,9 +23,7 @@ export default function LeaveRequestDetailPage() {
   const confirm = useConfirm();
   const { data: remoteReq, error, loading, refetch } = useAsync(() => getLeaveRequest(id), [id]);
 
-  useEffect(() => {
-    document.title = 'Leave Request · PbHub';
-  }, []);
+  useDocumentTitle('Leave Request');
 
   // Local copy for optimistic mutations
   const [req, setReq] = useState<LeaveRequest | null>(null);

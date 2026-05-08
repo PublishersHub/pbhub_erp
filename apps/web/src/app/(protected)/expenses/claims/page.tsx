@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -28,6 +29,7 @@ import {
   reviewExpenseClaim,
 } from '@/lib/expense-api';
 import { formatCurrency, formatDate, employeeName } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel-export';
 import type { ExpenseClaimStatus } from '@/types/expense';
 
 type ViewMode = 'my' | 'pending' | 'all';
@@ -49,14 +51,7 @@ export default function ExpenseClaimsPage() {
   const [view, setView] = useState<ViewMode>('my');
   const statusFilter = (searchParams.get('status') || '') as ExpenseClaimStatus | '';
 
-  useEffect(() => {
-    const titleByView: Record<ViewMode, string> = {
-      my: 'My Claims · PbHub',
-      pending: 'Expense Claims · PbHub',
-      all: 'Expense Claims · PbHub',
-    };
-    document.title = titleByView[view];
-  }, [view]);
+  useDocumentTitle(view === 'my' ? 'My Claims' : 'Expense Claims');
 
   const { data, error, errorStatus, loading, refetch } = useAsync(
     () => {
@@ -193,12 +188,32 @@ export default function ExpenseClaimsPage() {
       <PageHeader
         title="Expense Claims"
         actions={
-          <Link
-            href="/expenses/claims/new"
-            className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
-          >
-            New Claim
-          </Link>
+          <div className="flex gap-2">
+            {sorted.length > 0 && (
+              <button
+                onClick={() => {
+                  const rows = sorted.map((c) => ({
+                    'Claim #': c.claimNumber,
+                    Title: c.title,
+                    Employee: employeeName(c.employee),
+                    'Submitted On': c.submittedAt ? formatDate(c.submittedAt) : '',
+                    Status: c.status,
+                    'Total Amount': c.totalAmount,
+                  }));
+                  exportToExcel(`expense-claims-${view}`, rows);
+                }}
+                className="rounded-md border border-input bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted motion-press"
+              >
+                Export to Excel
+              </button>
+            )}
+            <Link
+              href="/expenses/claims/new"
+              className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
+            >
+              New Claim
+            </Link>
+          </div>
         }
       />
 

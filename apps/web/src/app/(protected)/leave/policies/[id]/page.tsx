@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { DetailRow } from '@/components/ui/detail-row';
@@ -20,9 +21,7 @@ export default function LeavePolicyDetailPage() {
   const confirm = useConfirm();
   const canManage = can('leave.manage');
 
-  useEffect(() => {
-    document.title = 'Leave Policy · PbHub';
-  }, []);
+  useDocumentTitle('Leave Policy');
   const { data: policy, error, loading, refetch } = useAsync(() => getLeavePolicy(id), [id]);
   const { data: employees } = useAsync(
     () => (canManage ? listEmployees() : Promise.resolve(null)),

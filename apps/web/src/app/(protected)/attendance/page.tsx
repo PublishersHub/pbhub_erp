@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -17,9 +18,7 @@ import type { AttendancePolicy } from '@/types/attendance';
 import type { Holiday } from '@/types/leave';
 
 export default function AttendancePage() {
-  useEffect(() => {
-    document.title = 'Attendance · PbHub';
-  }, []);
+  useDocumentTitle('Attendance');
 
   const { data, error, loading, refetch } = useAsync(() => getMyToday(), []);
   const [actionError, setActionError] = useState('');
@@ -35,6 +34,13 @@ export default function AttendancePage() {
       .then(setHolidays)
       .catch(() => setHolidays([]));
   }, []);
+
+  // Refetch when the floating Quick Actions widget records a check-in/out.
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener('attendance:updated', handler);
+    return () => window.removeEventListener('attendance:updated', handler);
+  }, [refetch]);
 
   const summary = data?.summary ?? null;
   const allLogs = data?.logs ?? [];
@@ -65,9 +71,10 @@ export default function AttendancePage() {
     setActionError('');
     setSubmitting(true);
     try {
-      const meta = await gatherCheckInMetadata();
+      const { meta } = await gatherCheckInMetadata();
       await checkIn({ source: 'WEB', ...meta });
       refetch();
+      window.dispatchEvent(new CustomEvent('attendance:updated'));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Check-in failed');
     } finally {
@@ -80,9 +87,10 @@ export default function AttendancePage() {
     setActionError('');
     setSubmitting(true);
     try {
-      const meta = await gatherCheckInMetadata();
+      const { meta } = await gatherCheckInMetadata();
       await checkOut({ source: 'WEB', ...meta });
       refetch();
+      window.dispatchEvent(new CustomEvent('attendance:updated'));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Check-out failed');
     } finally {

@@ -18,11 +18,25 @@ export function formatDateTime(value: string | null | undefined): string {
   });
 }
 
-export function formatCurrency(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
+/**
+ * Format an amount as PKR with proper grouping.
+ *   formatCurrency(150000)   → "PKR 150,000"
+ *   formatCurrency(1500.5)   → "PKR 1,500.50"
+ *   formatCurrency(null)     → "—"
+ */
+export function formatCurrency(
+  value: string | number | null | undefined,
+  options: { decimals?: number; symbol?: string } = {},
+): string {
+  if (value === null || value === undefined || value === '') return '—';
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+  const decimals = options.decimals ?? (Number.isInteger(num) ? 0 : 2);
+  const symbol = options.symbol ?? 'PKR';
+  return `${symbol} ${num.toLocaleString('en-PK', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
 }
 
 export function employeeName(emp: { firstName: string; lastName: string } | null | undefined): string {

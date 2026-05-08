@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -19,6 +20,7 @@ import {
 } from '@/lib/hooks';
 import { getMyPayslips } from '@/lib/payroll-api';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel-export';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -26,9 +28,7 @@ const MONTHS = [
 ];
 
 export default function MyPayslipsPage() {
-  useEffect(() => {
-    document.title = 'Payslips · PbHub';
-  }, []);
+  useDocumentTitle('Payslips');
 
   const { page, sort, order, pageSize, setPage, setSort, setParams, searchParams } =
     useTableParams();
@@ -85,7 +85,28 @@ export default function MyPayslipsPage() {
 
   return (
     <div>
-      <PageHeader title="My Payslips" />
+      <PageHeader
+        title="My Payslips"
+        actions={
+          sorted.length > 0 ? (
+            <button
+              onClick={() => {
+                const rows = sorted.map((p) => ({
+                  Period: p.payrollCycle ? `${MONTHS[p.payrollCycle.month - 1]} ${p.payrollCycle.year}` : '',
+                  'Gross Earnings': p.grossEarnings,
+                  'Total Deductions': p.totalDeductions,
+                  'Net Payable': p.netPayable,
+                  Status: p.payrollCycle?.status ?? '',
+                }));
+                exportToExcel(`my-payslips-${new Date().toISOString().slice(0, 10)}`, rows);
+              }}
+              className="rounded-md border border-input bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted motion-press"
+            >
+              Export to Excel
+            </button>
+          ) : undefined
+        }
+      />
 
       <FilterBar
         onClear={() => { setYear(''); setParams({ year: null, page: null }); }}

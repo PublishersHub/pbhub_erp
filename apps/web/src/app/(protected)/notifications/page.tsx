@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -65,9 +66,7 @@ function eventColor(eventType: string): string {
 }
 
 export default function NotificationsPage() {
-  useEffect(() => {
-    document.title = 'Notifications · PbHub';
-  }, []);
+  useDocumentTitle('Notifications');
   const { page, pageSize, setPage, setParams, searchParams } =
     useTableParams({ pageSize: 15 });
   const tab = (searchParams.get('tab') as Tab) || 'all';

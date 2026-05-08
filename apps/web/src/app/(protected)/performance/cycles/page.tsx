@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -45,9 +46,7 @@ const TRANSITION_LABELS: Record<string, string> = {
 };
 
 export default function PerformanceCyclesPage() {
-  useEffect(() => {
-    document.title = 'Performance Cycles · PbHub';
-  }, []);
+  useDocumentTitle('Performance Cycles');
 
   const confirm = useConfirm();
   const { can } = usePermission();

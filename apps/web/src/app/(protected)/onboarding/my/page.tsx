@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -15,9 +16,7 @@ import { TaskStatusForm } from '@/components/onboarding/task-status-form';
 import { DocumentUpload } from '@/components/onboarding/document-upload';
 
 export default function MyOnboardingPage() {
-  useEffect(() => {
-    document.title = 'My Onboarding · PbHub';
-  }, []);
+  useDocumentTitle('My Onboarding');
   const { can } = usePermission();
   const { data: inst, error, loading, refetch } = useAsync(() => getMyInstance());
 

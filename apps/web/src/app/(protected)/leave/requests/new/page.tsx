@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -14,9 +15,7 @@ export default function NewLeaveRequestPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Apply Leave · PbHub';
-  }, []);
+  useDocumentTitle('Apply Leave');
 
   const currentYear = new Date().getFullYear();
   const { data: balances, loading: balLoading } = useAsync(

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -26,9 +27,7 @@ import {
 import type { Designation } from '@/types/employee';
 
 export default function DesignationsPage() {
-  useEffect(() => {
-    document.title = 'Designations · PbHub';
-  }, []);
+  useDocumentTitle('Designations');
 
   const { can } = usePermission();
   const confirm = useConfirm();

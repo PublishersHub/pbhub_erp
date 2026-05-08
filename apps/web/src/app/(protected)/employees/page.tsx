@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -22,6 +23,7 @@ import {
 } from '@/lib/hooks';
 import { listEmployees, listMyTeam, listDepartments, listDesignations } from '@/lib/employee-api';
 import { employeeName } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel-export';
 import type { Department, Designation, Employee } from '@/types/employee';
 import { useState } from 'react';
 
@@ -59,9 +61,7 @@ function downloadEmployeesCsv(employees: Employee[]) {
 }
 
 export default function EmployeesListPage() {
-  useEffect(() => {
-    document.title = 'Employees · PbHub';
-  }, []);
+  useDocumentTitle('Employees');
 
   const { can } = usePermission();
   // Admin view = HR/super-admin level (can create or read sensitive data).
@@ -214,14 +214,32 @@ export default function EmployeesListPage() {
                   type="button"
                   onClick={() => {
                     const rows = (sorted as Employee[]).filter((e) => selectedIds.has(e.id));
-                    if (rows.length > 0) downloadEmployeesCsv(rows);
+                    if (rows.length === 0) return;
+                    exportToExcel(`employees-${new Date().toISOString().slice(0, 10)}`, rows.map((e) => ({
+                      Code: e.employeeCode ?? '',
+                      Name: `${e.firstName} ${e.lastName}`.trim(),
+                      Email: e.personalEmail ?? '',
+                      Department: e.department?.name ?? '',
+                      Designation: e.designation?.name ?? '',
+                      Status: e.isActive ? 'Active' : 'Inactive',
+                    })));
                   }}
                   className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-glow-primary motion-press hover:bg-primary/90"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
                   </svg>
-                  Export CSV
+                  Export to Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rows = (sorted as Employee[]).filter((e) => selectedIds.has(e.id));
+                    if (rows.length > 0) downloadEmployeesCsv(rows);
+                  }}
+                  className="rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium text-foreground motion-press hover:bg-muted"
+                >
+                  CSV
                 </button>
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -10,9 +11,7 @@ import { listPerformanceCycles, createGoal } from '@/lib/performance-api';
 import type { GoalMeasurementType } from '@/types/performance';
 
 export default function NewGoalPage() {
-  useEffect(() => {
-    document.title = 'New Goal · PbHub';
-  }, []);
+  useDocumentTitle('New Goal');
 
   const router = useRouter();
   const { data: cycles } = useAsync(() => listPerformanceCycles(), []);

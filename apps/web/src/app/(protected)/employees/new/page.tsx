@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -19,9 +20,7 @@ export default function CreateEmployeePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Add Employee · PbHub';
-  }, []);
+  useDocumentTitle('Add Employee');
 
   const { data: departments, loading: deptLoading } = useAsync(() => listDepartments(), []);
   const { data: designations, loading: desigLoading } = useAsync(() => listDesignations(), []);

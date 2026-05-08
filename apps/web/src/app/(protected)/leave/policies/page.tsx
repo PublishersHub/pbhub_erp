@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -28,9 +29,7 @@ export default function LeavePoliciesPage() {
   const { data, error, errorStatus, loading, refetch } = useAsync(() => listLeavePolicies(), []);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    document.title = 'Leave Policies · PbHub';
-  }, []);
+  useDocumentTitle('Leave Policies');
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -20,6 +21,7 @@ import {
 import { getMySummaries, getAllSummaries } from '@/lib/attendance-api';
 import { formatDate } from '@/lib/format';
 import { employeeName } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel-export';
 
 type ViewMode = 'my' | 'all';
 
@@ -28,9 +30,7 @@ function isoDate(d: Date) {
 }
 
 export default function DailySummaryPage() {
-  useEffect(() => {
-    document.title = 'Daily Attendance · PbHub';
-  }, []);
+  useDocumentTitle('Daily Attendance');
 
   const { can } = usePermission();
   const canReadAll = can('attendance.read');
@@ -59,6 +59,13 @@ export default function DailySummaryPage() {
         : getMySummaries(fromFilter, toFilter),
     [view, fromFilter, toFilter],
   );
+
+  // Refresh when a check-in/out happens elsewhere in the app.
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener('attendance:updated', handler);
+    return () => window.removeEventListener('attendance:updated', handler);
+  }, [refetch]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -98,11 +105,38 @@ export default function DailySummaryPage() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
+  function handleExport() {
+    if (!data) return;
+    const rows = sorted.map((s) => ({
+      Date: s.date.slice(0, 10),
+      ...(view === 'all' ? { Employee: employeeName(s.employee) } : {}),
+      Status: s.status,
+      'First In': s.firstCheckIn ? new Date(s.firstCheckIn).toLocaleTimeString() : '',
+      'Last Out': s.lastCheckOut ? new Date(s.lastCheckOut).toLocaleTimeString() : '',
+      'Worked (min)': s.totalWorkedMinutes,
+      'Late (min)': s.lateMinutes,
+      'Overtime (min)': s.overtimeMinutes,
+    }));
+    exportToExcel(`attendance-${fromFilter}-to-${toFilter}`, rows);
+  }
+
   const statuses = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LATE', 'ON_LEAVE', 'HOLIDAY', 'WEEKEND'];
 
   return (
     <div>
-      <PageHeader title="Daily Attendance Summary" />
+      <PageHeader
+        title="Daily Attendance Summary"
+        actions={
+          data && total > 0 ? (
+            <button
+              onClick={handleExport}
+              className="rounded-md border border-input bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted motion-press"
+            >
+              Export to Excel
+            </button>
+          ) : undefined
+        }
+      />
 
       {canReadAll && (
         <div className="mb-4 flex gap-2">

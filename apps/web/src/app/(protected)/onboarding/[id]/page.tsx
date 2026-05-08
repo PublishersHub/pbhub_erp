@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -14,9 +15,7 @@ import { TaskStatusForm } from '@/components/onboarding/task-status-form';
 import { DocumentUpload } from '@/components/onboarding/document-upload';
 
 export default function OnboardingInstanceDetailPage() {
-  useEffect(() => {
-    document.title = 'Onboarding · PbHub';
-  }, []);
+  useDocumentTitle('Onboarding');
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
   const { data: inst, error, loading, refetch } = useAsync(() => getInstance(id), [id]);

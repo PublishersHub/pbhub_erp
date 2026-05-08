@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -92,9 +93,7 @@ export default function NotificationPreferencesPage() {
     Map<string, boolean>
   >(new Map());
 
-  useEffect(() => {
-    document.title = 'Notification Preferences · PbHub';
-  }, []);
+  useDocumentTitle('Notification Preferences');
 
   // Build a lookup: "eventType:channel" -> enabled
   const prefMap = useMemo(() => {

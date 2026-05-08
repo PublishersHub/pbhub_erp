@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -14,9 +15,7 @@ import { listOffers } from '@/lib/recruitment-api';
 import { formatDate, formatCurrency } from '@/lib/format';
 
 export default function OffersListPage() {
-  useEffect(() => {
-    document.title = 'Offers · PbHub';
-  }, []);
+  useDocumentTitle('Offers');
   const { can } = usePermission();
   const { page, sort, order, pageSize, setPage, setSort, searchParams } =
     useTableParams();

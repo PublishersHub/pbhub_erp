@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/components/toast';
 import { useCommandPalette } from '@/components/command-palette';
 import { checkIn, checkOut, getMyToday, getMyPolicy } from '@/lib/attendance-api';
-import { gatherCheckInMetadata, metaHasLocation } from '@/lib/attendance-metadata';
+import { gatherCheckInMetadata, describeLocationStatus } from '@/lib/attendance-metadata';
 import { getPendingApprovals, listHolidays } from '@/lib/leave-api';
 import { getPendingClaims } from '@/lib/expense-api';
 import { OffDayCard, getOffDayInfo } from '@/components/attendance/off-day-card';
@@ -155,15 +155,18 @@ export function QuickActionsWidget() {
   const onCheckIn = async () => {
     setActionLoading('in');
     try {
-      const meta = await gatherCheckInMetadata();
+      const { meta, locationStatus } = await gatherCheckInMetadata();
       await checkIn(meta);
       const recordedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (metaHasLocation(meta)) {
-        success('Checked in', `Welcome — recorded at ${recordedAt}.`);
+      if (locationStatus === 'captured') {
+        success('Checked in', `Recorded at ${recordedAt} with location.`);
       } else {
-        success('Checked in', 'Location not shared');
+        success('Checked in', describeLocationStatus(locationStatus));
       }
       await loadToday();
+      // Notify other open views (/attendance page, /attendance/daily, dashboard heatmap)
+      // so they refetch instead of showing stale data.
+      window.dispatchEvent(new CustomEvent('attendance:updated'));
     } catch (e) {
       error('Check-in failed', e instanceof Error ? e.message : 'Try again.');
     } finally {
@@ -174,14 +177,15 @@ export function QuickActionsWidget() {
   const onCheckOut = async () => {
     setActionLoading('out');
     try {
-      const meta = await gatherCheckInMetadata();
+      const { meta, locationStatus } = await gatherCheckInMetadata();
       await checkOut(meta);
-      if (metaHasLocation(meta)) {
+      if (locationStatus === 'captured') {
         success('Checked out', `Have a good evening — ${formatDuration(liveMinutes)} worked today.`);
       } else {
-        success('Checked out', 'Location not shared');
+        success('Checked out', describeLocationStatus(locationStatus));
       }
       await loadToday();
+      window.dispatchEvent(new CustomEvent('attendance:updated'));
     } catch (e) {
       error('Check-out failed', e instanceof Error ? e.message : 'Try again.');
     } finally {

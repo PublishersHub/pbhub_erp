@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -92,9 +93,7 @@ export default function LeaveRequestsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
 
   // Page title
-  useEffect(() => {
-    document.title = 'Leave Requests · PbHub';
-  }, []);
+  useDocumentTitle('Leave Requests');
 
   // Restore layout pref
   useEffect(() => {

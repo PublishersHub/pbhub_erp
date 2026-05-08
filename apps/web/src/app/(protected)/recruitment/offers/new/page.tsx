@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -14,9 +15,7 @@ import type { EmploymentType, DepartmentRef, DesignationRef, EmployeeRef } from 
 const EMPLOYMENT_TYPES: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
 
 export default function CreateOfferPage() {
-  useEffect(() => {
-    document.title = 'New Offer · PbHub';
-  }, []);
+  useDocumentTitle('New Offer');
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetAppId = searchParams.get('applicationId') || '';
@@ -34,7 +33,7 @@ export default function CreateOfferPage() {
   const [employmentType, setEmploymentType] = useState<EmploymentType>('FULL_TIME');
   const [baseSalary, setBaseSalary] = useState('');
   const [joiningBonus, setJoiningBonus] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('PKR');
   const [proposedJoiningDate, setProposedJoiningDate] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -60,7 +59,7 @@ export default function CreateOfferPage() {
         baseSalary: parseFloat(baseSalary),
         proposedJoiningDate,
         expiresAt: new Date(expiresAt).toISOString(),
-        ...(currency !== 'USD' && { currency }),
+        ...(currency !== 'PKR' && { currency }),
         ...(joiningBonus && { joiningBonus: parseFloat(joiningBonus) }),
         ...(departmentId && { departmentId }),
         ...(designationId && { designationId }),
