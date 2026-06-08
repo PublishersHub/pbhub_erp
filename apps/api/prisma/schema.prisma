@@ -78,9 +78,10 @@ model Organization {
   payrolls                 Payroll[]
 
   // Expense Management
-  expenseCategories ExpenseCategory[]
-  expensePolicies   ExpensePolicy[]
-  expenseClaims     ExpenseClaim[]
+  expenseCategories    ExpenseCategory[]
+  expensePolicies      ExpensePolicy[]
+  expenseClaims        ExpenseClaim[]
+  expenseLedgerEntries ExpenseLedgerEntry[]
 
   // Notifications
   notificationTemplates NotificationTemplate[]
@@ -443,6 +444,9 @@ enum AttendanceLogSource {
   MOBILE
   MANUAL
   SYSTEM
+  RFID
+  PIN
+  BIOMETRIC
 }
 
 enum AttendanceStatus {
@@ -2139,4 +2143,30 @@ model OnboardingTaskDocument {
 
   @@index([onboardingTaskId])
   @@map("onboarding_task_documents")
+}
+
+// ============================================
+// Expense Ledger
+// ============================================
+//
+// Simple single-table ledger replacing the manager-finance approval workflow.
+// Each row is an entry the admin types in directly. The running balance is
+// derived in the service from previous rows on read so the data stays
+// trivially auditable.
+
+model ExpenseLedgerEntry {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  date           DateTime @db.Date
+  particular     String
+  debit          Decimal  @default(0) @db.Decimal(15, 2)
+  credit         Decimal  @default(0) @db.Decimal(15, 2)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, date])
+  @@map("expense_ledger_entries")
 }

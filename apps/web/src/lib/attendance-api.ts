@@ -13,6 +13,7 @@ import type {
   CorrectionRequestStatus,
   TodayReport,
   EmployeeMonthlyStats,
+  AttendanceStatus,
 } from '@/types/attendance';
 
 function qs(params: Record<string, string | undefined>): string {
@@ -145,4 +146,50 @@ export function getEmployeeMonthlyReport(employeeId: string, month: string) {
   return get<EmployeeMonthlyStats>(
     `/api/attendance-reports/employee/${employeeId}/month?month=${month}`,
   );
+}
+
+export interface MonthlyGridCell {
+  date: string;
+  status: AttendanceStatus | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  workedMinutes: number;
+  lateMinutes: number;
+  overtimeMinutes: number;
+}
+
+export interface MonthlyGridRow {
+  employee: {
+    id: string;
+    employeeCode: string;
+    firstName: string;
+    lastName: string;
+    department: { id: string; name: string } | null;
+    designation: { id: string; name: string } | null;
+  };
+  grossSalary: number | null;
+  workingDayCount: number;
+  effectiveWorkedDays: number;
+  earnedSalary: number | null;
+  cells: MonthlyGridCell[];
+}
+
+export interface MonthlyGrid {
+  month: string;
+  totalDaysInMonth: number;
+  dates: string[];
+  rows: MonthlyGridRow[];
+}
+
+export function getMonthlyGrid(month: string) {
+  return get<MonthlyGrid>(`/api/attendance-reports/monthly-grid?month=${month}`);
+}
+
+export function setDayAttendance(payload: {
+  employeeId: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+}) {
+  return patch<{ ok: boolean }>('/api/attendance/day', payload);
 }

@@ -362,6 +362,108 @@ export class AttendanceService {
     });
   }
 
+  // ─── Admin: set check-in/out for a specific day ──
+  //
+  // Replaces existing CHECK_IN / CHECK_OUT logs for the day with the new
+  // pair and re-derives the daily summary. Used by the editable monthly
+  // grid for HR / Super Admin overrides.
+
+  async setDayAttendance(
+    organizationId: string,
+    employeeId: string,
+    date: string,
+    checkInTime: string | null,
+    checkOutTime: string | null,
+  ) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, organizationId, isActive: true },
+      select: { id: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new BadRequestException('date must be YYYY-MM-DD');
+    }
+
+    const buildAt = (timeStr: string): Date => {
+      if (!/^\d{2}:\d{2}$/.test(timeStr)) {
+        throw new BadRequestException(`Invalid time "${timeStr}", expected HH:MM`);
+      }
+      const [y, m, d] = date.split('-').map(Number);
+      const [hh, mm] = timeStr.split(':').map(Number);
+      return new Date(y, m - 1, d, hh, mm, 0, 0);
+    };
+
+    const checkInAt = checkInTime ? buildAt(checkInTime) : null;
+    const checkOutAt = checkOutTime ? buildAt(checkOutTime) : null;
+
+    if (checkInAt && checkOutAt && checkOutAt <= checkInAt) {
+      throw new BadRequestException('Check-out must be after check-in');
+    }
+
+    const [y, m, d] = date.split('-').map(Number);
+    const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+    const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Wipe existing logs for the day
+      await tx.attendanceLog.deleteMany({
+        where: {
+          employeeId,
+          organizationId,
+          timestamp: { gte: dayStart, lte: dayEnd },
+        },
+      });
+
+      // Insert new logs
+      if (checkInAt) {
+        await tx.attendanceLog.create({
+          data: {
+            organizationId,
+            employeeId,
+            logType: 'CHECK_IN',
+            timestamp: checkInAt,
+            source: 'MANUAL',
+            ipAddress: null,
+            notes: 'Set by admin via grid',
+          },
+        });
+      }
+      if (checkOutAt) {
+        await tx.attendanceLog.create({
+          data: {
+            organizationId,
+            employeeId,
+            logType: 'CHECK_OUT',
+            timestamp: checkOutAt,
+            source: 'MANUAL',
+            ipAddress: null,
+            notes: 'Set by admin via grid',
+          },
+        });
+      }
+
+      // If both removed, also clear the summary so it re-derives as absent
+      if (!checkInAt && !checkOutAt) {
+        await tx.attendanceDailySummary.deleteMany({
+          where: { employeeId, date: this.startOfDayUtcFromCivil(date) },
+        });
+      }
+    });
+
+    // Re-derive the daily summary outside the transaction so it picks up the new logs
+    if (checkInAt || checkOutAt) {
+      await this.recalculateDailySummary(organizationId, employeeId, dayStart);
+    }
+
+    return { ok: true };
+  }
+
+  private startOfDayUtcFromCivil(date: string): Date {
+    const [y, m, d] = date.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+
   // ─── Helpers ─────────────────────────────
 
   private async findEmployeeByUserId(userId: string, organizationId: string) {

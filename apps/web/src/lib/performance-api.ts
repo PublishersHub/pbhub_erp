@@ -60,8 +60,8 @@ export function getTeamGoals(cycleId?: string) {
   return get<Goal[]>(`/api/goals/team${qs({ cycleId })}`);
 }
 
-export function getAllGoals(cycleId?: string) {
-  return get<Goal[]>(`/api/goals${qs({ cycleId })}`);
+export function getAllGoals(cycleId?: string, employeeId?: string) {
+  return get<Goal[]>(`/api/goals${qs({ cycleId, employeeId })}`);
 }
 
 export function getGoal(id: string) {
@@ -102,8 +102,8 @@ export function getTeamReviews(cycleId?: string) {
   return get<PerformanceReview[]>(`/api/performance-reviews/team${qs({ cycleId })}`);
 }
 
-export function getAllReviews(cycleId?: string) {
-  return get<PerformanceReview[]>(`/api/performance-reviews${qs({ cycleId })}`);
+export function getAllReviews(cycleId?: string, employeeId?: string) {
+  return get<PerformanceReview[]>(`/api/performance-reviews${qs({ cycleId, employeeId })}`);
 }
 
 export function getReview(id: string) {

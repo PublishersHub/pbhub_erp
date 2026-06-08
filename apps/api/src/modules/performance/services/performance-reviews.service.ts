@@ -72,11 +72,12 @@ export class PerformanceReviewsService {
 
   // ─── All reviews (admin) ──────────────
 
-  async findAll(organizationId: string, cycleId?: string) {
+  async findAll(organizationId: string, cycleId?: string, employeeId?: string) {
     return this.prisma.performanceReview.findMany({
       where: {
         organizationId,
         ...(cycleId && { cycleId }),
+        ...(employeeId && { employeeId }),
       },
       include: {
         employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } },

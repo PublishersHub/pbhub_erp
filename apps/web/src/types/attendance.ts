@@ -2,7 +2,7 @@
 
 export type AttendancePolicyType = 'FIXED' | 'FLEXIBLE';
 export type AttendanceLogType = 'CHECK_IN' | 'CHECK_OUT';
-export type AttendanceLogSource = 'WEB' | 'MOBILE' | 'MANUAL' | 'SYSTEM';
+export type AttendanceLogSource = 'WEB' | 'MOBILE' | 'MANUAL' | 'SYSTEM' | 'RFID' | 'PIN' | 'BIOMETRIC';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'LATE' | 'ON_LEAVE' | 'HOLIDAY' | 'WEEKEND';
 export type CorrectionRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 

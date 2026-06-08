@@ -34,8 +34,9 @@ export default function LeaveRequestsPage() {
   const canViewAll = can('leave.read');
   const canApprove = can('leave.approve');
 
+  const defaultView: ViewMode = canViewAll ? 'all' : canApprove ? 'pending' : 'my';
   const [view, setView] = useState<ViewMode>(
-    (searchParams.get('view') as ViewMode) || 'my',
+    (searchParams.get('view') as ViewMode) || defaultView,
   );
 
   const { data, error, loading, refetch } = useAsync(() => {
@@ -70,7 +71,7 @@ export default function LeaveRequestsPage() {
     [sorted, page, pageSize],
   );
 
-  const hasActiveFilters = !!(status || view !== 'my');
+  const hasActiveFilters = !!(status || view !== defaultView);
 
   return (
     <div>
@@ -90,7 +91,7 @@ export default function LeaveRequestsPage() {
 
       <FilterBar
         onClear={() => {
-          setView('my');
+          setView(defaultView);
           setParams({ status: null, view: null, page: null });
         }}
         hasActiveFilters={hasActiveFilters}
@@ -100,7 +101,7 @@ export default function LeaveRequestsPage() {
           onChange={(e) => {
             const v = e.target.value as ViewMode;
             setView(v);
-            setParams({ view: v === 'my' ? null : v, page: null });
+            setParams({ view: v === defaultView ? null : v, page: null });
           }}
           className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         >

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, type FormEvent } from 'react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -248,7 +249,15 @@ export default function DepartmentsPage() {
                           className="rounded border border-gray-300 px-2 py-1 text-sm"
                         />
                       ) : (
-                        <span className="font-medium text-gray-900">{dept.name}</span>
+                        <Link
+                          href={`/employees/departments/${dept.id}`}
+                          className="font-medium text-blue-600 hover:underline"
+                        >
+                          {dept.parentId && (
+                            <span className="mr-1 text-gray-300">└</span>
+                          )}
+                          {dept.name}
+                        </Link>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">

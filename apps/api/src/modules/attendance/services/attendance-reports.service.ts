@@ -251,6 +251,174 @@ export class AttendanceReportsService {
     };
   }
 
+  // ─── Monthly Excel Grid ────────────────
+  //
+  // Returns a matrix view: for each active employee, the list of daily
+  // summaries within the month plus a simple "earned salary" projection
+  // based on present + half-day proportion of total non-weekend days.
+
+  async getMonthlyGrid(organizationId: string, month: string) {
+    this.validateMonthFormat(month);
+    const { start, end, totalDaysInMonth } = this.parseMonth(month);
+
+    const employees = await this.prisma.employee.findMany({
+      where: { organizationId, isActive: true },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        department: { select: { id: true, name: true } },
+        designation: { select: { id: true, name: true } },
+      },
+      orderBy: [{ employeeCode: 'asc' }],
+    });
+
+    const employeeIds = employees.map((e) => e.id);
+
+    const [summaries, logs, structures] = await Promise.all([
+      this.prisma.attendanceDailySummary.findMany({
+        where: {
+          organizationId,
+          employeeId: { in: employeeIds },
+          date: { gte: start, lte: end },
+        },
+        select: {
+          employeeId: true,
+          date: true,
+          status: true,
+          firstCheckIn: true,
+          lastCheckOut: true,
+          totalWorkedMinutes: true,
+          overtimeMinutes: true,
+          lateMinutes: true,
+        },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.attendanceLog.findMany({
+        where: {
+          organizationId,
+          employeeId: { in: employeeIds },
+          timestamp: { gte: start, lte: new Date(end.getTime() + 86400000) },
+        },
+        select: {
+          employeeId: true,
+          logType: true,
+          timestamp: true,
+        },
+        orderBy: { timestamp: 'asc' },
+      }),
+      this.prisma.employeeSalaryStructure.findMany({
+        where: {
+          organizationId,
+          employeeId: { in: employeeIds },
+          isActive: true,
+        },
+        orderBy: { effectiveFrom: 'desc' },
+        select: {
+          employeeId: true,
+          effectiveFrom: true,
+          grossSalary: true,
+        },
+      }),
+    ]);
+
+    // Most recent active structure per employee
+    const structureByEmp = new Map<string, { grossSalary: any }>();
+    for (const s of structures) {
+      if (!structureByEmp.has(s.employeeId)) {
+        structureByEmp.set(s.employeeId, { grossSalary: s.grossSalary });
+      }
+    }
+
+    // Group summaries and logs by employee
+    const summariesByEmp = new Map<string, typeof summaries>();
+    for (const s of summaries) {
+      const arr = summariesByEmp.get(s.employeeId) ?? [];
+      arr.push(s);
+      summariesByEmp.set(s.employeeId, arr);
+    }
+    const logsByEmp = new Map<string, typeof logs>();
+    for (const l of logs) {
+      const arr = logsByEmp.get(l.employeeId) ?? [];
+      arr.push(l);
+      logsByEmp.set(l.employeeId, arr);
+    }
+
+    // Build a list of all dates in the month for the grid header
+    const dates: string[] = [];
+    for (let d = new Date(start); d <= end; d = new Date(d.getTime() + 86400000)) {
+      dates.push(d.toISOString().slice(0, 10));
+    }
+
+    // Per-employee row payload
+    const rows = employees.map((emp) => {
+      const empSummaries = summariesByEmp.get(emp.id) ?? [];
+
+      // index by date key
+      const byDate = new Map<string, (typeof empSummaries)[number]>();
+      for (const s of empSummaries) {
+        byDate.set(s.date.toISOString().slice(0, 10), s);
+      }
+
+      const cells = dates.map((date) => {
+        const s = byDate.get(date) ?? null;
+        return {
+          date,
+          status: s?.status ?? null,
+          checkIn: s?.firstCheckIn ?? null,
+          checkOut: s?.lastCheckOut ?? null,
+          workedMinutes: s?.totalWorkedMinutes ?? 0,
+          lateMinutes: s?.lateMinutes ?? 0,
+          overtimeMinutes: s?.overtimeMinutes ?? 0,
+        };
+      });
+
+      // Effective working days (PRESENT + LATE + HALF_DAY * 0.5)
+      let workingDayCount = 0;
+      let effectiveWorked = 0;
+      for (const s of empSummaries) {
+        if (s.status === AttendanceStatus.PRESENT) {
+          workingDayCount++;
+          effectiveWorked++;
+        } else if (s.status === AttendanceStatus.LATE) {
+          workingDayCount++;
+          effectiveWorked++;
+        } else if (s.status === AttendanceStatus.HALF_DAY) {
+          workingDayCount++;
+          effectiveWorked += 0.5;
+        } else if (s.status === AttendanceStatus.ON_LEAVE) {
+          workingDayCount++;
+        } else if (s.status === AttendanceStatus.ABSENT) {
+          workingDayCount++;
+        }
+      }
+
+      const grossSalary = structureByEmp.get(emp.id)?.grossSalary ?? null;
+      const grossNum = grossSalary ? Number(grossSalary.toString()) : null;
+      const earnedSalary =
+        grossNum !== null && workingDayCount > 0
+          ? Number(((grossNum / workingDayCount) * effectiveWorked).toFixed(2))
+          : null;
+
+      return {
+        employee: emp,
+        grossSalary: grossNum,
+        workingDayCount,
+        effectiveWorkedDays: effectiveWorked,
+        earnedSalary,
+        cells,
+      };
+    });
+
+    return {
+      month,
+      totalDaysInMonth,
+      dates,
+      rows,
+    };
+  }
+
   // ─── Helpers ─────────────────────────────
 
   private startOfDayUTC(date: Date): Date {

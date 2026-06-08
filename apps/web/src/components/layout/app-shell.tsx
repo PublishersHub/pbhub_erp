@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Attendance',
     children: [
       { href: '/attendance', label: 'Check In / Out' },
+      { href: '/attendance/grid', label: 'Monthly Grid' },
       { href: '/attendance/daily', label: 'Daily Summary' },
       { href: '/attendance/corrections', label: 'Corrections' },
       { href: '/attendance/policies', label: 'Policies' },
@@ -56,9 +57,10 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    href: '/expenses',
+    href: '/expenses/ledger',
     label: 'Expenses',
     children: [
+      { href: '/expenses/ledger', label: 'Ledger' },
       { href: '/expenses/claims', label: 'Claims' },
       { href: '/expenses/categories', label: 'Categories' },
       { href: '/expenses/policies', label: 'Policies' },
@@ -68,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/performance',
     label: 'Performance',
     children: [
+      { href: '/performance/by-employee', label: 'By Employee' },
       { href: '/performance/cycles', label: 'Cycles' },
       { href: '/performance/goals', label: 'Goals' },
       { href: '/performance/reviews', label: 'Reviews' },
@@ -94,7 +97,13 @@ const NAV_ITEMS: NavItem[] = [
       { href: '/onboarding/templates', label: 'Templates' },
     ],
   },
+  { href: '/onboarding/tasks/my', label: 'Tasks' },
   { href: '/notifications', label: 'Notifications' },
+  {
+    href: '/settings/roles',
+    label: 'Settings',
+    children: [{ href: '/settings/roles', label: 'Roles & Permissions' }],
+  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -111,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <h1 className="text-lg font-bold text-gray-900">PbHub HRMS</h1>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -155,6 +164,36 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Sidebar footer: always-visible logout */}
+        <div className="border-t bg-white p-3">
+          <div className="mb-2 px-1">
+            <p className="truncate text-sm font-medium text-gray-900">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <p className="truncate text-xs text-gray-500">{user?.email}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+              />
+            </svg>
+            Log out
+          </button>
+        </div>
       </aside>
 
       {/* Main area */}
@@ -189,18 +228,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             </Link>
 
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
-            </div>
-            <button
-              onClick={logout}
-              className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              Logout
-            </button>
           </div>
         </header>
 

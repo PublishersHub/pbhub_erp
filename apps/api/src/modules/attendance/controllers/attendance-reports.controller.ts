@@ -52,4 +52,18 @@ export class AttendanceReportsController {
       month,
     );
   }
+
+  @Get('monthly-grid')
+  @RequirePermissions('attendance.read')
+  @ApiOperation({
+    summary:
+      'Excel-style monthly grid: employees x days with check-in/out and earned salary projection',
+  })
+  @ApiQuery({ name: 'month', required: true, example: '2026-03' })
+  async getMonthlyGrid(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('month') month: string,
+  ) {
+    return this.reportsService.getMonthlyGrid(user.organizationId, month);
+  }
 }

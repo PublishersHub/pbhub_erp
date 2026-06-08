@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AttendanceService } from '../services/attendance.service';
 import { CheckInDto } from '../dto/check-in.dto';
@@ -109,6 +109,28 @@ export class AttendanceController {
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
     });
+  }
+
+  @Patch('day')
+  @RequirePermissions('attendance.read')
+  @ApiOperation({ summary: 'Admin: set check-in/out for an employee on a specific day' })
+  async setDayAttendance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body()
+    body: {
+      employeeId: string;
+      date: string;
+      checkIn: string | null;
+      checkOut: string | null;
+    },
+  ) {
+    return this.attendanceService.setDayAttendance(
+      user.organizationId,
+      body.employeeId,
+      body.date,
+      body.checkIn,
+      body.checkOut,
+    );
   }
 
   @Get('logs')

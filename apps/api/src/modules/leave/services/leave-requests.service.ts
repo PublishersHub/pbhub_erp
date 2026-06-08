@@ -140,11 +140,13 @@ export class LeaveRequestsService {
       },
     });
 
-    // Notify: manager (if any), otherwise HR
+    // Notify: manager (if any) + HR / super admin as fallback so the request
+    // is never silently lost when no manager is assigned.
     const recipientEmployeeIds: string[] = [];
     if (employee.reportingManagerId) {
       recipientEmployeeIds.push(employee.reportingManagerId);
     }
+    const hrUserIds = await this.findHrAndAdminUserIds(organizationId);
 
     this.eventEmitter.emit(NotificationEvents.LEAVE_SUBMITTED, {
       organizationId,
@@ -152,6 +154,7 @@ export class LeaveRequestsService {
       referenceId: created.id,
       referenceType: 'LeaveRequest',
       recipientEmployeeIds,
+      recipientUserIds: hrUserIds,
       variables: {
         employeeName: `${employee.firstName} ${employee.lastName}`,
         leaveType: created.leavePolicy.name,
@@ -694,6 +697,22 @@ export class LeaveRequestsService {
   private countCalendarDays(start: Date, end: Date): number {
     const msPerDay = 86400000;
     return Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1;
+  }
+
+  private async findHrAndAdminUserIds(organizationId: string): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        organizationId,
+        isActive: true,
+        userRoles: {
+          some: {
+            role: { slug: { in: HR_ROLE_SLUGS } },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return users.map((u) => u.id);
   }
 
   private async findEmployeeByUserId(userId: string, organizationId: string) {
