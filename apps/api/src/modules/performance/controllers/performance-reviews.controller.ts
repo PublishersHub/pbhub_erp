@@ -48,11 +48,13 @@ export class PerformanceReviewsController {
   @RequirePermissions('performance.read')
   @ApiOperation({ summary: 'List all reviews (admin/HR)' })
   @ApiQuery({ name: 'cycleId', required: false })
+  @ApiQuery({ name: 'employeeId', required: false })
   async findAll(
     @CurrentUser() user: AuthenticatedUser,
     @Query('cycleId') cycleId?: string,
+    @Query('employeeId') employeeId?: string,
   ) {
-    return this.reviewsService.findAll(user.organizationId, cycleId);
+    return this.reviewsService.findAll(user.organizationId, cycleId, employeeId);
   }
 
   // ─── Single review ───────────────────

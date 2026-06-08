@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -135,6 +136,28 @@ export class AttendanceController {
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
     });
+  }
+
+  @Patch('day')
+  @RequirePermissions('attendance.read')
+  @ApiOperation({ summary: 'Admin: set check-in/out for an employee on a specific day' })
+  async setDayAttendance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body()
+    body: {
+      employeeId: string;
+      date: string;
+      checkIn: string | null;
+      checkOut: string | null;
+    },
+  ) {
+    return this.attendanceService.setDayAttendance(
+      user.organizationId,
+      body.employeeId,
+      body.date,
+      body.checkIn,
+      body.checkOut,
+    );
   }
 
   @Get('logs')

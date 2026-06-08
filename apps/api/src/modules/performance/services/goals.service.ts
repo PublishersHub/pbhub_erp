@@ -120,12 +120,13 @@ export class GoalsService {
 
   // ─── All goals (admin) ────────────────
 
-  async findAll(organizationId: string, cycleId?: string) {
+  async findAll(organizationId: string, cycleId?: string, employeeId?: string) {
     return this.prisma.goal.findMany({
       where: {
         organizationId,
         isActive: true,
         ...(cycleId && { cycleId }),
+        ...(employeeId && { employeeId }),
       },
       include: {
         employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } },

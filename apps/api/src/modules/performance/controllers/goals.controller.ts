@@ -64,11 +64,13 @@ export class GoalsController {
   @RequirePermissions('performance.read')
   @ApiOperation({ summary: 'List all goals (admin/HR)' })
   @ApiQuery({ name: 'cycleId', required: false })
+  @ApiQuery({ name: 'employeeId', required: false })
   async findAll(
     @CurrentUser() user: AuthenticatedUser,
     @Query('cycleId') cycleId?: string,
+    @Query('employeeId') employeeId?: string,
   ) {
-    return this.goalsService.findAll(user.organizationId, cycleId);
+    return this.goalsService.findAll(user.organizationId, cycleId, employeeId);
   }
 
   // ─── Single goal ──────────────────────

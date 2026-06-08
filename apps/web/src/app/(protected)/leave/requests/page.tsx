@@ -83,8 +83,9 @@ export default function LeaveRequestsPage() {
   const canViewAll = can('leave.read');
   const canApprove = can('leave.approve');
 
+  const defaultView: ViewMode = canViewAll ? 'all' : canApprove ? 'pending' : 'my';
   const [view, setView] = useState<ViewMode>(
-    (searchParams.get('view') as ViewMode) || 'my',
+    (searchParams.get('view') as ViewMode) || defaultView,
   );
   const [search, setSearch] = useState('');
   const [layout, setLayout] = useState<LayoutMode>('list');
@@ -180,7 +181,7 @@ export default function LeaveRequestsPage() {
     [sorted, page, pageSize],
   );
 
-  const hasActiveFilters = !!(status || view !== 'my' || search || dateFilter);
+  const hasActiveFilters = !!(status || view !== defaultView || search || dateFilter);
 
   // Bulk action helpers — only operate on currently visible PENDING requests
   const pendingVisibleIds = useMemo(
@@ -298,7 +299,7 @@ export default function LeaveRequestsPage() {
 
       <FilterBar
         onClear={() => {
-          setView('my');
+          setView(defaultView);
           setSearch('');
           setParams({ status: null, view: null, page: null, date: null });
         }}
@@ -309,7 +310,7 @@ export default function LeaveRequestsPage() {
           onChange={(e) => {
             const v = e.target.value as ViewMode;
             setView(v);
-            setParams({ view: v === 'my' ? null : v, page: null });
+            setParams({ view: v === defaultView ? null : v, page: null });
           }}
           className="rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
         >

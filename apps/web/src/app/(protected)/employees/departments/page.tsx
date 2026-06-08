@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { PageHeader } from '@/components/ui/page-header';
 import { Loading } from '@/components/ui/loading';
@@ -270,7 +271,15 @@ export default function DepartmentsPage() {
                           className="rounded border border-input bg-card text-foreground px-2 py-1 text-sm focus:border-primary focus:ring-2 focus:ring-ring/50 transition-colors"
                         />
                       ) : (
-                        <span className="font-medium text-foreground">{dept.name}</span>
+                        <Link
+                          href={`/employees/departments/${dept.id}`}
+                          className="font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {dept.parentId && (
+                            <span className="mr-1 text-muted-foreground/60">└</span>
+                          )}
+                          {dept.name}
+                        </Link>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">

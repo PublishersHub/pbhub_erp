@@ -144,6 +144,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Icon.Clock,
     children: [
       { href: '/attendance', label: 'Check In / Out', permissions: ['attendance.checkin', 'attendance.read_own'] },
+      { href: '/attendance/grid', label: 'Monthly Grid', permissions: ['attendance.read'] },
       { href: '/attendance/daily', label: 'Daily Summary', permissions: ['attendance.read'] },
       { href: '/attendance/corrections', label: 'Corrections', permissions: ['attendance.correct', 'attendance.read_own'] },
       { href: '/attendance/policies', label: 'Policies', permissions: ['attendance.manage'] },
@@ -162,10 +163,11 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    href: '/expenses',
+    href: '/expenses/ledger',
     label: 'Expenses',
     icon: Icon.Receipt,
     children: [
+      { href: '/expenses/ledger', label: 'Ledger', permissions: ['expense.read'] },
       { href: '/expenses/claims', label: 'Claims', permissions: ['expense.read_own'] },
       { href: '/expenses/categories', label: 'Categories', permissions: ['expense.manage'] },
       { href: '/expenses/policies', label: 'Policies', permissions: ['expense.manage'] },
@@ -176,6 +178,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Performance',
     icon: Icon.Chart,
     children: [
+      { href: '/performance/by-employee', label: 'By Employee', permissions: ['performance.read'] },
       { href: '/performance/cycles', label: 'Cycles', permissions: ['performance.read', 'performance.manage'] },
       { href: '/performance/goals', label: 'Goals', permissions: ['performance.read_own'] },
       { href: '/performance/reviews', label: 'Reviews', permissions: ['performance.read_own'] },
