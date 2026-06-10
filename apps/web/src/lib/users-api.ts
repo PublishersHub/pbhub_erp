@@ -1,4 +1,4 @@
-import { get, post, del } from './api';
+import { get, post, patch, del } from './api';
 
 export interface AccountSlim {
   id: string;
@@ -39,4 +39,16 @@ export function assignUserRole(userId: string, roleId: string) {
 
 export function removeUserRole(userId: string, roleId: string) {
   return del<{ message: string }>(`/api/users/${userId}/roles/${roleId}`);
+}
+
+export function adminSetUserPassword(userId: string, password: string) {
+  return patch<{ ok: boolean }>(`/api/users/${userId}/password`, { password });
+}
+
+export function setUserActive(userId: string, isActive: boolean) {
+  return patch<{ ok: boolean; isActive: boolean }>(`/api/users/${userId}/active`, { isActive });
+}
+
+export function updateUserName(userId: string, firstName: string, lastName: string) {
+  return patch<{ ok: boolean }>(`/api/users/${userId}/name`, { firstName, lastName });
 }

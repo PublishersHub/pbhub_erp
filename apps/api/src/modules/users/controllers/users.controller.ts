@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { AssignRoleDto } from '../dto/assign-role.dto';
@@ -40,5 +49,43 @@ export class UsersController {
   ) {
     await this.usersService.removeRole(user.organizationId, userId, roleId);
     return { message: 'Role removed' };
+  }
+
+  @Patch(':id/password')
+  @RequirePermissions('user.manage_roles')
+  @ApiOperation({ summary: 'Admin: set a member password (revokes existing sessions)' })
+  async setPassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { password: string },
+  ) {
+    return this.usersService.adminSetPassword(user.organizationId, id, body.password);
+  }
+
+  @Patch(':id/active')
+  @RequirePermissions('user.manage_roles')
+  @ApiOperation({ summary: 'Activate or deactivate a member' })
+  async setActive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { isActive: boolean },
+  ) {
+    return this.usersService.setUserActive(user.organizationId, id, !!body.isActive);
+  }
+
+  @Patch(':id/name')
+  @RequirePermissions('user.manage_roles')
+  @ApiOperation({ summary: 'Update a member display name (Account + linked Employee)' })
+  async updateName(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { firstName: string; lastName: string },
+  ) {
+    return this.usersService.updateAccountName(
+      user.organizationId,
+      id,
+      body.firstName,
+      body.lastName,
+    );
   }
 }

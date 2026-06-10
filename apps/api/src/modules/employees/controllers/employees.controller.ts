@@ -144,6 +144,13 @@ export class EmployeesController {
     return this.employeesService.deactivate(user.organizationId, id);
   }
 
+  @Patch(':id/reactivate')
+  @RequirePermissions('employee.update')
+  @ApiOperation({ summary: 'Reactivate a previously deactivated employee' })
+  async reactivate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.employeesService.reactivate(user.organizationId, id);
+  }
+
   // ─── Employment Detail ──────────────────────
 
   @Put(':id/employment-detail')

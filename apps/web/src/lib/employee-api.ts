@@ -77,6 +77,10 @@ export function deactivateEmployee(id: string) {
   return del<void>(`/api/employees/${id}`);
 }
 
+export function reactivateEmployee(id: string) {
+  return patch<Employee>(`/api/employees/${id}/reactivate`, {});
+}
+
 // ─── Employment Details ─────────────────────
 
 export function upsertEmploymentDetail(employeeId: string, payload: CreateEmploymentDetailPayload) {

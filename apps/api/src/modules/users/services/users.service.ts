@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthenticatedUser } from '../../../common/types';
 
@@ -185,5 +190,121 @@ export class UsersService {
     await this.prisma.userRole.deleteMany({
       where: { userId, roleId, organizationId },
     });
+  }
+
+  /**
+   * Admin-set password for a member of the current org. The new password is
+   * hashed and saved on the Account row (Accounts authenticate, Users only
+   * scope them to orgs). Revokes all existing refresh tokens so the user is
+   * forced to re-login with the new credentials.
+   */
+  async adminSetPassword(
+    organizationId: string,
+    userId: string,
+    newPassword: string,
+  ) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId },
+      select: { id: true, accountId: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const hash = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.$transaction([
+      this.prisma.account.update({
+        where: { id: user.accountId },
+        data: { passwordHash: hash },
+      }),
+      this.prisma.refreshToken.deleteMany({
+        where: { accountId: user.accountId },
+      }),
+    ]);
+
+    return { ok: true };
+  }
+
+  /**
+   * Toggle a User membership active flag. When deactivating, also revokes
+   * refresh tokens so the user is signed out everywhere immediately.
+   */
+  async setUserActive(
+    organizationId: string,
+    userId: string,
+    isActive: boolean,
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId },
+      select: { id: true, accountId: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (isActive) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { isActive: true },
+      });
+    } else {
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: userId },
+          data: { isActive: false },
+        }),
+        this.prisma.refreshToken.deleteMany({
+          where: { accountId: user.accountId },
+        }),
+      ]);
+    }
+
+    return { ok: true, isActive };
+  }
+
+  /**
+   * Update the display name on the Account. Because Account is shared across
+   * orgs, the name change propagates to every membership. We also sync to the
+   * linked Employee row within this org if one exists so the directory stays
+   * consistent.
+   */
+  async updateAccountName(
+    organizationId: string,
+    userId: string,
+    firstName: string,
+    lastName: string,
+  ) {
+    if (!firstName?.trim() || !lastName?.trim()) {
+      throw new BadRequestException('firstName and lastName are required');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId },
+      select: {
+        id: true,
+        accountId: true,
+        employee: { select: { id: true } },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.account.update({
+        where: { id: user.accountId },
+        data: { firstName: fn, lastName: ln },
+      });
+      if (user.employee) {
+        await tx.employee.update({
+          where: { id: user.employee.id },
+          data: { firstName: fn, lastName: ln },
+        });
+      }
+    });
+
+    return { ok: true };
   }
 }

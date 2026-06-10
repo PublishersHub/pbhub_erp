@@ -59,6 +59,22 @@ export class InvitationsService {
       );
     }
 
+    // 3a. Validate optional employeeId belongs to this org and isn't already linked
+    if (dto.employeeId) {
+      const employee = await this.prisma.employee.findFirst({
+        where: { id: dto.employeeId, organizationId },
+        select: { id: true, userId: true, isActive: true },
+      });
+      if (!employee) {
+        throw new BadRequestException('Employee not found in this organization');
+      }
+      if (employee.userId) {
+        throw new ConflictException(
+          'This employee is already linked to a user account',
+        );
+      }
+    }
+
     // 3. Validate every roleId
     if (dto.roleIds.length > 0) {
       const roles = await this.prisma.role.findMany({
@@ -94,6 +110,7 @@ export class InvitationsService {
           expiresAt,
           status: 'PENDING',
           invitedByUserId,
+          employeeId: dto.employeeId ?? null,
           roleAssignments: {
             create: dto.roleIds.map((roleId) => ({ roleId })),
           },
@@ -261,6 +278,7 @@ export class InvitationsService {
       where: { tokenHash },
       include: {
         roleAssignments: { select: { roleId: true } },
+        employee: { select: { id: true, userId: true, organizationId: true } },
       },
     });
 
@@ -315,6 +333,18 @@ export class InvitationsService {
             organizationId: invitation.organizationId,
           })),
           skipDuplicates: true,
+        });
+      }
+
+      // Link the new User to the pre-assigned Employee (if any and still unlinked)
+      if (
+        invitation.employee &&
+        invitation.employee.organizationId === invitation.organizationId &&
+        !invitation.employee.userId
+      ) {
+        await tx.employee.update({
+          where: { id: invitation.employee.id },
+          data: { userId: user.id },
         });
       }
 

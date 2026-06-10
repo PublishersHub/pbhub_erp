@@ -46,6 +46,7 @@ export function createInvitation(payload: {
   firstName: string;
   lastName: string;
   roleIds: string[];
+  employeeId?: string;
 }) {
   return post<CreatedInvitation>('/api/invitations', payload);
 }

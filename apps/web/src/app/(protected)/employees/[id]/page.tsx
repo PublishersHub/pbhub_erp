@@ -14,7 +14,9 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/toast';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { useAuth } from '@/context/auth-context';
-import { getEmployee, deactivateEmployee, downloadEmployeeIdCard } from '@/lib/employee-api';
+import { getEmployee, deactivateEmployee, reactivateEmployee, downloadEmployeeIdCard } from '@/lib/employee-api';
+import { createInvitation } from '@/lib/invitations-api';
+import { listRoles } from '@/lib/roles-api';
 import { formatDate, employeeName } from '@/lib/format';
 import { PerformanceNotesCard } from '@/components/performance-notes-card';
 
@@ -68,6 +70,62 @@ export default function EmployeeDetailPage() {
       toast.error('Failed to deactivate', msg);
     } finally {
       setActing(false);
+    }
+  }
+
+  async function handleReactivate() {
+    if (!emp) return;
+    setActionError('');
+    setActing(true);
+    try {
+      await reactivateEmployee(id);
+      toast.success('Employee reactivated', `${emp.firstName} ${emp.lastName}`);
+      refetch();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Action failed';
+      setActionError(msg);
+      toast.error('Failed to reactivate', msg);
+    } finally {
+      setActing(false);
+    }
+  }
+
+  // ── Invite-to-login flow ────────────────────────────────────────
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRoleId, setInviteRoleId] = useState<string>('');
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const { data: invitableRoles } = useAsync(() => listRoles(), []);
+
+  function openInvite() {
+    if (!emp) return;
+    setInviteEmail(emp.personalEmail ?? '');
+    setInviteRoleId(invitableRoles?.find((r) => r.slug === 'employee')?.id ?? '');
+    setInviteOpen(true);
+  }
+
+  async function submitInvite() {
+    if (!emp || inviteBusy) return;
+    if (!inviteEmail || !inviteRoleId) {
+      toast.error('Email and role are required');
+      return;
+    }
+    setInviteBusy(true);
+    try {
+      await createInvitation({
+        email: inviteEmail.trim(),
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        roleIds: [inviteRoleId],
+        employeeId: emp.id,
+      });
+      toast.success('Invitation sent', 'They will receive an email with a setup link.');
+      setInviteOpen(false);
+      refetch();
+    } catch (err) {
+      toast.error('Failed to send invitation', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setInviteBusy(false);
     }
   }
 
@@ -254,6 +312,15 @@ export default function EmployeeDetailPage() {
                 </button>
               )}
 
+              {can('user.create') && !emp.userId && emp.isActive && (
+                <button
+                  onClick={openInvite}
+                  className="w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90 motion-press transition-colors px-4 py-2 text-sm font-medium"
+                >
+                  Invite to log in
+                </button>
+              )}
+
               {can('employee.delete') && emp.isActive && (
                 <button
                   onClick={handleDeactivate}
@@ -261,6 +328,16 @@ export default function EmployeeDetailPage() {
                   className="w-full rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
                 >
                   {acting ? 'Deactivating...' : 'Deactivate'}
+                </button>
+              )}
+
+              {can('employee.update') && !emp.isActive && (
+                <button
+                  onClick={handleReactivate}
+                  disabled={acting}
+                  className="w-full rounded-md bg-success text-success-foreground hover:bg-success/90 motion-press transition-colors px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {acting ? 'Reactivating...' : 'Reactivate'}
                 </button>
               )}
             </div>
@@ -277,6 +354,65 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Invite-to-login modal */}
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground">Invite to log in</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Send {emp.firstName} {emp.lastName} a login invitation. They'll receive an email with a
+              link to set their password. Their User account will be auto-linked to this employee
+              profile on accept.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Email</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="employee@example.com"
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Role</label>
+                <select
+                  value={inviteRoleId}
+                  onChange={(e) => setInviteRoleId(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                >
+                  <option value="">Select a role…</option>
+                  {(invitableRoles ?? [])
+                    .filter((r) => r.isActive)
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setInviteOpen(false)}
+                disabled={inviteBusy}
+                className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitInvite}
+                disabled={inviteBusy || !inviteEmail || !inviteRoleId}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {inviteBusy ? 'Sending…' : 'Send invitation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

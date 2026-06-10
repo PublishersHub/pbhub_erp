@@ -11,7 +11,14 @@ import { TableSearch } from '@/components/ui/table-search';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useAsync, usePermission } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
-import { listMembers, assignUserRole, removeUserRole } from '@/lib/users-api';
+import {
+  listMembers,
+  assignUserRole,
+  removeUserRole,
+  adminSetUserPassword,
+  setUserActive,
+  updateUserName,
+} from '@/lib/users-api';
 import { listRoles } from '@/lib/roles-api';
 import type { MemberWithRoles } from '@/lib/users-api';
 import type { Role } from '@/types/role';
@@ -144,6 +151,9 @@ interface DetailPanelProps {
   canManage: boolean;
   pending: Set<string>;
   onToggle: (userId: string, roleId: string, currentlyAssigned: boolean) => void;
+  onRename: (member: MemberWithRoles) => void;
+  onSetPassword: (member: MemberWithRoles) => void;
+  onToggleActive: (member: MemberWithRoles) => void;
 }
 
 function DetailPanel({
@@ -153,6 +163,9 @@ function DetailPanel({
   canManage,
   pending,
   onToggle,
+  onRename,
+  onSetPassword,
+  onToggleActive,
 }: DetailPanelProps) {
   const gradient = gradientFor(member.id);
   const name = displayName(member);
@@ -194,6 +207,42 @@ function DetailPanel({
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           You can view memberships but not edit them.
         </p>
+      )}
+
+      {/* Account actions */}
+      {canManage && (
+        <div className="rounded-lg border border-border bg-card">
+          <div className="border-b border-border px-4 py-2">
+            <h4 className="text-sm font-semibold text-foreground">Account</h4>
+          </div>
+          <div className="flex flex-wrap gap-2 p-4">
+            <button
+              type="button"
+              onClick={() => onRename(member)}
+              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 motion-press"
+            >
+              Edit name
+            </button>
+            <button
+              type="button"
+              onClick={() => onSetPassword(member)}
+              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 motion-press"
+            >
+              Set password
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleActive(member)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors motion-press ${
+                member.isActive
+                  ? 'border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20'
+                  : 'border border-success/30 bg-success/10 text-success hover:bg-success/20'
+              }`}
+            >
+              {member.isActive ? 'Deactivate' : 'Reactivate'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Roles list */}
@@ -323,6 +372,79 @@ export default function UsersPage() {
     }
   }
 
+  // ─── Admin action modals ─────────────
+  const [renameFor, setRenameFor] = useState<MemberWithRoles | null>(null);
+  const [renameFirst, setRenameFirst] = useState('');
+  const [renameLast, setRenameLast] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
+
+  const [pwFor, setPwFor] = useState<MemberWithRoles | null>(null);
+  const [pwValue, setPwValue] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+
+  function openRename(m: MemberWithRoles) {
+    setRenameFor(m);
+    setRenameFirst(m.account.firstName);
+    setRenameLast(m.account.lastName);
+  }
+  async function submitRename() {
+    if (!renameFor || renameBusy) return;
+    setRenameBusy(true);
+    try {
+      await updateUserName(renameFor.id, renameFirst.trim(), renameLast.trim());
+      toast.success('Name updated');
+      setRenameFor(null);
+      await refetchMembers();
+    } catch (err) {
+      toast.error('Update failed', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setRenameBusy(false);
+    }
+  }
+
+  function openSetPassword(m: MemberWithRoles) {
+    setPwFor(m);
+    setPwValue('');
+  }
+  async function submitSetPassword() {
+    if (!pwFor || pwBusy) return;
+    if (pwValue.length < 8) {
+      toast.error('Password too short', 'Use at least 8 characters');
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await adminSetUserPassword(pwFor.id, pwValue);
+      toast.success('Password set', `${displayName(pwFor)} will need to log in again`);
+      setPwFor(null);
+      setPwValue('');
+    } catch (err) {
+      toast.error('Failed to set password', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setPwBusy(false);
+    }
+  }
+
+  async function handleToggleActive(m: MemberWithRoles) {
+    const next = !m.isActive;
+    const ok = await confirm({
+      title: next ? 'Reactivate this member?' : 'Deactivate this member?',
+      description: next
+        ? `${displayName(m)} will be able to log in again.`
+        : `${displayName(m)} will be signed out immediately and unable to log in.`,
+      confirmLabel: next ? 'Reactivate' : 'Deactivate',
+      tone: next ? 'default' : 'warning',
+    });
+    if (!ok) return;
+    try {
+      await setUserActive(m.id, next);
+      toast.success(next ? 'Member reactivated' : 'Member deactivated');
+      await refetchMembers();
+    } catch (err) {
+      toast.error('Action failed', err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+
   const filteredMembers = useMemo(() => {
     if (!members) return members;
     if (!search) return members;
@@ -431,11 +553,108 @@ export default function UsersPage() {
                 canManage={canManage}
                 pending={pending}
                 onToggle={toggleRole}
+                onRename={openRename}
+                onSetPassword={openSetPassword}
+                onToggleActive={handleToggleActive}
               />
             </div>
           )}
         </div>
       </div>
+
+      {/* Rename modal */}
+      {renameFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground">Edit name</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{renameFor.account.email}</p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">First name</label>
+                <input
+                  value={renameFirst}
+                  onChange={(e) => setRenameFirst(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Last name</label>
+                <input
+                  value={renameLast}
+                  onChange={(e) => setRenameLast(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Updates the account name and (if linked) the employee profile name.
+              </p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setRenameFor(null)}
+                disabled={renameBusy}
+                className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitRename}
+                disabled={renameBusy}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {renameBusy ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set password modal */}
+      {pwFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground">Set password</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {displayName(pwFor)} · {pwFor.account.email}
+            </p>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-foreground/80">
+                New password (min 8 characters)
+              </label>
+              <input
+                type="text"
+                value={pwValue}
+                onChange={(e) => setPwValue(e.target.value)}
+                placeholder="Enter a temporary password"
+                className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                autoFocus
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Saves immediately and signs the user out of every device. Share the password securely.
+              </p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setPwFor(null);
+                  setPwValue('');
+                }}
+                disabled={pwBusy}
+                className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitSetPassword}
+                disabled={pwBusy || pwValue.length < 8}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {pwBusy ? 'Saving…' : 'Set password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

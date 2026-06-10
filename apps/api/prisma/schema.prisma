@@ -278,12 +278,16 @@ model Invitation {
   invitedByUserId   String?          @map("invited_by_user_id")
   acceptedAt        DateTime?        @map("accepted_at")
   acceptedAccountId String?          @map("accepted_account_id")
+  // Optional Employee to link on accept. Lets HR invite an existing employee
+  // to log in without manually re-linking the User row afterwards.
+  employeeId        String?          @map("employee_id")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
   organization    Organization               @relation(fields: [organizationId], references: [id])
   invitedByUser   User?                      @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
   acceptedAccount Account?                   @relation("AcceptedInvitations", fields: [acceptedAccountId], references: [id])
+  employee        Employee?                  @relation("InvitedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   roleAssignments InvitationRoleAssignment[]
 
   @@unique([tokenHash])
@@ -501,6 +505,9 @@ model Employee {
   // Suggestions
   authoredSuggestions  Suggestion[] @relation("SuggestionAuthor")
   respondedSuggestions Suggestion[] @relation("SuggestionResponder")
+
+  // Invitations
+  invitations Invitation[] @relation("InvitedEmployee")
 
   @@unique([organizationId, employeeCode])
   @@index([organizationId])

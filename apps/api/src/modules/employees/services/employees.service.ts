@@ -247,6 +247,17 @@ export class EmployeesService {
     });
   }
 
+  async reactivate(organizationId: string, id: string) {
+    const existing = await this.prisma.employee.findFirst({
+      where: { id, organizationId },
+    });
+    if (!existing) throw new NotFoundException('Employee not found');
+    return this.prisma.employee.update({
+      where: { id },
+      data: { isActive: true },
+    });
+  }
+
   // ─── Employment Detail ──────────────────────
 
   /**
