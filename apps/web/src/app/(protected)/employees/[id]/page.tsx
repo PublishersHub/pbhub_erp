@@ -17,6 +17,7 @@ import { useAuth } from '@/context/auth-context';
 import { getEmployee, deactivateEmployee, reactivateEmployee, downloadEmployeeIdCard } from '@/lib/employee-api';
 import { createInvitation } from '@/lib/invitations-api';
 import { listRoles } from '@/lib/roles-api';
+import { adminSetUserPassword } from '@/lib/users-api';
 import { formatDate, employeeName } from '@/lib/format';
 import { PerformanceNotesCard } from '@/components/performance-notes-card';
 
@@ -87,6 +88,30 @@ export default function EmployeeDetailPage() {
       toast.error('Failed to reactivate', msg);
     } finally {
       setActing(false);
+    }
+  }
+
+  // ── Set-password flow (for employees with a linked User) ────────
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwValue, setPwValue] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+
+  async function submitSetPassword() {
+    if (!emp?.userId || pwBusy) return;
+    if (pwValue.length < 8) {
+      toast.error('Password too short', 'Use at least 8 characters');
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await adminSetUserPassword(emp.userId, pwValue);
+      toast.success('Password set', `${emp.firstName} ${emp.lastName} will need to log in again`);
+      setPwOpen(false);
+      setPwValue('');
+    } catch (err) {
+      toast.error('Failed to set password', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setPwBusy(false);
     }
   }
 
@@ -321,6 +346,18 @@ export default function EmployeeDetailPage() {
                 </button>
               )}
 
+              {can('user.manage_roles') && emp.userId && (
+                <button
+                  onClick={() => {
+                    setPwValue('');
+                    setPwOpen(true);
+                  }}
+                  className="w-full rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 motion-press transition-colors px-4 py-2 text-sm font-medium"
+                >
+                  Set password
+                </button>
+              )}
+
               {can('employee.delete') && emp.isActive && (
                 <button
                   onClick={handleDeactivate}
@@ -354,6 +391,54 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Set-password modal */}
+      {pwOpen && emp.userId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground">Set password</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {emp.firstName} {emp.lastName}
+            </p>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-foreground/80">
+                New password (min 8 characters)
+              </label>
+              <input
+                type="text"
+                value={pwValue}
+                onChange={(e) => setPwValue(e.target.value)}
+                placeholder="Enter a temporary password"
+                autoFocus
+                className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Saves immediately and signs the user out of every device. Share the password
+                securely.
+              </p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setPwOpen(false);
+                  setPwValue('');
+                }}
+                disabled={pwBusy}
+                className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitSetPassword}
+                disabled={pwBusy || pwValue.length < 8}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {pwBusy ? 'Saving…' : 'Set password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite-to-login modal */}
       {inviteOpen && (
