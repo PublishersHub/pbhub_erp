@@ -28,6 +28,16 @@ export class UsersController {
     return this.usersService.listMembersWithRoles(user.organizationId);
   }
 
+  @Get('orphan-employees')
+  @RequirePermissions('user.read')
+  @ApiOperation({
+    summary:
+      'List active employees that do not yet have a linked User login — surfaces them on /settings/users so HR can invite them.',
+  })
+  async findOrphanEmployees(@CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.listEmployeesWithoutUser(user.organizationId);
+  }
+
   @Post(':id/roles')
   @RequirePermissions('user.manage_roles')
   @ApiOperation({ summary: 'Assign a role to a user' })

@@ -13,6 +13,7 @@ import { useAsync, usePermission } from '@/lib/hooks';
 import { useToast } from '@/components/toast';
 import {
   listMembers,
+  listOrphanEmployees,
   assignUserRole,
   removeUserRole,
   adminSetUserPassword,
@@ -20,7 +21,9 @@ import {
   updateUserName,
 } from '@/lib/users-api';
 import { listRoles } from '@/lib/roles-api';
-import type { MemberWithRoles } from '@/lib/users-api';
+import { createInvitation } from '@/lib/invitations-api';
+import Link from 'next/link';
+import type { MemberWithRoles, OrphanEmployee } from '@/lib/users-api';
 import type { Role } from '@/types/role';
 
 // ─── Avatar helpers ───────────────────────────
@@ -323,6 +326,47 @@ export default function UsersPage() {
 
   const { data: roles, loading: rolesLoading } = useAsync(() => listRoles(), []);
 
+  const {
+    data: orphans,
+    refetch: refetchOrphans,
+  } = useAsync(() => listOrphanEmployees(), []);
+
+  // ─── Invite orphan flow ──────────
+  const [inviteFor, setInviteFor] = useState<OrphanEmployee | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRoleId, setInviteRoleId] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
+
+  function openInvite(emp: OrphanEmployee) {
+    setInviteFor(emp);
+    setInviteEmail(emp.personalEmail ?? '');
+    setInviteRoleId(roles?.find((r) => r.slug === 'employee')?.id ?? '');
+  }
+  async function submitInvite() {
+    if (!inviteFor || inviteBusy) return;
+    if (!inviteEmail || !inviteRoleId) {
+      toast.error('Email and role are required');
+      return;
+    }
+    setInviteBusy(true);
+    try {
+      await createInvitation({
+        email: inviteEmail.trim(),
+        firstName: inviteFor.firstName,
+        lastName: inviteFor.lastName,
+        roleIds: [inviteRoleId],
+        employeeId: inviteFor.id,
+      });
+      toast.success('Invitation sent', 'They will receive an email with a setup link.');
+      setInviteFor(null);
+      await refetchOrphans();
+    } catch (err) {
+      toast.error('Failed to send invitation', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
     if (members && !selectedId && members.length > 0) setSelectedId(members[0].id);
@@ -481,6 +525,64 @@ export default function UsersPage() {
         title="Members"
         description="Assign or remove roles for each member of your organization."
       />
+
+      {/* Employees without a login */}
+      {canManage && orphans && orphans.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+          <div className="mb-3 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Employees without a login ({orphans.length})
+              </h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                These employees exist in your directory but can't sign in yet. Invite them to set up a login.
+              </p>
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-amber-200 bg-card">
+            <table className="min-w-full divide-y divide-amber-100">
+              <thead className="bg-amber-50/60">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-foreground/70">Code</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-foreground/70">Name</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-foreground/70">Department</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-foreground/70">Personal email</th>
+                  <th className="px-3 py-2 text-right" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-100">
+                {orphans.map((e) => (
+                  <tr key={e.id} className="hover:bg-amber-50/30">
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-muted-foreground">{e.employeeCode}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-sm">
+                      <Link
+                        href={`/employees/${e.id}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {e.firstName} {e.lastName}
+                      </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-muted-foreground">
+                      {e.department?.name ?? '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-muted-foreground">
+                      {e.personalEmail ?? '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                      <button
+                        onClick={() => openInvite(e)}
+                        className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        Invite to log in
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Two-column layout */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -650,6 +752,64 @@ export default function UsersPage() {
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {pwBusy ? 'Saving…' : 'Set password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite orphan-employee modal */}
+      {inviteFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground">Invite to log in</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {inviteFor.firstName} {inviteFor.lastName} · {inviteFor.employeeCode}
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Email</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="employee@example.com"
+                  autoFocus
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground/80">Role</label>
+                <select
+                  value={inviteRoleId}
+                  onChange={(e) => setInviteRoleId(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50"
+                >
+                  <option value="">Select a role…</option>
+                  {(roles ?? [])
+                    .filter((r) => r.isActive)
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setInviteFor(null)}
+                disabled={inviteBusy}
+                className="rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitInvite}
+                disabled={inviteBusy || !inviteEmail || !inviteRoleId}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {inviteBusy ? 'Sending…' : 'Send invitation'}
               </button>
             </div>
           </div>

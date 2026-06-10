@@ -160,6 +160,27 @@ export class UsersService {
   }
 
   /**
+   * List active employees in an org that don't yet have a User login. These
+   * are surfaced on the members page so HR can see them and invite them to
+   * log in without bouncing through /employees.
+   */
+  async listEmployeesWithoutUser(organizationId: string) {
+    return this.prisma.employee.findMany({
+      where: { organizationId, isActive: true, userId: null },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        personalEmail: true,
+        department: { select: { id: true, name: true } },
+        designation: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * Assign a role to a user (membership) in the current org.
    * Idempotent — returns the existing row if the assignment already exists.
    */

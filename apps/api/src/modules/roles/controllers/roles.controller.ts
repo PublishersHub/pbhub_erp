@@ -44,6 +44,7 @@ export class RolesController {
       slug: role.slug,
       description: role.description,
       isSystem: role.isSystem,
+      isActive: role.isActive,
       userCount: role._count.userRoles,
       permissions: role.rolePermissions.map((rp) => rp.permission.code),
     }));
@@ -72,6 +73,7 @@ export class RolesController {
       slug: role.slug,
       description: role.description,
       isSystem: role.isSystem,
+      isActive: role.isActive,
       permissions: role.rolePermissions.map((rp) => ({
         code: rp.permission.code,
         name: rp.permission.name,

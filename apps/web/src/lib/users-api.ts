@@ -33,6 +33,20 @@ export function listMembers() {
   return get<MemberWithRoles[]>('/api/users');
 }
 
+export interface OrphanEmployee {
+  id: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  personalEmail: string | null;
+  department: { id: string; name: string } | null;
+  designation: { id: string; name: string } | null;
+}
+
+export function listOrphanEmployees() {
+  return get<OrphanEmployee[]>('/api/users/orphan-employees');
+}
+
 export function assignUserRole(userId: string, roleId: string) {
   return post<unknown>(`/api/users/${userId}/roles`, { roleId });
 }
